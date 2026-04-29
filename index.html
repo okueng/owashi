@@ -138,6 +138,24 @@
     font-variation-settings:"opsz" 32;
   }
 
+  .demo{
+    display:flex;flex-direction:column;gap:12px;
+  }
+  .demo .label{
+    font-family:"JetBrains Mono",monospace;
+    font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--rust);
+    display:flex;align-items:center;gap:14px;
+  }
+  .demo .label::before{content:"";width:30px;height:1px;background:var(--rust)}
+  .demo iframe{
+    border:0;
+    width:100%;
+    height:120px;
+    display:block;
+    background:var(--bone);
+  }
+
   .bottom{
     display:flex;justify-content:space-between;align-items:flex-end;
     gap:24px;flex-wrap:wrap;
@@ -263,6 +281,15 @@
     <p class="bio">
       Basé en Suisse romande, Ōwashi propose un <em>rock progressif instrumental immersif</em>, entre riffs mélodiques, textures planantes et poussées métal. Sur scène, le quatuor construit un voyage sonore intense, clair et dynamique, porté par des compositions originales.
     </p>
+
+    <div class="demo">
+      <div class="label">Démo — Kepler 1-b</div>
+      <iframe
+        title="Kepler 1-b — Ōwashi (SoundCloud)"
+        allow="autoplay"
+        src="https://w.soundcloud.com/player/?url=https%3A//soundcloud.com/owashi-band-official/kepler-1-b&color=%23c2541b&inverse=false&auto_play=false&show_user=false&hide_related=true&show_comments=false&show_reposts=false&show_teaser=false&visual=false">
+      </iframe>
+    </div>
 
     <div class="bottom">
       <div class="links">
