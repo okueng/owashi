@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ōwashi — Rock progressif instrumental</title>
+<meta name="description" content="Basé en Suisse romande, Ōwashi propose un rock progressif instrumental immersif, entre riffs mélodiques, textures planantes et poussées métal.">
+<meta property="og:title" content="Ōwashi">
+<meta property="og:description" content="Rock progressif instrumental — Suisse romande">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://owashi.band">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,900;1,9..144,400&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bone: #f4f2ee;
+    --ink:  #0b0a08;
+    --slate:#5a5b5c;
+    --rust: #c2541b;
+    --rust-deep:#8a3a12;
+    --line: rgba(11,10,8,.18);
+    --line-on-dark: rgba(244,242,238,.2);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bone);
+    color:var(--ink);
+    font-family:"Fraunces",serif;
+    font-variation-settings:"opsz" 32;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    overflow-x:hidden;
+  }
+  ::selection{background:var(--rust);color:var(--bone)}
+
+  /* ---- HERO SPLIT ---- */
+  .page{
+    min-height:100vh;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    grid-template-rows:1fr;
+  }
+  @media(max-width:860px){
+    .page{grid-template-columns:1fr;grid-template-rows:42vh 1fr}
+  }
+
+  /* Left — eagle texture */
+  .visual{
+    position:relative;
+    overflow:hidden;
+    background:#000;
+  }
+  .visual img{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    object-position:35% 35%;
+    filter:contrast(1.06) brightness(.95);
+    pointer-events:none;
+  }
+  .visual::after{
+    content:"";
+    position:absolute;inset:0;
+    background:linear-gradient(180deg,rgba(0,0,0,0) 55%,rgba(0,0,0,.45) 100%);
+  }
+  .visual .stamp{
+    position:absolute;
+    left:28px;bottom:24px;
+    z-index:2;
+    color:rgba(244,242,238,.7);
+    font-family:"JetBrains Mono",monospace;
+    font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+  }
+  .visual .stamp em{font-style:normal;color:var(--rust)}
+  .visual .stamp-r{
+    position:absolute;
+    right:28px;bottom:24px;
+    z-index:2;
+    color:rgba(244,242,238,.55);
+    font-family:"JetBrains Mono",monospace;
+    font-size:11px;letter-spacing:.22em;
+  }
+
+  /* Right — content */
+  .content{
+    padding:56px 60px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    gap:48px;
+  }
+  @media(max-width:860px){.content{padding:36px 24px}}
+
+  .top{
+    display:flex;justify-content:space-between;align-items:baseline;
+    font-family:"JetBrains Mono",monospace;
+    font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--slate);
+  }
+  .top .kanji{font-family:"Fraunces",serif;font-size:18px;letter-spacing:0;color:var(--ink)}
+
+  .wordmark{margin:auto 0}
+  .wordmark h1{
+    font-family:"Fraunces",serif;
+    font-weight:900;
+    font-variation-settings:"opsz" 144;
+    font-size:clamp(96px,14vw,200px);
+    line-height:.82;
+    letter-spacing:-.045em;
+  }
+  .wordmark h1 .ma{color:var(--rust)}
+  .wordmark .tagline{
+    margin-top:24px;
+    font-family:"JetBrains Mono",monospace;
+    font-size:12px;letter-spacing:.32em;text-transform:uppercase;
+    color:var(--rust);
+    display:flex;align-items:center;gap:14px;
+  }
+  .wordmark .tagline::before{content:"";width:30px;height:1px;background:var(--rust)}
+
+  .bio{
+    max-width:48ch;
+    font-family:"Fraunces",serif;
+    font-variation-settings:"opsz" 32;
+    font-weight:300;
+    font-size:clamp(18px,1.5vw,22px);
+    line-height:1.5;
+    letter-spacing:-.005em;
+    color:var(--ink);
+  }
+  .bio em{
+    font-style:italic;
+    color:var(--rust-deep);
+    font-variation-settings:"opsz" 32;
+  }
+
+  .bottom{
+    display:flex;justify-content:space-between;align-items:flex-end;
+    gap:24px;flex-wrap:wrap;
+    padding-top:28px;
+    border-top:1px solid var(--line);
+    font-family:"JetBrains Mono",monospace;
+    font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--slate);
+  }
+  .bottom a{
+    color:var(--ink);
+    text-decoration:none;
+    border-bottom:1px solid var(--line);
+    padding-bottom:2px;
+    transition:color .2s,border-color .2s;
+  }
+  .bottom a:hover{color:var(--rust);border-color:var(--rust)}
+  .links{display:flex;gap:22px;flex-wrap:wrap}
+
+  /* ---- BAND SECTION ---- */
+  .quatuor{
+    position:relative;
+    background:var(--ink);
+    color:var(--bone);
+    border-top:1px solid var(--line);
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    align-items:stretch;
+    min-height:70vh;
+  }
+  @media(max-width:860px){.quatuor{grid-template-columns:1fr;min-height:auto}}
+
+  .quatuor .photo{
+    position:relative;
+    overflow:hidden;
+    background:#1a1916;
+  }
+  .quatuor .photo img{
+    width:100%;height:100%;
+    object-fit:cover;
+    object-position:center 30%;
+    filter:contrast(1.05) brightness(.95);
+    display:block;
+  }
+  .quatuor .photo::after{
+    content:"";position:absolute;inset:0;
+    background:linear-gradient(180deg,rgba(0,0,0,0) 60%,rgba(0,0,0,.45) 100%);
+  }
+  .quatuor .photo .caption{
+    position:absolute;left:28px;bottom:24px;right:28px;
+    z-index:2;
+    display:flex;justify-content:space-between;
+    color:rgba(244,242,238,.7);
+    font-family:"JetBrains Mono",monospace;
+    font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+  }
+  .quatuor .photo .caption em{font-style:normal;color:var(--rust)}
+
+  .quatuor .side{
+    padding:56px 60px;
+    display:flex;flex-direction:column;justify-content:space-between;
+    gap:32px;
+  }
+  @media(max-width:860px){.quatuor .side{padding:36px 24px}}
+
+  .quatuor .side .label{
+    font-family:"JetBrains Mono",monospace;
+    font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+    color:rgba(244,242,238,.55);
+    display:flex;align-items:center;gap:14px;
+  }
+  .quatuor .side .label::before{content:"";width:30px;height:1px;background:var(--rust)}
+
+  .quatuor .side .members-bio{
+    max-width:46ch;
+    font-family:"Fraunces",serif;
+    font-variation-settings:"opsz" 32;
+    font-weight:300;
+    font-size:clamp(20px,1.8vw,28px);
+    line-height:1.45;
+    letter-spacing:-.005em;
+    color:rgba(244,242,238,.9);
+  }
+  .quatuor .side .members-bio em{
+    font-style:normal;
+    color:var(--bone);
+    font-weight:500;
+  }
+
+  .quatuor .side .foot{
+    display:flex;justify-content:space-between;align-items:flex-end;gap:18px;flex-wrap:wrap;
+    padding-top:24px;
+    border-top:1px solid var(--line-on-dark);
+    font-family:"JetBrains Mono",monospace;
+    font-size:11px;letter-spacing:.2em;text-transform:uppercase;
+    color:rgba(244,242,238,.55);
+  }
+  .quatuor .side .foot b{color:var(--bone);font-weight:400}
+</style>
+</head>
+<body>
+
+<main class="page">
+
+  <div class="visual" aria-hidden="true">
+    <img src="assets/eagle-feathers.png" alt="">
+    <span class="stamp">Frg. <em>I</em></span>
+    <span class="stamp-r">大鷲</span>
+  </div>
+
+  <div class="content">
+
+    <div class="top">
+      <span>Quatuor instrumental — Suisse romande</span>
+      <span class="kanji">大鷲</span>
+    </div>
+
+    <div class="wordmark">
+      <h1><span class="ma">Ō</span>washi</h1>
+      <div class="tagline">Rock progressif</div>
+    </div>
+
+    <p class="bio">
+      Basé en Suisse romande, Ōwashi propose un <em>rock progressif instrumental immersif</em>, entre riffs mélodiques, textures planantes et poussées métal. Sur scène, le quatuor construit un voyage sonore intense, clair et dynamique, porté par des compositions originales.
+    </p>
+
+    <div class="bottom">
+      <div class="links">
+        <a href="#">Bandcamp</a>
+        <a href="#">Spotify</a>
+        <a href="#">Instagram</a>
+        <a href="mailto:contact@owashi.ch">contact@owashi.ch</a>
+      </div>
+      <span>© 2026</span>
+    </div>
+
+  </div>
+
+</main>
+
+<section class="quatuor">
+  <div class="side">
+    <div class="label">The band</div>
+    <p class="members-bio">
+      Ōwashi est un quatuor de rock progressif instrumental construit autour de compositions originales initiées par <em>Cyril</em> (guitare lead). À ses côtés, <em>Olivier</em> (basse), <em>Romain</em> (batterie) et <em>Deán</em> (guitare rythmique) enrichissent chaque morceau de leurs influences et sensibilités.
+    </p>
+  </div>
+  <div class="photo">
+    <img src="assets/band.png" alt="Le quatuor Ōwashi">
+    <div class="caption">
+      <span>Frg. <em>II</em></span>
+      <span>大鷲</span>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
