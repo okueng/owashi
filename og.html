@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Ōwashi OG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,900&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1200px;height:630px;overflow:hidden}
+  body{
+    background:#0b0a08;
+    color:#f4f2ee;
+    font-family:"Fraunces",serif;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    position:relative;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+  }
+  .visual{
+    position:relative;
+    overflow:hidden;
+    background:#000;
+  }
+  .visual img{
+    position:absolute;inset:0;
+    width:100%;height:100%;
+    object-fit:cover;
+    object-position:35% 35%;
+    filter:contrast(1.06) brightness(.9);
+  }
+  .visual::after{
+    content:"";position:absolute;inset:0;
+    background:linear-gradient(90deg,rgba(0,0,0,0) 60%,rgba(11,10,8,1) 100%);
+  }
+  .content{
+    padding:60px 64px;
+    display:flex;flex-direction:column;justify-content:space-between;
+  }
+  .top{
+    display:flex;justify-content:space-between;align-items:baseline;
+    font-family:"JetBrains Mono",monospace;
+    font-size:14px;letter-spacing:.22em;text-transform:uppercase;
+    color:rgba(244,242,238,.55);
+  }
+  .top .kanji{
+    font-family:"Fraunces",serif;
+    font-size:24px;letter-spacing:0;color:#f4f2ee;
+  }
+  h1{
+    font-family:"Fraunces",serif;
+    font-weight:900;
+    font-variation-settings:"opsz" 144;
+    font-size:200px;
+    line-height:.82;
+    letter-spacing:-.045em;
+  }
+  h1 .ma{color:#c2541b;margin-right:.04em}
+  .tagline{
+    margin-top:24px;
+    font-family:"JetBrains Mono",monospace;
+    font-size:15px;letter-spacing:.32em;text-transform:uppercase;
+    color:#c2541b;
+    display:flex;align-items:center;gap:14px;
+  }
+  .tagline::before{content:"";width:30px;height:1px;background:#c2541b}
+  .bottom{
+    font-family:"JetBrains Mono",monospace;
+    font-size:13px;letter-spacing:.22em;text-transform:uppercase;
+    color:rgba(244,242,238,.6);
+  }
+  .bottom b{color:#f4f2ee;font-weight:400}
+</style>
+</head>
+<body>
+  <div class="visual"><img src="assets/eagle-feathers.jpg" alt=""></div>
+  <div class="content">
+    <div class="top">
+      <span>Quatuor instrumental</span>
+      <span class="kanji">大鷲</span>
+    </div>
+    <div>
+      <h1><span class="ma">Ō</span>washi</h1>
+      <div class="tagline">Rock progressif</div>
+    </div>
+    <div class="bottom">Suisse romande — <b>owashi.band</b></div>
+  </div>
+</body>
+</html>
