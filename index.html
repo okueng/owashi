@@ -108,12 +108,21 @@
   @media(max-width:860px){.content{padding:36px 24px}}
 
   .top{
-    display:flex;justify-content:flex-end;align-items:baseline;
+    display:flex;justify-content:space-between;align-items:baseline;
     font-family:"JetBrains Mono",monospace;
     font-size:11px;letter-spacing:.22em;text-transform:uppercase;
     color:var(--slate);
   }
   .top .kanji{font-family:"Fraunces",serif;font-size:18px;letter-spacing:0;color:var(--ink)}
+  .lang{display:flex;gap:18px;align-items:center}
+  .lang button{
+    background:none;border:0;padding:0;cursor:pointer;
+    font:inherit;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--slate);transition:color .15s;
+  }
+  .lang button[data-lang="ja"]{font-family:"Fraunces",serif;font-size:14px;letter-spacing:0}
+  .lang button:hover{color:var(--ink)}
+  .lang button.active{color:var(--rust)}
 
   .wordmark{margin:auto 0}
   .wordmark h1{
@@ -281,6 +290,11 @@
   <div class="content">
 
     <div class="top">
+      <div class="lang" role="group" aria-label="Language">
+        <button type="button" data-lang="fr">FR</button>
+        <button type="button" data-lang="en">EN</button>
+        <button type="button" data-lang="ja">日</button>
+      </div>
       <span class="kanji">大鷲</span>
     </div>
 
@@ -289,12 +303,12 @@
       <div class="tagline">Instrumental progressive rock</div>
     </div>
 
-    <p class="bio">
+    <p class="bio" data-i18n="bio.main">
       Basé en Suisse romande, Ōwashi propose un <em>rock progressif instrumental immersif</em>, entre riffs mélodiques, textures planantes et poussées métal. Sur scène, le quatuor construit un voyage sonore intense, clair et dynamique.
     </p>
 
     <div class="demo">
-      <div class="label">Démo — Kepler 1-b</div>
+      <div class="label" data-i18n="demo.label">Démo — Kepler 1-b</div>
       <iframe
         title="Kepler 1-b — Ōwashi (SoundCloud)"
         allow="autoplay"
@@ -306,7 +320,7 @@
       <div class="links">
         <a href="https://soundcloud.com/owashi-band-official" target="_blank" rel="noopener">SoundCloud</a>
         <a href="https://www.instagram.com/owashiband/" target="_blank" rel="noopener">Instagram</a>
-        <a href="mailto:contact@owashi.ch">contact@owashi.ch</a>
+        <a href="mailto:contact@owashi.band">contact@owashi.band</a>
       </div>
       <span>© 2026</span>
     </div>
@@ -318,7 +332,7 @@
 <section class="quatuor">
   <div class="side">
     <div class="label">The band</div>
-    <p class="members-bio">
+    <p class="members-bio" data-i18n="bio.members">
       Le groupe s'est construit autour de compositions originales initiées par <em>Cyril</em> (guitare lead). À ses côtés, <em>Olivier</em> (basse), <em>Romain</em> (batterie) et <em>Deán</em> (guitare rythmique) enrichissent chaque morceau de leurs influences et sensibilités.
     </p>
   </div>
@@ -330,6 +344,58 @@
     </div>
   </div>
 </section>
+
+<script>
+(() => {
+  const I18N = {
+    fr: {
+      'bio.main': 'Basé en Suisse romande, Ōwashi propose un <em>rock progressif instrumental immersif</em>, entre riffs mélodiques, textures planantes et poussées métal. Sur scène, le quatuor construit un voyage sonore intense, clair et dynamique.',
+      'demo.label': 'Démo — Kepler 1-b',
+      'bio.members': "Le groupe s'est construit autour de compositions originales initiées par <em>Cyril</em> (guitare lead). À ses côtés, <em>Olivier</em> (basse), <em>Romain</em> (batterie) et <em>Deán</em> (guitare rythmique) enrichissent chaque morceau de leurs influences et sensibilités."
+    },
+    en: {
+      'bio.main': 'Based in French-speaking Switzerland, Ōwashi crafts an <em>immersive instrumental progressive rock</em> — melodic riffs, sweeping textures and metallic surges. On stage, the quartet builds an intense, clear and dynamic sonic journey.',
+      'demo.label': 'Demo — Kepler 1-b',
+      'bio.members': 'The band came together around original compositions written by <em>Cyril</em> (lead guitar). Alongside him, <em>Olivier</em> (bass), <em>Romain</em> (drums) and <em>Deán</em> (rhythm guitar) bring their own influences and sensibilities to every track.'
+    },
+    ja: {
+      'bio.main': 'スイス・ロマンド地方を拠点とするŌwashiは、メロディアスなリフ、広がりのあるテクスチャ、メタル的な勢いが交差する<em>没入型のインストゥルメンタル・プログレッシブ・ロック</em>を奏でる。ライブでは、強烈で透明感のあるダイナミックな音の旅を紡ぎ出す。',
+      'demo.label': 'デモ — Kepler 1-b',
+      'bio.members': 'バンドは<em>Cyril</em>（リードギター）が手がけたオリジナル曲を軸に結成された。<em>Olivier</em>（ベース）、<em>Romain</em>（ドラム）、<em>Deán</em>（リズムギター）が、それぞれの感性と影響を各曲に注ぎ込んでいる。'
+    }
+  };
+
+  const SUPPORTED = ['fr', 'en', 'ja'];
+
+  function applyLang(lang){
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.dataset.i18n;
+      const txt = I18N[lang]?.[key];
+      if (txt) el.innerHTML = txt;
+    });
+    document.querySelectorAll('.lang button').forEach(b => {
+      b.classList.toggle('active', b.dataset.lang === lang);
+      b.setAttribute('aria-pressed', b.dataset.lang === lang);
+    });
+    try { localStorage.setItem('owashi-lang', lang); } catch(e){}
+  }
+
+  function detect(){
+    let stored;
+    try { stored = localStorage.getItem('owashi-lang'); } catch(e){}
+    if (stored && SUPPORTED.includes(stored)) return stored;
+    const browser = (navigator.language || 'en').toLowerCase().split('-')[0];
+    return SUPPORTED.includes(browser) ? browser : 'en';
+  }
+
+  document.querySelectorAll('.lang button').forEach(b => {
+    b.addEventListener('click', () => applyLang(b.dataset.lang));
+  });
+
+  applyLang(detect());
+})();
+</script>
 
 </body>
 </html>
