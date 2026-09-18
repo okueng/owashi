@@ -114,7 +114,7 @@
   .haze{
     position:absolute;left:0;top:0;width:150vmax;height:150vmax;
     transform:translate3d(calc(var(--lx) - 75vmax),calc(var(--ly) - 75vmax),0);
-    background:radial-gradient(circle closest-side, rgba(226,229,236,.115) 0%, rgba(226,229,236,.05) 22%, rgba(226,229,236,.014) 42%, transparent 60%);
+    background:radial-gradient(circle closest-side, rgba(226,229,236,.20) 0%, rgba(226,229,236,.09) 20%, rgba(226,229,236,.03) 38%, transparent 56%);
     opacity:var(--fo);pointer-events:none;will-change:transform;
   }
   .hero .inner{position:relative}
@@ -521,7 +521,7 @@
     s.setProperty('--lx', light.x.toFixed(1) + 'px'); s.setProperty('--ly', light.y.toFixed(1) + 'px');
     if (pupil) {   // shadow falls away from the light
       const dx = pupil.x + innerWidth * .18 - light.x, dy = pupil.y - light.y, d = Math.hypot(dx, dy) || 1;
-      const k = Math.min(1, d / 700) * 14;
+      const k = Math.min(1, d / 700) * 18;
       s.setProperty('--sx', (dx / d * k).toFixed(1) + 'px'); s.setProperty('--sy', (6 + dy / d * k).toFixed(1) + 'px');
     }
     const moving = Math.abs(light.tx - light.x) + Math.abs(light.ty - light.y) > .3;
