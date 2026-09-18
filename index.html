@@ -98,7 +98,7 @@
   .lang button.active{color:var(--bg);background:var(--fg)}
 
   /* ---- Hero (pinned; scroll drives the "through the eye" sequence) ---- */
-  .hero-wrap{height:calc(100svh + 130vh);margin-bottom:-55svh}
+  .hero-wrap{height:calc(100svh + 110vh);margin-bottom:-55svh}
   main > section:not(.hero){position:relative;z-index:2}
   .hero{
     position:sticky;top:0;
@@ -107,7 +107,7 @@
     padding:120px var(--gutter) 80px;
     text-align:center;
     overflow:hidden;
-    --fo:1;--so:0;--spread:0px;--zoom:1;--shift:0px;--sw:13;--fade:1;--ui:1;
+    --fo:1;--so:0;--zoom:1;--shift:0px;--sw:13;--fade:1;--ui:1;
     --lx:50vw;--ly:40vh;--sx:0px;--sy:10px;
   }
   /* stage haze: one soft backlight behind the sign, panned slowly toward the pointer */
@@ -127,7 +127,6 @@
     opacity:var(--fade);
     will-change:transform,opacity;
   }
-  .wm .gl{transform:translateX(calc(var(--spread) * var(--k)));will-change:transform}
   .wm .solid{
     opacity:var(--fo);
     filter:drop-shadow(var(--sx) var(--sy) 26px rgba(0,0,0,.65));
@@ -300,8 +299,8 @@
     <div class="inner">
       <h1 class="wordmark" aria-label="Ōwashi">
         <svg class="wm" viewBox="-40 -40 7195 1936" role="img" aria-label="Ōwashi">
-          <g class="solid"><g class="gl" style="--k:-2.5"><use href="#g0"/></g><g class="gl" style="--k:-1.5"><use href="#g1"/></g><g class="gl" style="--k:-0.5"><use href="#g2"/></g><g class="gl" style="--k:0.5"><use href="#g3"/></g><g class="gl" style="--k:1.5"><use href="#g4"/></g><g class="gl" style="--k:2.5"><use href="#g5"/></g></g>
-          <g class="wire"><g class="gl" style="--k:-2.5"><use href="#g0"/></g><g class="gl" style="--k:-1.5"><use href="#g1"/></g><g class="gl" style="--k:-0.5"><use href="#g2"/></g><g class="gl" style="--k:0.5"><use href="#g3"/></g><g class="gl" style="--k:1.5"><use href="#g4"/></g><g class="gl" style="--k:2.5"><use href="#g5"/></g></g>
+          <g class="solid"><g class="gl"><use href="#g0"/></g><g class="gl"><use href="#g1"/></g><g class="gl"><use href="#g2"/></g><g class="gl"><use href="#g3"/></g><g class="gl"><use href="#g4"/></g><g class="gl"><use href="#g5"/></g></g>
+          <g class="wire"><g class="gl"><use href="#g0"/></g><g class="gl"><use href="#g1"/></g><g class="gl"><use href="#g2"/></g><g class="gl"><use href="#g3"/></g><g class="gl"><use href="#g4"/></g><g class="gl"><use href="#g5"/></g></g>
         </svg>
       </h1>
       <div class="ui">
@@ -467,19 +466,18 @@
     if (reduce) return;
     const max = wrap.offsetHeight - innerHeight;
     p = max > 0 ? clamp(scrollY / max, 0, 1) : 0;
-    const hollow = ease(span(p, 0, .5));       // solid -> wireframe, letters drift apart
-    const zoom   = ease(span(p, .42, 1));      // fly through the eye
+    const hollow = ease(span(p, 0, .4));       // solid -> wireframe
+    const zoom   = ease(span(p, .06, 1));      // fly straight into the eye
     const s = hero.style;
     s.setProperty('--fo', (1 - hollow).toFixed(3));
     hero.classList.toggle('hollow', hollow >= 1);
     s.setProperty('--so', (Math.min(1, hollow * 1.6) * (1 - span(zoom, .55, 1))).toFixed(3));
-    s.setProperty('--spread', (hollow * 190).toFixed(1) + 'px');
     const z = 1 + zoom * 3.4;
     s.setProperty('--zoom', z.toFixed(4));
     s.setProperty('--sw', (13 / Math.sqrt(z)).toFixed(2));
     // carry the pupil to the centre of the viewport as we fly through it
     const r = wm.getBoundingClientRect();
-    const pupilX = r.left + r.width * .1117 - 2.5 * (hollow * 190) * (r.width / 7195);
+    const pupilX = r.left + r.width * .1117;
     pupil = { x: pupilX, y: r.top + r.height * .584 };
     s.setProperty('--shift', ((innerWidth / 2 - pupilX) * zoom).toFixed(1) + 'px');
     s.setProperty('--fade', (1 - span(zoom, .5, 1)).toFixed(3));
