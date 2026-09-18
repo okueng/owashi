@@ -509,11 +509,11 @@
   }
 
   // Backlight: eases toward the pointer over ~1.5s; idles on a slow drift without a fine pointer.
-  const light = { x: innerWidth / 2, y: innerHeight * .4, tx: innerWidth / 2, ty: innerHeight * .4, raf: 0, t0: performance.now() };
+  const light = { x: -innerWidth * .2, y: innerHeight * 1.1, tx: innerWidth / 2, ty: innerHeight * .4, raf: 0, t0: performance.now(), sx: 0, sy: 0 };
   function lightFrame(now){
     light.raf = 0;
-    if (!finePointer) {
-      const t = (now - light.t0) / 1000;
+    if (!finePointer && now - light.t0 > 3000) {
+      const t = (now - light.t0 - 3000) / 1000;
       light.tx = innerWidth * (.5 + .28 * Math.sin(t * .23)); light.ty = innerHeight * (.42 + .16 * Math.sin(t * .17 + 1.3));
     }
     light.x += (light.tx - light.x) * .035; light.y += (light.ty - light.y) * .035;
@@ -522,7 +522,8 @@
     if (pupil) {   // shadow falls away from the light
       const dx = pupil.x + innerWidth * .18 - light.x, dy = pupil.y - light.y, d = Math.hypot(dx, dy) || 1;
       const k = Math.min(1, d / 700) * 18;
-      s.setProperty('--sx', (dx / d * k).toFixed(1) + 'px'); s.setProperty('--sy', (6 + dy / d * k).toFixed(1) + 'px');
+      const sx = Math.round(dx / d * k), sy = Math.round(6 + dy / d * k);
+      if (sx !== light.sx || sy !== light.sy) { light.sx = sx; light.sy = sy; s.setProperty('--sx', sx + 'px'); s.setProperty('--sy', sy + 'px'); }
     }
     const moving = Math.abs(light.tx - light.x) + Math.abs(light.ty - light.y) > .3;
     if ((moving || !finePointer) && p < 1) light.raf = requestAnimationFrame(lightFrame);
