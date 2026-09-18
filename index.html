@@ -178,13 +178,6 @@
     font-size:15px;line-height:1.7;color:var(--fg-2);max-width:44ch;
   }
   .aside p+p{margin-top:14px}
-  .meta{
-    display:grid;grid-template-columns:auto 1fr;gap:8px 20px;
-    font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:400;
-    color:var(--fg-3);margin-top:28px;
-  }
-  .meta b{font-weight:400;color:var(--fg-2);letter-spacing:.08em;text-transform:none;font-size:14px}
-  .meta .kanji{font-family:var(--font-ja);font-size:15px;letter-spacing:.2em}
 
   /* ---- Listen ---- */
   .player{
@@ -212,21 +205,7 @@
     background:linear-gradient(180deg,var(--bg) 0%,rgba(11,11,12,.72) 30%,rgba(11,11,12,.78) 70%,var(--bg) 100%);
   }
   .band .block{border-top:0}
-  .members{
-    display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
-    border-top:1px solid var(--line-2);
-  }
-  @media(max-width:760px){.members{grid-template-columns:repeat(2,minmax(0,1fr))}}
-  .member{
-    padding:26px 22px 30px 0;
-    border-bottom:1px solid var(--line);
-    display:flex;flex-direction:column;gap:10px;
-  }
-  .member .idx{font-size:11px;letter-spacing:.24em;color:var(--fg-3);font-weight:400}
-  .member .name{font-size:clamp(24px,2.6vw,36px);font-weight:400;line-height:1.05;letter-spacing:-.01em}
-  .member .role{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--fg-2);font-weight:400}
-  html[lang="ja"] .member .role{letter-spacing:.1em}
-  .band .aside{margin-top:clamp(36px,6vh,64px);max-width:60ch;font-size:clamp(16px,1.5vw,20px);line-height:1.6}
+  .band .aside{max-width:60ch;font-size:clamp(16px,1.5vw,20px);line-height:1.6}
   .band .aside strong{font-weight:400;color:var(--fg)}
 
   /* ---- Contact / footer ---- */
@@ -298,12 +277,6 @@
         <p class="lede" data-i18n="about.lede">Un <strong>rock progressif instrumental</strong> immersif, entre riffs mélodiques, textures planantes et poussées métal.</p>
         <div class="aside">
           <p data-i18n="about.text">Basé en Suisse romande, <span class="om">Ōwashi</span> construit sur scène un voyage sonore intense, clair et dynamique. Des compositions originales qui prennent leur temps, montent, respirent et frappent.</p>
-          <dl class="meta">
-            <dt data-i18n="meta.name">Nom</dt><dd><b>Ōwashi</b> <span class="kanji">大鷲</span></dd>
-            <dt data-i18n="meta.meaning">Sens</dt><dd><b data-i18n="meta.meaning.v">« Grand aigle » en japonais</b></dd>
-            <dt data-i18n="meta.from">Base</dt><dd><b data-i18n="meta.from.v">Suisse romande</b></dd>
-            <dt data-i18n="meta.form">Formation</dt><dd><b data-i18n="meta.form.v">Quatuor · instrumental</b></dd>
-          </dl>
         </div>
       </div>
     </div>
@@ -330,13 +303,7 @@
   <section id="band" class="band">
     <div class="wrap block">
       <div class="label"><svg class="eye"><use href="#eye"/></svg><span data-i18n="band.label">Quatuor</span></div>
-      <div class="members">
-        <div class="member"><span class="idx">01</span><span class="name">Cyril</span><span class="role" data-i18n="role.lead">Guitare lead</span></div>
-        <div class="member"><span class="idx">02</span><span class="name">Fab</span><span class="role" data-i18n="role.rhythm">Guitare rythmique</span></div>
-        <div class="member"><span class="idx">03</span><span class="name">Olivier</span><span class="role" data-i18n="role.bass">Basse</span></div>
-        <div class="member"><span class="idx">04</span><span class="name">Romain</span><span class="role" data-i18n="role.drums">Batterie</span></div>
-      </div>
-      <p class="aside" data-i18n="band.text">Le groupe s'est construit autour de compositions originales initiées par <strong>Cyril</strong>. À ses côtés, <strong>Fab</strong>, <strong>Olivier</strong> et <strong>Romain</strong> enrichissent chaque morceau de leurs influences et sensibilités.</p>
+      <p class="aside" data-i18n="band.text">Le groupe s'est construit autour de compositions originales initiées par <strong>Cyril</strong> (guitare lead). À ses côtés, <strong>Fab</strong> (guitare rythmique), <strong>Olivier</strong> (basse) et <strong>Romain</strong> (batterie) enrichissent chaque morceau de leurs influences et sensibilités.</p>
     </div>
   </section>
 
@@ -377,13 +344,9 @@
       'about.label': 'Le groupe',
       'about.lede': 'Un <strong>rock progressif instrumental</strong> immersif, entre riffs mélodiques, textures planantes et poussées métal.',
       'about.text': 'Basé en Suisse romande, <span class="om">Ōwashi</span> construit sur scène un voyage sonore intense, clair et dynamique. Des compositions originales qui prennent leur temps, montent, respirent et frappent.',
-      'meta.name': 'Nom', 'meta.meaning': 'Sens', 'meta.meaning.v': '« Grand aigle » en japonais',
-      'meta.from': 'Base', 'meta.from.v': 'Suisse romande',
-      'meta.form': 'Formation', 'meta.form.v': 'Quatuor · instrumental',
       'listen.label': 'Écouter', 'listen.demo': 'Démo', 'listen.more': 'Tout sur SoundCloud',
       'band.label': 'Quatuor',
-      'role.lead': 'Guitare lead', 'role.rhythm': 'Guitare rythmique', 'role.bass': 'Basse', 'role.drums': 'Batterie',
-      'band.text': "Le groupe s'est construit autour de compositions originales initiées par <strong>Cyril</strong>. À ses côtés, <strong>Fab</strong>, <strong>Olivier</strong> et <strong>Romain</strong> enrichissent chaque morceau de leurs influences et sensibilités.",
+      'band.text': "Le groupe s'est construit autour de compositions originales initiées par <strong>Cyril</strong> (guitare lead). À ses côtés, <strong>Fab</strong> (guitare rythmique), <strong>Olivier</strong> (basse) et <strong>Romain</strong> (batterie) enrichissent chaque morceau de leurs influences et sensibilités.",
       'contact.label': 'Contact', 'contact.text': 'Concerts, presse, projets :',
       'footer.loc': 'Suisse romande'
     },
@@ -394,13 +357,9 @@
       'about.label': 'The band',
       'about.lede': 'Immersive <strong>instrumental progressive rock</strong> — melodic riffs, sweeping textures and metallic surges.',
       'about.text': 'Based in French-speaking Switzerland, <span class="om">Ōwashi</span> builds an intense, clear and dynamic sonic journey on stage. Original compositions that take their time, climb, breathe and hit.',
-      'meta.name': 'Name', 'meta.meaning': 'Meaning', 'meta.meaning.v': '“Great eagle” in Japanese',
-      'meta.from': 'Based in', 'meta.from.v': 'French-speaking Switzerland',
-      'meta.form': 'Line-up', 'meta.form.v': 'Quartet · instrumental',
       'listen.label': 'Listen', 'listen.demo': 'Demo', 'listen.more': 'More on SoundCloud',
       'band.label': 'Quartet',
-      'role.lead': 'Lead guitar', 'role.rhythm': 'Rhythm guitar', 'role.bass': 'Bass', 'role.drums': 'Drums',
-      'band.text': 'The band came together around original compositions written by <strong>Cyril</strong>. Alongside him, <strong>Fab</strong>, <strong>Olivier</strong> and <strong>Romain</strong> bring their own influences and sensibilities to every track.',
+      'band.text': 'The band came together around original compositions written by <strong>Cyril</strong> (lead guitar). Alongside him, <strong>Fab</strong> (rhythm guitar), <strong>Olivier</strong> (bass) and <strong>Romain</strong> (drums) bring their own influences and sensibilities to every track.',
       'contact.label': 'Contact', 'contact.text': 'Shows, press, projects:',
       'footer.loc': 'Switzerland'
     },
@@ -411,13 +370,9 @@
       'about.label': 'バンドについて',
       'about.lede': 'メロディアスなリフ、広がりのあるテクスチャ、メタル的な勢いが交差する、没入型の<strong>インストゥルメンタル・プログレッシブ・ロック</strong>。',
       'about.text': 'スイス・ロマンド地方を拠点とする<span class="om">Ōwashi</span>は、ライブで強烈かつ透明感のあるダイナミックな音の旅を紡ぎ出す。時間をかけて高まり、呼吸し、そして打ちつけるオリジナル曲。',
-      'meta.name': '名前', 'meta.meaning': '意味', 'meta.meaning.v': '日本語の「大鷲」より',
-      'meta.from': '拠点', 'meta.from.v': 'スイス・ロマンド地方',
-      'meta.form': '編成', 'meta.form.v': 'カルテット · インストゥルメンタル',
       'listen.label': '聴く', 'listen.demo': 'デモ', 'listen.more': 'SoundCloud で聴く',
       'band.label': 'メンバー',
-      'role.lead': 'リードギター', 'role.rhythm': 'リズムギター', 'role.bass': 'ベース', 'role.drums': 'ドラム',
-      'band.text': 'バンドは<strong>Cyril</strong>が手がけたオリジナル曲を軸に結成された。<strong>Fab</strong>、<strong>Olivier</strong>、<strong>Romain</strong>が、それぞれの感性と影響を各曲に注ぎ込んでいる。',
+      'band.text': 'バンドは<strong>Cyril</strong>（リードギター）が手がけたオリジナル曲を軸に結成された。<strong>Fab</strong>（リズムギター）、<strong>Olivier</strong>（ベース）、<strong>Romain</strong>（ドラム）が、それぞれの感性と影響を各曲に注ぎ込んでいる。',
       'contact.label': 'コンタクト', 'contact.text': 'ライブ、取材、プロジェクトのご相談：',
       'footer.loc': 'スイス'
     }
