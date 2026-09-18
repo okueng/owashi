@@ -108,7 +108,16 @@
     text-align:center;
     overflow:hidden;
     --fo:1;--so:0;--spread:0px;--zoom:1;--shift:0px;--sw:13;--fade:1;--ui:1;
+    --lx:50vw;--ly:40vh;--sx:0px;--sy:10px;
   }
+  /* stage haze: one soft backlight behind the sign, panned slowly toward the pointer */
+  .haze{
+    position:absolute;left:0;top:0;width:150vmax;height:150vmax;
+    transform:translate3d(calc(var(--lx) - 75vmax),calc(var(--ly) - 75vmax),0);
+    background:radial-gradient(circle closest-side, rgba(226,229,236,.115) 0%, rgba(226,229,236,.05) 22%, rgba(226,229,236,.014) 42%, transparent 60%);
+    opacity:var(--fo);pointer-events:none;will-change:transform;
+  }
+  .hero .inner{position:relative}
   .hero .inner{display:flex;flex-direction:column;align-items:center;gap:clamp(28px,4vh,44px)}
   .wordmark{width:min(78vw,980px);color:var(--fg)}
   .wordmark .wm{
@@ -121,7 +130,7 @@
   .wm .gl{transform:translateX(calc(var(--spread) * var(--k)));will-change:transform}
   .wm .solid{
     opacity:var(--fo);
-    filter:drop-shadow(0 0 28px rgba(255,255,255,.10)) drop-shadow(0 10px 30px rgba(0,0,0,.6));
+    filter:drop-shadow(var(--sx) var(--sy) 26px rgba(0,0,0,.65));
   }
   .wm .solid use{fill:currentColor;stroke:#000;stroke-width:34;stroke-linejoin:round;paint-order:stroke fill}
   .hero.hollow .solid{visibility:hidden}
@@ -169,6 +178,7 @@
     .hero-wrap{margin-bottom:0}
     .hero{position:static;height:auto;min-height:100svh}
     #pupil{transition:none}
+    .haze{display:none}
   }
 
   /* ---- Sections ---- */
@@ -288,6 +298,7 @@
 
   <div class="hero-wrap">
   <section class="hero" id="top">
+    <div class="haze" aria-hidden="true"></div>
     <div class="inner">
       <h1 class="wordmark" aria-label="Ōwashi">
         <svg class="wm" viewBox="-40 -40 7195 1936" role="img" aria-label="Ōwashi">
@@ -497,10 +508,36 @@
     addEventListener('pointerleave', () => look(0, 0));
   }
 
+  // Backlight: eases toward the pointer over ~1.5s; idles on a slow drift without a fine pointer.
+  const light = { x: innerWidth / 2, y: innerHeight * .4, tx: innerWidth / 2, ty: innerHeight * .4, raf: 0, t0: performance.now() };
+  function lightFrame(now){
+    light.raf = 0;
+    if (!finePointer) {
+      const t = (now - light.t0) / 1000;
+      light.tx = innerWidth * (.5 + .28 * Math.sin(t * .23)); light.ty = innerHeight * (.42 + .16 * Math.sin(t * .17 + 1.3));
+    }
+    light.x += (light.tx - light.x) * .035; light.y += (light.ty - light.y) * .035;
+    const s = hero.style;
+    s.setProperty('--lx', light.x.toFixed(1) + 'px'); s.setProperty('--ly', light.y.toFixed(1) + 'px');
+    if (pupil) {   // shadow falls away from the light
+      const dx = pupil.x + innerWidth * .18 - light.x, dy = pupil.y - light.y, d = Math.hypot(dx, dy) || 1;
+      const k = Math.min(1, d / 700) * 14;
+      s.setProperty('--sx', (dx / d * k).toFixed(1) + 'px'); s.setProperty('--sy', (6 + dy / d * k).toFixed(1) + 'px');
+    }
+    const moving = Math.abs(light.tx - light.x) + Math.abs(light.ty - light.y) > .3;
+    if ((moving || !finePointer) && p < 1) light.raf = requestAnimationFrame(lightFrame);
+  }
+  function wake(){ if (!reduce && !light.raf) light.raf = requestAnimationFrame(lightFrame); }
+  if (finePointer && !reduce) {
+    addEventListener('pointermove', e => { light.tx = e.clientX; light.ty = e.clientY; wake(); }, { passive: true });
+    document.addEventListener('pointerleave', () => { light.tx = innerWidth / 2; light.ty = innerHeight * .4; wake(); });
+  }
+  wake();
+
   let ticking = false;
   addEventListener('scroll', () => {
     if (ticking) return; ticking = true;
-    requestAnimationFrame(() => { update(); ticking = false; });
+    requestAnimationFrame(() => { update(); wake(); ticking = false; });
   }, { passive: true });
   addEventListener('resize', update);
   update();
