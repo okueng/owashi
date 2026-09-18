@@ -76,6 +76,15 @@
     background:linear-gradient(180deg,rgba(0,0,0,0) 60%,rgba(0,0,0,.55) 100%);
   }
 
+  /* ---- Persistent faint Ō: the ring you flew through stays around the page ---- */
+  .watermark{
+    position:fixed;left:50%;top:0;z-index:0;
+    width:var(--wmW,900px);
+    transform:translate(-50%,var(--wmY,0px));
+    opacity:var(--wmO,0);pointer-events:none;will-change:transform,opacity;
+  }
+  .watermark svg{width:100%;height:auto;fill:none;stroke:var(--fg);stroke-width:var(--wmSW,3);stroke-linejoin:round}
+
   /* ---- Header ---- */
   .top{
     position:absolute;top:0;left:0;right:0;z-index:5;
@@ -282,6 +291,7 @@
 </svg>
 
 <div class="wall" aria-hidden="true"></div>
+<div class="watermark" aria-hidden="true"><svg viewBox="0 0 1528 1854"><use href="#g0"/></svg></div>
 
 <header class="top">
   <a class="mark" href="#" aria-label="Ōwashi"><svg viewBox="-40 -40 7195 1936"><use href="#wordmark"/></svg></a>
@@ -482,6 +492,14 @@
     pupil = { x: pupilX, y: r.top + r.height * .584 };
     s.setProperty('--shift', ((innerWidth / 2 - pupilX) * zoom).toFixed(1) + 'px');
     s.setProperty('--fade', (1 - span(zoom, .5, 1)).toFixed(3));
+    // persistent ring: same size and place as the fully zoomed Ō
+    const wmW = r.width * (1528 / 7195) * 4.4, wmH = wmW * (1854 / 1528);
+    const overshoot = Math.max(0, scrollY - max);
+    const rs = root.style;
+    rs.setProperty('--wmW', wmW.toFixed(1) + 'px');
+    rs.setProperty('--wmSW', (1528 / wmW * 1.4).toFixed(2));
+    rs.setProperty('--wmY', ((r.top + r.height * .584) - wmH * (1091 / 1854) - overshoot * .06).toFixed(1) + 'px');
+    rs.setProperty('--wmO', (span(p, .78, 1) * .065).toFixed(3));
     s.setProperty('--ui', (1 - span(p, 0, .22)).toFixed(3));
   }
 
