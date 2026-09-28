@@ -178,14 +178,6 @@
   section{position:relative}
   .wrap{max-width:var(--max);margin:0 auto;padding:0 var(--gutter)}
   .block{padding-block:clamp(72px,11vh,128px);border-top:1px solid var(--line)}
-  .label{
-    display:flex;align-items:center;gap:12px;
-    font-size:11px;letter-spacing:.28em;text-transform:uppercase;font-weight:400;
-    color:var(--fg-3);
-    margin-bottom:clamp(28px,4vh,44px);
-  }
-  .label .eye{width:16px;height:16px;fill:var(--fg-2)}
-  .label .num{color:var(--fg-3)}
 
   .grid{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,8fr);gap:clamp(24px,4vw,64px);align-items:start}
   @media(max-width:760px){.grid{grid-template-columns:1fr}}
@@ -369,7 +361,6 @@
 
   <section id="contact" class="contact">
     <div class="wrap block">
-      <div class="label"><svg class="eye"><use href="#eye"/></svg><span data-i18n="contact.label">Contact</span></div>
       <div class="links">
         <a href="https://soundcloud.com/owashi-band-official" target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 14.5h1.5v4H2zm2.5-1.5H6v5.5H4.5zm2.5-2h1.5V19H7zm2.5-1H11v9H9.5zm2.5-2H13.5V19H12zm2.6-2.2c.5-.3 1.2-.5 1.9-.5 2.3 0 4.2 1.9 4.3 4.2 1.7.2 3 1.6 3 3.3A3.3 3.3 0 0 1 20 19h-5.4z"/></svg>
@@ -404,7 +395,7 @@
       'about.text': 'Basé en Suisse romande, <span class="om">Ōwashi</span> construit sur scène un voyage sonore intense, clair et dynamique. Des compositions originales qui prennent leur temps, montent, respirent et frappent.',
       'band.alt': 'Ōwashi : Cyril, Fab, Olivier et Romain devant une façade vitrée',
       'band.text': "Le groupe s'est construit autour des compositions originales de <strong>Cyril</strong>, aujourd'hui rejointes par celles de <strong>Fab</strong>. Tous deux se partagent guitares lead et rythmique ; <strong>Olivier</strong> (basse) et <strong>Romain</strong> (batterie) enrichissent chaque morceau de leurs influences et sensibilités.",
-      'contact.label': 'Contact', 'contact.text': 'Concerts, presse, projets :',
+      'contact.text': 'Concerts, presse, projets :',
       'footer.loc': 'Suisse romande'
     },
     en: {
@@ -414,7 +405,7 @@
       'about.text': 'Based in French-speaking Switzerland, <span class="om">Ōwashi</span> builds an intense, clear and dynamic sonic journey on stage. Original compositions that take their time, climb, breathe and hit.',
       'band.alt': 'Ōwashi: Cyril, Fab, Olivier and Romain in front of a glass façade',
       'band.text': 'The band came together around <strong>Cyril</strong>\'s original compositions, now joined by <strong>Fab</strong>\'s. The two share lead and rhythm guitar, while <strong>Olivier</strong> (bass) and <strong>Romain</strong> (drums) bring their own influences and sensibilities to every track.',
-      'contact.label': 'Contact', 'contact.text': 'Shows, press, projects:',
+      'contact.text': 'Shows, press, projects:',
       'footer.loc': 'Switzerland'
     },
     ja: {
@@ -424,7 +415,7 @@
       'about.text': 'スイス・ロマンド地方を拠点とする<span class="om">Ōwashi</span>は、ライブで強烈かつ透明感のあるダイナミックな音の旅を紡ぎ出す。時間をかけて高まり、呼吸し、そして打ちつけるオリジナル曲。',
       'band.alt': 'Ōwashi：Cyril、Fab、Olivier、Romain',
       'band.text': 'バンドは<strong>Cyril</strong>のオリジナル曲を軸に結成され、現在は<strong>Fab</strong>の楽曲も加わっている。二人はリードとリズムの両ギターを分け合い、<strong>Olivier</strong>（ベース）と<strong>Romain</strong>（ドラム）がそれぞれの感性と影響を各曲に注ぎ込んでいる。',
-      'contact.label': 'コンタクト', 'contact.text': 'ライブ、取材、プロジェクトのご相談：',
+      'contact.text': 'ライブ、取材、プロジェクトのご相談：',
       'footer.loc': 'スイス'
     }
   };
