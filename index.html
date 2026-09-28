@@ -200,6 +200,24 @@
   }
   .aside p+p{margin-top:14px}
 
+  /* ---- Live ---- */
+  .gigs{list-style:none;border-top:1px solid var(--line-2)}
+  .gigs li{
+    display:grid;grid-template-columns:minmax(0,3fr) minmax(0,6fr) minmax(0,3fr);
+    gap:10px 24px;align-items:baseline;
+    padding:22px 0;border-bottom:1px solid var(--line);
+  }
+  .gigs time{font-size:clamp(20px,2.2vw,30px);font-weight:400;letter-spacing:-.01em;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .gigs .venue{font-size:clamp(18px,1.8vw,24px);color:var(--fg)}
+  .gigs .city{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--fg-2);text-align:right;font-weight:400}
+  .gigs li.past{opacity:.38}
+  @media(max-width:560px){
+    .gigs li{grid-template-columns:1fr auto}
+    .gigs time{grid-row:1;grid-column:1}
+    .gigs .city{grid-row:1;grid-column:2}
+    .gigs .venue{grid-row:2;grid-column:1/-1;margin-top:-4px}
+  }
+
   /* ---- Listen ---- */
   .player{
     border:1px solid var(--line);
@@ -337,6 +355,15 @@
     </div>
   </section>
 
+  <section id="live">
+    <div class="wrap block">
+      <ul class="gigs">
+        <li><time datetime="2026-11-28">28 nov. 2026</time><span class="venue">Pression et Distortions</span><span class="city">Renens</span></li>
+        <li><time datetime="2027-04-24">24 avr. 2027</time><span class="venue">La Syncope</span><span class="city">Morges</span></li>
+      </ul>
+    </div>
+  </section>
+
   <section id="listen">
     <div class="wrap block">
       <div class="player">
@@ -434,6 +461,14 @@
     document.querySelectorAll('[data-i18n-alt]').forEach(el => {
       const txt = I18N[lang]?.[el.dataset.i18nAlt];
       if (txt != null) el.alt = txt;
+    });
+    const locale = { fr: 'fr-CH', en: 'en-GB', ja: 'ja-JP' }[lang] || 'en-GB';
+    const fmt = new Intl.DateTimeFormat(locale, { day: 'numeric', month: lang === 'ja' ? 'long' : 'short', year: 'numeric' });
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    document.querySelectorAll('.gigs time[datetime]').forEach(el => {
+      const d = new Date(el.dateTime + 'T12:00:00');
+      el.textContent = fmt.format(d);
+      el.closest('li').classList.toggle('past', d < today);
     });
     document.querySelectorAll('.lang button').forEach(b => {
       const on = b.dataset.lang === lang;
