@@ -6,6 +6,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["-y", "serve", "-l", "8765", "."],
       "port": 8765
+    },
+    {
+      "name": "owashi-static-alt",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["-y", "serve", "-l", "8767", "."],
+      "port": 8767
     }
   ]
 }
