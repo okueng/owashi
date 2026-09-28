@@ -191,7 +191,7 @@
   /* ---- Sections ---- */
   section{position:relative}
   .wrap{max-width:var(--max);margin:0 auto;padding:0 var(--gutter)}
-  .block{padding:clamp(72px,11vh,128px) 0;border-top:1px solid var(--line)}
+  .block{padding-block:clamp(72px,11vh,128px);border-top:1px solid var(--line)}
   .label{
     display:flex;align-items:center;gap:12px;
     font-size:11px;letter-spacing:.28em;text-transform:uppercase;font-weight:400;
@@ -246,6 +246,33 @@
   .band .block{border-top:0}
   .band .aside{max-width:60ch;font-size:clamp(16px,1.5vw,20px);line-height:1.6}
   .band .aside strong{font-weight:400;color:var(--fg)}
+  .band .grid{grid-template-columns:minmax(0,6fr) minmax(0,5fr);align-items:center}
+  /* band photo: edges dissolve into the section, the ground falls away like the page's bottom fade */
+  .band .photo{position:relative;justify-self:end;width:min(100%,460px);aspect-ratio:1200/2133}
+  .band .photo img{
+    width:100%;height:100%;object-fit:cover;
+    -webkit-mask-image:linear-gradient(90deg,transparent,#000 11%,#000 89%,transparent),linear-gradient(180deg,transparent,#000 9%,#000 74%,transparent);
+    -webkit-mask-composite:source-in;
+    mask-image:linear-gradient(90deg,transparent,#000 11%,#000 89%,transparent),linear-gradient(180deg,transparent,#000 9%,#000 74%,transparent);
+    mask-composite:intersect;
+  }
+  /* easter egg: a name lets that member's spirit drift up out of the photo */
+  .band .member{cursor:default;transition:text-shadow .8s}
+  .band .member.haunt{text-shadow:0 0 16px rgba(226,229,236,.6)}
+  .spirit,.husk{
+    position:absolute;inset:0;pointer-events:none;opacity:0;
+    /* the member's silhouette, cut by the same side fade as the photo (not the top: spirits leave through it) */
+    -webkit-mask:var(--m) 0 0/100% 100% no-repeat,linear-gradient(90deg,transparent,#000 11%,#000 89%,transparent);
+    -webkit-mask-composite:source-in;
+    mask:var(--m) 0 0/100% 100% no-repeat,linear-gradient(90deg,transparent,#000 11%,#000 89%,transparent);
+    mask-composite:intersect;
+  }
+  .spirit{background:var(--src) center/cover;mix-blend-mode:screen;will-change:transform,opacity,filter}
+  .husk{background:var(--bg)}
+  @media(max-width:760px){
+    .band .grid{grid-template-columns:1fr}
+    .band .photo{order:-1;justify-self:center;width:min(100%,520px)}
+  }
 
   /* ---- Contact / footer ---- */
   .contact .links{display:flex;flex-wrap:wrap;gap:12px}
@@ -328,7 +355,7 @@
 
   <section id="about">
     <div class="wrap block">
-      <div class="label"><svg class="eye"><use href="#eye"/></svg><span data-i18n="about.label">Le groupe</span></div>
+      <div class="label"><svg class="eye"><use href="#eye"/></svg><span data-i18n="about.label">À propos</span></div>
       <div class="grid">
         <p class="lede" data-i18n="about.lede">Un <strong>rock progressif instrumental</strong> immersif, entre riffs mélodiques, textures planantes et poussées métal.</p>
         <div class="aside">
@@ -358,8 +385,15 @@
 
   <section id="band" class="band">
     <div class="wrap block">
-      <div class="label"><svg class="eye"><use href="#eye"/></svg><span data-i18n="band.label">Quatuor</span></div>
-      <p class="aside" data-i18n="band.text">Le groupe s'est construit autour des compositions originales de <strong>Cyril</strong>, aujourd'hui rejointes par celles de <strong>Fab</strong>. Tous deux se partagent guitares lead et rythmique ; <strong>Olivier</strong> (basse) et <strong>Romain</strong> (batterie) enrichissent chaque morceau de leurs influences et sensibilités.</p>
+      <div class="label"><svg class="eye"><use href="#eye"/></svg><span data-i18n="band.label">Le groupe</span></div>
+      <div class="grid">
+        <p class="aside" data-i18n="band.text">Le groupe s'est construit autour des compositions originales de <strong>Cyril</strong>, aujourd'hui rejointes par celles de <strong>Fab</strong>. Tous deux se partagent guitares lead et rythmique ; <strong>Olivier</strong> (basse) et <strong>Romain</strong> (batterie) enrichissent chaque morceau de leurs influences et sensibilités.</p>
+        <figure class="photo">
+          <img src="assets/band-2026.jpg" srcset="assets/band-2026-720.jpg 720w, assets/band-2026.jpg 1200w" sizes="(max-width: 760px) 100vw, 460px"
+            width="1200" height="2133" loading="lazy" decoding="async"
+            alt="Ōwashi : Cyril, Fab, Olivier et Romain devant une façade vitrée" data-i18n-alt="band.alt">
+        </figure>
+      </div>
     </div>
   </section>
 
@@ -397,11 +431,12 @@
       'tagline': 'Rock progressif instrumental · Suisse romande',
       'cta': 'Écouter Kepler 1-b',
       'scroll': 'Défiler',
-      'about.label': 'Le groupe',
+      'about.label': 'À propos',
       'about.lede': 'Un <strong>rock progressif instrumental</strong> immersif, entre riffs mélodiques, textures planantes et poussées métal.',
       'about.text': 'Basé en Suisse romande, <span class="om">Ōwashi</span> construit sur scène un voyage sonore intense, clair et dynamique. Des compositions originales qui prennent leur temps, montent, respirent et frappent.',
       'listen.label': 'Écouter', 'listen.demo': 'Démo', 'listen.more': 'Tout sur SoundCloud',
-      'band.label': 'Quatuor',
+      'band.label': 'Le groupe',
+      'band.alt': 'Ōwashi : Cyril, Fab, Olivier et Romain devant une façade vitrée',
       'band.text': "Le groupe s'est construit autour des compositions originales de <strong>Cyril</strong>, aujourd'hui rejointes par celles de <strong>Fab</strong>. Tous deux se partagent guitares lead et rythmique ; <strong>Olivier</strong> (basse) et <strong>Romain</strong> (batterie) enrichissent chaque morceau de leurs influences et sensibilités.",
       'contact.label': 'Contact', 'contact.text': 'Concerts, presse, projets :',
       'footer.loc': 'Suisse romande'
@@ -410,11 +445,12 @@
       'tagline': 'Instrumental progressive rock · Switzerland',
       'cta': 'Listen to Kepler 1-b',
       'scroll': 'Scroll',
-      'about.label': 'The band',
+      'about.label': 'About',
       'about.lede': 'Immersive <strong>instrumental progressive rock</strong> — melodic riffs, sweeping textures and metallic surges.',
       'about.text': 'Based in French-speaking Switzerland, <span class="om">Ōwashi</span> builds an intense, clear and dynamic sonic journey on stage. Original compositions that take their time, climb, breathe and hit.',
       'listen.label': 'Listen', 'listen.demo': 'Demo', 'listen.more': 'More on SoundCloud',
-      'band.label': 'Quartet',
+      'band.label': 'Band',
+      'band.alt': 'Ōwashi: Cyril, Fab, Olivier and Romain in front of a glass façade',
       'band.text': 'The band came together around <strong>Cyril</strong>\'s original compositions, now joined by <strong>Fab</strong>\'s. The two share lead and rhythm guitar, while <strong>Olivier</strong> (bass) and <strong>Romain</strong> (drums) bring their own influences and sensibilities to every track.',
       'contact.label': 'Contact', 'contact.text': 'Shows, press, projects:',
       'footer.loc': 'Switzerland'
@@ -428,6 +464,7 @@
       'about.text': 'スイス・ロマンド地方を拠点とする<span class="om">Ōwashi</span>は、ライブで強烈かつ透明感のあるダイナミックな音の旅を紡ぎ出す。時間をかけて高まり、呼吸し、そして打ちつけるオリジナル曲。',
       'listen.label': '聴く', 'listen.demo': 'デモ', 'listen.more': 'SoundCloud で聴く',
       'band.label': 'メンバー',
+      'band.alt': 'Ōwashi：Cyril、Fab、Olivier、Romain',
       'band.text': 'バンドは<strong>Cyril</strong>のオリジナル曲を軸に結成され、現在は<strong>Fab</strong>の楽曲も加わっている。二人はリードとリズムの両ギターを分け合い、<strong>Olivier</strong>（ベース）と<strong>Romain</strong>（ドラム）がそれぞれの感性と影響を各曲に注ぎ込んでいる。',
       'contact.label': 'コンタクト', 'contact.text': 'ライブ、取材、プロジェクトのご相談：',
       'footer.loc': 'スイス'
@@ -440,6 +477,10 @@
     document.querySelectorAll('[data-i18n]').forEach(el => {
       const txt = I18N[lang]?.[el.dataset.i18n];
       if (txt != null) el.innerHTML = txt;
+    });
+    document.querySelectorAll('[data-i18n-alt]').forEach(el => {
+      const txt = I18N[lang]?.[el.dataset.i18nAlt];
+      if (txt != null) el.alt = txt;
     });
     document.querySelectorAll('.lang button').forEach(b => {
       const on = b.dataset.lang === lang;
@@ -457,6 +498,103 @@
   }
   document.querySelectorAll('.lang button').forEach(b => b.addEventListener('click', () => applyLang(b.dataset.lang)));
   applyLang(detect());
+})();
+</script>
+
+<script>
+// Easter egg: hover, tap or focus a member (their name, or them in the photo) and their spirit drifts up out of the photo.
+(() => {
+  const text = document.querySelector('[data-i18n="band.text"]');
+  const photo = document.querySelector('.band .photo');
+  const img = photo && photo.querySelector('img');
+  if (!text || !img) return;
+  // each member's centre in the frame (from the masks in assets/ghost-*.png)
+  const MEMBERS = { fab: '13.5% 33.4%', romain: '43.1% 46.8%', olivier: '65.3% 24.1%', cyril: '70.3% 56.6%' };
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const layers = {}, running = new Set();
+
+  function tag(){
+    text.querySelectorAll('strong').forEach(s => {
+      const id = s.textContent.trim().toLowerCase();
+      if (MEMBERS[id]) { s.classList.add('member'); s.dataset.member = id; s.tabIndex = 0; }
+    });
+  }
+  new MutationObserver(tag).observe(text, { childList: true });   // the language switch rewrites the paragraph
+  tag();
+
+  function layer(cls, id, src){
+    const el = document.createElement('div');
+    el.className = cls; el.setAttribute('aria-hidden', 'true');
+    el.style.setProperty('--m', `url("assets/ghost-${id}.png")`);
+    if (src) el.style.setProperty('--src', src);
+    el.style.transformOrigin = MEMBERS[id];
+    photo.append(el);
+    return el;
+  }
+  // hit map: which member is under each point of the photo, read from the same masks
+  const ids = Object.keys(MEMBERS), MW = 288, MH = 512, hit = new Uint8Array(MW * MH);
+  function buildHitMap(){
+    const c = document.createElement('canvas'); c.width = MW; c.height = MH;
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    ids.forEach((id, k) => {
+      const m = new Image();
+      m.onload = () => {
+        ctx.clearRect(0, 0, MW, MH); ctx.drawImage(m, 0, 0, MW, MH);
+        const a = ctx.getImageData(0, 0, MW, MH).data;
+        for (let i = 0; i < hit.length; i++) if (a[i * 4 + 3] > 128) hit[i] = k + 1;
+      };
+      m.src = `assets/ghost-${id}.png`;
+    });
+  }
+  function build(){
+    const src = `url("${img.currentSrc || img.src}")`;   // same file the page already loaded
+    for (const id in MEMBERS) layers[id] = { husk: layer('husk', id), spirits: [layer('spirit', id, src), layer('spirit', id, src)] };
+    buildHitMap();
+  }
+  if (img.complete && img.naturalWidth) build(); else img.addEventListener('load', build, { once: true });
+
+  function rise(strength){
+    if (reduce) return [{ opacity: 0 }, { opacity: .5 * strength, offset: .3 }, { opacity: 0 }];
+    return [
+      { opacity: 0,              transform: 'translateY(0) scale(1)',       filter: 'brightness(1.5) blur(0px)' },
+      { opacity: .7 * strength,  transform: 'translateY(-1%) scale(1.01)',  filter: 'brightness(1.7) blur(1px)', offset: .12 },
+      { opacity: 0,              transform: 'translateY(-16%) scale(1.08)', filter: 'brightness(2) blur(10px)' }
+    ];
+  }
+  const nameOf = id => text.querySelector(`.member[data-member="${id}"]`);
+  function haunt(id){
+    const L = layers[id];
+    if (!L || running.has(id)) return;
+    running.add(id); nameOf(id)?.classList.add('haunt');
+    const easing = 'cubic-bezier(.25,.6,.3,1)';
+    const anims = L.spirits.map((s, i) => s.animate(rise(i ? .5 : 1), { duration: reduce ? 1400 : 2200 + i * 400, delay: i * 240, easing, fill: 'both' }));
+    if (!reduce) anims.push(L.husk.animate([{ opacity: 0 }, { opacity: .4, offset: .2 }, { opacity: .4, offset: .55 }, { opacity: 0 }], { duration: 2800, easing: 'ease-in-out' }));
+    Promise.all(anims.map(a => a.finished)).then(() => {
+      anims.forEach(a => a.cancel());
+      running.delete(id); nameOf(id)?.classList.remove('haunt');   // re-query: a language switch replaces the name
+    });
+  }
+  const pick = e => e.target.closest && e.target.closest('.member');
+  text.addEventListener('pointerover', e => { const m = pick(e); if (m && !m.contains(e.relatedTarget)) haunt(m.dataset.member); });
+  text.addEventListener('focusin', e => { const m = pick(e); if (m) haunt(m.dataset.member); });
+  text.addEventListener('click', e => { const m = pick(e); if (m) haunt(m.dataset.member); });
+
+  // in the photo: the mouse entering someone, or a tap on them
+  function memberAt(e){
+    const r = photo.getBoundingClientRect();
+    const x = Math.floor((e.clientX - r.left) / r.width * MW), y = Math.floor((e.clientY - r.top) / r.height * MH);
+    if (x < 0 || y < 0 || x >= MW || y >= MH) return null;
+    const k = hit[y * MW + x];
+    return k ? ids[k - 1] : null;
+  }
+  let over = null;
+  photo.addEventListener('pointermove', e => {
+    if (e.pointerType === 'touch') return;   // touch scrolls past the photo; a tap is handled by click
+    const id = memberAt(e);
+    if (id !== over) { over = id; if (id) haunt(id); }
+  });
+  photo.addEventListener('pointerleave', () => { over = null; });
+  photo.addEventListener('click', e => { const id = memberAt(e); if (id) haunt(id); });
 })();
 </script>
 
