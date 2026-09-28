@@ -123,6 +123,10 @@
     background:radial-gradient(circle closest-side, rgba(226,229,236,.20) 0%, rgba(226,229,236,.09) 20%, rgba(226,229,236,.03) 38%, transparent 56%);
     opacity:var(--fo);pointer-events:none;will-change:transform;
   }
+  @media(prefers-reduced-motion:no-preference){
+    .haze{animation:hazeon 2.6s ease}
+    @keyframes hazeon{from{opacity:0}}
+  }
   .hero .inner{position:relative}
   .hero .inner{display:flex;flex-direction:column;align-items:center;gap:clamp(28px,4vh,44px)}
   .wordmark{width:min(78vw,980px);color:var(--fg)}
@@ -589,14 +593,12 @@
     s.setProperty('--ui', (1 - span(p, 0, .22)).toFixed(3));
   }
 
-  // Backlight: sweeps in on load, then drifts slowly on its own.
-  const light = { x: -innerWidth * .2, y: innerHeight * 1.1, tx: innerWidth / 2, ty: innerHeight * .4, raf: 0, t0: performance.now(), sx: 0, sy: 0 };
+  // Backlight: rests behind the sign and drifts slowly on its own.
+  const light = { x: innerWidth / 2, y: innerHeight * .42, tx: innerWidth / 2, ty: innerHeight * .42, raf: 0, t0: performance.now(), sx: 0, sy: 0 };
   function lightFrame(now){
     light.raf = 0;
-    if (now - light.t0 > 3000) {
-      const t = (now - light.t0 - 3000) / 1000;
-      light.tx = innerWidth * (.5 + .28 * Math.sin(t * .23)); light.ty = innerHeight * (.42 + .16 * Math.sin(t * .17 + 1.3));
-    }
+    const t = (now - light.t0) / 1000;
+    light.tx = innerWidth * (.5 + .18 * Math.sin(t * .11)); light.ty = innerHeight * (.42 + .10 * Math.sin(t * .08));
     light.x += (light.tx - light.x) * .035; light.y += (light.ty - light.y) * .035;
     const s = hero.style;
     s.setProperty('--lx', light.x.toFixed(1) + 'px'); s.setProperty('--ly', light.y.toFixed(1) + 'px');
