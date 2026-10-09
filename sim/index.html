@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ōwashi Light Sim</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0b0c;
+    --fg:#f3f2ee;
+    --fg-2:rgba(243,242,238,.64);
+    --fg-3:rgba(243,242,238,.40);
+    --line:rgba(243,242,238,.12);
+    --line-2:rgba(243,242,238,.22);
+    --panel:rgba(11,11,12,.78);
+    --font:"Jost",system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:400 13px/1.4 var(--font);overflow:hidden}
+  canvas.stage{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+
+  .title{position:fixed;top:16px;left:16px;pointer-events:none}
+  .title h1{margin:0;font-weight:400;font-size:15px;letter-spacing:.14em;text-transform:uppercase}
+  .title p{margin:2px 0 0;color:var(--fg-3);font-size:12px}
+  .loading{position:fixed;inset:0;display:grid;place-items:center;color:var(--fg-3);letter-spacing:.12em;text-transform:uppercase;font-size:12px;pointer-events:none;transition:opacity .6s}
+  .loading.done{opacity:0}
+
+  .panel{position:fixed;left:16px;right:16px;bottom:16px;display:flex;flex-wrap:wrap;gap:10px 22px;align-items:flex-end;
+    padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:10px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    max-height:46vh;overflow-y:auto}
+  .group{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .group > span{color:var(--fg-3);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+  .row{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+  button{font:inherit;color:var(--fg);background:transparent;border:1px solid var(--line-2);border-radius:6px;padding:5px 9px;cursor:pointer;line-height:1.2}
+  button:hover{border-color:var(--fg-2)}
+  button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+  button kbd{font:inherit;opacity:.45;margin-left:4px;font-size:11px}
+  button[data-scene=build]{position:relative;overflow:hidden}
+  button[data-scene=build]::after{content:"";position:absolute;left:0;bottom:0;height:3px;width:calc(var(--p,0) * 100%);background:#e0301e}
+  .swatch{width:22px;height:22px;padding:0;border-radius:50%;border:2px solid transparent;background:var(--c)}
+  .swatch[aria-pressed="true"]{border-color:var(--fg);background:var(--c);box-shadow:0 0 0 2px var(--bg) inset}
+  .swatches{display:grid;grid-template-columns:auto repeat(8,22px);gap:4px 4px;align-items:center}
+  .swatches b{font-weight:400;color:var(--fg-3);font-size:11px;width:12px}
+  .bpm{font-variant-numeric:tabular-nums;font-size:20px;font-weight:300;min-width:3ch}
+  .beat{width:8px;height:8px;border-radius:50%;background:var(--fg);opacity:.15}
+  label.slider{display:flex;align-items:center;gap:8px;color:var(--fg-2)}
+  label.slider span{width:72px}
+  input[type=range]{width:110px;accent-color:var(--fg)}
+  .spacer{flex:1}
+  .artnet .dot{width:8px;height:8px;border-radius:50%;background:var(--fg-3);margin-right:2px}
+  .artnet .dot[data-state="connecting"]{background:#e0a21e}
+  .artnet .dot[data-state="connected"]{background:#3ccf6e}
+  .artnet .dot[data-state="offline"]{background:#e0301e}
+  .artnet button[data-artnet="send"][aria-pressed="true"]{background:#e0301e;border-color:#e0301e;color:#fff}
+  .artnet-status{color:var(--fg-3);font-size:11px;max-width:320px;user-select:text}
+  body.mirroring .scenes,body.mirroring .swatches,body.mirroring .hit,body.mirroring .flash{opacity:.35;pointer-events:none}
+  .links{display:flex;gap:4px}
+
+  .dmx{position:fixed;top:84px;left:16px;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  .dmx[hidden]{display:none}
+  .dmx header{display:flex;justify-content:space-between;color:var(--fg-3);font-size:11px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
+  .dmx .universes{margin-bottom:8px}
+  .dmx canvas{display:block;image-rendering:pixelated;max-width:100%}
+  .dmx .hover{height:18px;margin-top:6px;color:var(--fg-2);font-variant-numeric:tabular-nums;font-size:12px}
+  .dmx ul{list-style:none;margin:6px 0 0;padding:0;color:var(--fg-3);font-size:11px;font-variant-numeric:tabular-nums;columns:2;column-gap:16px}
+
+  .place{position:fixed;top:16px;left:50%;transform:translateX(-50%);padding:6px 12px;background:var(--panel);border:1px solid var(--line);border-radius:999px;
+    color:var(--fg-2);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;opacity:0;transition:opacity .3s;pointer-events:none}
+  .place.on{opacity:1}
+  .setlist{position:fixed;top:16px;right:16px;width:min(400px,calc(100vw - 32px));max-height:calc(100vh - var(--panel-h,180px) - 32px);
+    display:flex;flex-direction:column;gap:10px;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  .setlist[hidden]{display:none}
+  .setlist header{display:flex;gap:6px;align-items:center}
+  .setlist header > span{color:var(--fg-3);font-size:11px;letter-spacing:.12em;text-transform:uppercase;margin-right:auto}
+  .setlist select,.setlist input{font:inherit;color:var(--fg);background:rgba(243,242,238,.06);border:1px solid var(--line-2);border-radius:6px;padding:4px 6px}
+  .setlist select option{background:var(--bg)}
+  .setlist .sc iframe{display:block;width:100%;height:20px;border:0}
+  .setlist .sc[data-note]::after{content:attr(data-note);color:var(--fg-3);font-size:11px}
+  .setlist .transport{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .setlist .clock{font-variant-numeric:tabular-nums;color:var(--fg-2);min-width:96px}
+  .setlist .check{display:flex;gap:4px;align-items:center;color:var(--fg-2);margin-left:auto}
+  .setlist .check input{accent-color:var(--fg)}
+  .setlist .rec[aria-pressed="true"]{background:#e0301e;border-color:#e0301e;color:#fff}
+  .setlist .timeline{width:100%;height:56px;border-radius:6px;cursor:pointer;display:block}
+  .setlist .cues{list-style:none;margin:0;padding:0;overflow-y:auto;flex:1;min-height:60px;display:flex;flex-direction:column;gap:4px}
+  .setlist .cue{border-left:3px solid var(--look);padding:6px 6px 6px 8px;border-radius:4px;background:rgba(243,242,238,.03);cursor:pointer;display:grid;gap:4px}
+  .setlist .cue.on{background:rgba(243,242,238,.12)}
+  .setlist .cue .l1,.setlist .cue .l2{display:flex;gap:4px;align-items:center}
+  .setlist .cue .t{width:64px;font-variant-numeric:tabular-nums}
+  .setlist .cue .n{flex:1;min-width:0}
+  .setlist .cue .look{flex:1;min-width:0}
+  .setlist .cue .bpm{width:58px}
+  .setlist .cue .l2 span{color:var(--fg-3);font-size:11px}
+  .setlist .cue .x{padding:2px 8px;border-color:transparent;color:var(--fg-3)}
+  .setlist .cue .sw{width:18px;height:18px;padding:0;border-radius:50%;border:1px solid var(--line-2);background:var(--c)}
+  .setlist .go-row{display:flex;gap:6px}
+  .setlist .go{flex:1;padding:10px;font-size:14px;letter-spacing:.04em;background:var(--fg);color:var(--bg);border-color:var(--fg);text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .setlist .go:disabled,.setlist .back:disabled{opacity:.35;cursor:default}
+  .setlist footer{display:flex;gap:4px;flex-wrap:wrap}
+  .setlist footer label{font:inherit;border:1px solid var(--line-2);border-radius:6px;padding:5px 9px;cursor:pointer}
+  .setlist footer button:disabled{opacity:.35;cursor:default}
+  .setlist .save-status{flex-basis:100%;color:var(--fg-3);font-size:11px}
+  body.hide-ui .panel,body.hide-ui .dmx,body.hide-ui .title,body.hide-ui .place,body.hide-ui .setlist{display:none}
+  dialog{background:var(--bg);color:var(--fg);border:1px solid var(--line-2);border-radius:10px;max-width:min(560px,calc(100vw - 32px));padding:18px 20px}
+  dialog::backdrop{background:rgba(0,0,0,.6)}
+  dialog h2{margin:0 0 8px;font-weight:400;font-size:15px;letter-spacing:.1em;text-transform:uppercase}
+  dialog ul{padding-left:18px;color:var(--fg-2)}
+  dialog a{color:var(--fg)}
+
+  @media (max-width:640px){
+    .title p{display:none}
+    .panel{gap:10px 14px;padding:10px}
+    input[type=range]{width:90px}
+    label.slider span{width:60px}
+    .dmx{left:16px;right:16px;top:52px}
+    .setlist{top:16px;left:16px;right:16px;width:auto}
+    .place{top:44px;white-space:normal;width:max-content;max-width:calc(100vw - 32px);text-align:center}
+  }
+</style>
+<!-- libraries live in vendor/ (see vendor/README.md), so the sim starts with no internet -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/build/three.module.js",
+    "three/addons/": "./vendor/three/examples/jsm/",
+    "preact": "./vendor/preact/dist/preact.module.js",
+    "preact/hooks": "./vendor/preact/hooks/dist/hooks.module.js",
+    "htm": "./vendor/htm/dist/htm.module.js",
+    "@preact/signals": "./vendor/preact-signals/dist/signals.module.js",
+    "@preact/signals-core": "./vendor/preact-signals-core/dist/signals-core.module.js"
+  }
+}
+</script>
+</head>
+<body>
+<canvas class="stage" aria-label="3D view of the stage"></canvas>
+<div class="loading">Rigging the stage…</div>
+
+<div class="title">
+  <h1>Ōwashi · Light sim</h1>
+  <p>4 COB tubes · 2 floor bars · 4 Betopper LB150 · 3 universes</p>
+  <p>Drag Fab, Cyril or Olivier to move them around the stage</p>
+</div>
+<div class="place" aria-live="polite"></div>
+
+<div id="setlist-root"></div>   <!-- the setlist panel, drawn by setlist-ui.js -->
+
+<section class="dmx" hidden aria-label="DMX monitor">
+  <header><span>DMX</span><span class="fps"></span></header>
+  <div class="row universes"></div>
+  <canvas width="320" height="160"></canvas>
+  <div class="hover"></div>
+  <ul class="patch"></ul>
+</section>
+
+<div class="panel">
+  <div class="group"><span>Scene</span><div class="row scenes"></div></div>
+  <div class="group"><span>Colours</span><div class="swatches"></div></div>
+  <div class="group"><span>Tempo</span>
+    <div class="row"><span class="bpm">120</span><span class="beat"></span><button class="tap">Tap<kbd>T</kbd></button><button class="hit">Hit<kbd>Enter</kbd></button><button class="flash">Flash<kbd>Space</kbd></button></div>
+  </div>
+  <div class="group">
+    <label class="slider"><span>Master</span><input type="range" class="master" min="0" max="1" step="0.01" value="1"></label>
+    <label class="slider"><span>Haze</span><input type="range" class="haze" min="0" max="1.5" step="0.01" value="0.8"></label>
+    <label class="slider"><span>Front light</span><input type="range" class="fill" min="0" max="1" step="0.01" value="0.45"></label>
+  </div>
+  <div class="group"><span>View</span><div class="row views"></div></div>
+  <div class="group artnet"><span>Real rig · Art-Net</span>
+    <div class="row"><span class="dot" aria-hidden="true"></span><button data-artnet="off">Off</button><button data-artnet="send">Drive the rig</button><button data-artnet="mirror">Mirror a desk</button></div>
+    <small class="artnet-status"></small>
+  </div>
+  <div class="spacer"></div>
+  <div class="group"><div class="links"><button class="setlist-toggle">Setlist<kbd>L</kbd></button><button class="reset-layout">Reset stage</button><button class="dmx-toggle">DMX<kbd>D</kbd></button><button class="credits-open">Credits</button><button class="hide">Hide<kbd>H</kbd></button></div></div>
+</div>
+
+<dialog class="credits">
+  <h2>Credits</h2>
+  <p>3D models from <a href="https://poly.pizza" target="_blank" rel="noopener">Poly Pizza</a>, under <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY</a>:</p>
+  <ul>
+    <li><a href="https://poly.pizza/m/eoSib2-NN9Y" target="_blank" rel="noopener">Electric guitar</a> by Poly by Google</li>
+    <li><a href="https://poly.pizza/m/0hg94uOO-sS" target="_blank" rel="noopener">Electric guitar</a> by jeremy</li>
+    <li><a href="https://poly.pizza/m/ByBoHTCdYZ" target="_blank" rel="noopener">Bass Guitar</a> by Zsky</li>
+    <li><a href="https://poly.pizza/m/1HvDgRF7fX" target="_blank" rel="noopener">Full Drum Kit</a> by Batoski</li>
+    <li><a href="https://poly.pizza/m/3FiWjHDj0Zf" target="_blank" rel="noopener">Guitar Amp</a> by Poly by Google</li>
+    <li><a href="https://poly.pizza/m/8Qzh7Jl1n3V" target="_blank" rel="noopener">Amp</a> by Poly by Google</li>
+  </ul>
+  <p>Built with <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a>.</p>
+  <form method="dialog"><button>Close</button></form>
+</dialog>
+
+<script type="module" src="./main.js"></script>
+</body>
+</html>

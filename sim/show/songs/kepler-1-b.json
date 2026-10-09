@@ -1,0 +1,61 @@
+{
+  "id": "kepler-1-b",
+  "title": "Kepler 1-b",
+  "soundcloud": "https://soundcloud.com/owashi-band-official/kepler-1-b",
+  "cues": [
+    {
+      "t": 0,
+      "name": "Intro",
+      "scene": "sweep",
+      "a": "Ice",
+      "b": "Blue",
+      "bpm": 120,
+      "phase": 0
+    },
+    {
+      "t": 24,
+      "name": "Build 1",
+      "scene": "build",
+      "a": "Red",
+      "b": "Blue",
+      "bpm": 120,
+      "phase": 0
+    },
+    {
+      "t": 44,
+      "name": "Riff 1",
+      "scene": "riff",
+      "a": "Red",
+      "b": "UV",
+      "bpm": 120,
+      "phase": 0
+    },
+    {
+      "t": 237,
+      "name": "Ambient 1",
+      "scene": "ambient",
+      "a": "Red",
+      "b": "Blue",
+      "bpm": 120,
+      "phase": 0
+    },
+    {
+      "t": 324,
+      "name": "Sweep 2",
+      "scene": "sweep",
+      "a": "Ice",
+      "b": "Blue",
+      "bpm": 120,
+      "phase": 0
+    },
+    {
+      "t": 438,
+      "name": "Embers 1",
+      "scene": "embers",
+      "a": "Amber",
+      "b": "Red",
+      "bpm": 120,
+      "phase": 0
+    }
+  ]
+}

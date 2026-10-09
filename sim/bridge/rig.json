@@ -1,0 +1,22 @@
+{
+  "universes": [
+    {
+      "sim": 1,
+      "artnet": 0,
+      "to": "broadcast",
+      "note": "Art-Net→DMX boxes: 4 × LB150 (1–48), floor bars (49–148)"
+    },
+    {
+      "sim": 2,
+      "artnet": 1,
+      "to": "broadcast",
+      "note": "WLED: tube 1 (ch 1–192) and tube 2 (ch 193–384), Multi RGB"
+    },
+    {
+      "sim": 3,
+      "artnet": 2,
+      "to": "broadcast",
+      "note": "WLED: tube 3 (ch 1–192) and tube 4 (ch 193–384), Multi RGB"
+    }
+  ]
+}
