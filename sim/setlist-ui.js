@@ -31,7 +31,7 @@ function SoundCloud({ url, title }) {
   const frame = useRef();
   useEffect(() => S.connectSoundCloud(frame.current), []);
   return html`<div class="sc" data-note=${S.scNote.value || undefined}>
-    <iframe ref=${frame} title=${`${title} (SoundCloud)`} allow="autoplay" height="20" src=${S.scPlayerUrl(url)}></iframe>
+    <iframe ref=${frame} title=${`${title} (SoundCloud)`} allow="autoplay; encrypted-media" height="20" src=${S.scPlayerUrl(url)}></iframe>
   </div>`;
 }
 
