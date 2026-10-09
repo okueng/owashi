@@ -1,0 +1,5 @@
+{
+  "redirects": [
+    { "source": "/sim", "destination": "/sim/", "permanent": true }
+  ]
+}
