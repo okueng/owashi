@@ -133,10 +133,12 @@ function Footer() {
     : S.song.value?.soundcloud ? "Waiting for the track's waveform" : 'Needs a recording';
   const pick = e => { const f = e.currentTarget.files[0]; e.currentTarget.value = ''; if (f) S.importFile(f); };
   return html`<footer>
-    <button class="cue-add" title="Add a cue at the playhead with the current look" onClick=${S.addCueHere}>+ Cue here</button>
-    <button class="draft" disabled=${!w || !S.duration.value} title=${draftNote} onClick=${S.draft}>Draft from waveform</button>
-    <button class="export" onClick=${S.exportSong}>Export</button>
-    <label class="import">Import<input type="file" accept=".json,application/json" hidden onChange=${pick} /></label>
+    <div class="actions">
+      <button class="cue-add" title="Add a cue at the playhead with the current look" onClick=${S.addCueHere}>+ Cue here</button>
+      <button class="draft" disabled=${!w || !S.duration.value} title=${draftNote} onClick=${S.draft}>Draft from waveform</button>
+      <button class="export" onClick=${S.exportSong}>Export</button>
+      <label class="import">Import<input type="file" accept=".json,application/json" hidden onChange=${pick} /></label>
+    </div>
     <small class="save-status">${S.status}</small>
   </footer>`;
 }

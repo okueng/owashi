@@ -68,7 +68,8 @@ const VIEWS = {
 
 const canvas = document.querySelector('canvas.stage');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+let pixelRatio = Math.min(devicePixelRatio, 1.5);   // stepped down by the loop if the device can't keep up
+renderer.setPixelRatio(pixelRatio);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.0;
 RectAreaLightUniformsLib.init();
@@ -91,17 +92,22 @@ const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.8, 0.45, 0.9);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
-// Widen the lens on tall screens, and lift the stage clear of the control panel.
+// Widen the lens on tall screens, and lift the stage clear of whatever covers the bottom of the screen
+// (the control panel; on phones also the tab bar and the setlist, which docks at the bottom there).
 const panel = document.querySelector('.panel');
+const narrow = matchMedia('(max-width: 640px)');
+const shown = el => el && el.getBoundingClientRect().height > 0;
 function resize() {
   const w = innerWidth, h = innerHeight;
   renderer.setSize(w, h, false);
   composer.setSize(w, h);
   camera.aspect = w / h;
   camera.fov = Math.min(72, 42 * Math.max(1, 1.3 / camera.aspect));
-  const covered = document.body.classList.contains('hide-ui') ? 0 : panel.getBoundingClientRect().height + 16;
-  document.documentElement.style.setProperty('--panel-h', `${covered}px`);
-  const drawer = document.querySelector('.setlist');   // and slide it left of the setlist when that's open
+  const drawer = document.querySelector('.setlist');
+  const bottom = [panel, document.querySelector('.mtabs'), narrow.matches && drawer].filter(shown);
+  const covered = document.body.classList.contains('hide-ui') ? 0 : Math.max(0, ...bottom.map(el => h - el.getBoundingClientRect().top));
+  document.documentElement.style.setProperty('--panel-h', `${shown(panel) ? h - panel.getBoundingClientRect().top : 0}px`);
+  // on wide screens the setlist sits on the right: slide the stage left of it
   const side = drawer && !drawer.hidden && covered && w > 900 ? (drawer.getBoundingClientRect().width + 16) / 2 : 0;
   camera.setViewOffset(w, h, side, Math.min(covered, h * 0.5) / 2, w, h);
   camera.updateProjectionMatrix();
@@ -217,10 +223,10 @@ function fit(gltfScene, spec) {
   return wrap;
 }
 
-async function loadModels() {
-  const entries = await Promise.all(Object.entries(MODELS).map(async ([key, spec]) => {
-    const gltf = await loader.loadAsync(`./models/${spec.file}`);
-    return [key, fit(gltf.scene, spec)];
+async function loadModels(keys) {
+  const entries = await Promise.all([...keys].map(async key => {
+    const gltf = await loader.loadAsync(`./models/${MODELS[key].file}`);
+    return [key, fit(gltf.scene, MODELS[key])];
   }));
   return Object.fromEntries(entries);
 }
@@ -229,13 +235,14 @@ function loadImage(src) {
   return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
 }
 
-// Each member is a card standing on the stage: their full-body picture from players/<id>.png
+// Each member is a card standing on the stage: their full-body picture from players/<id>.webp
 // (green screen or transparent) when we have one, otherwise cut out of the band photo with their ghost mask.
 async function loadBand() {
-  const photo = await loadImage('../assets/band-2026-720.jpg');
+  let photo = null;   // only fetched if someone has no picture
   return Promise.all(BAND.map(async member => {
-    const player = await loadImage(`./players/${member.id}.png`).catch(() => null);
-    const cut = player ? keyOut(player) : cutFromPhoto(photo, await loadImage(`../assets/ghost-${member.id}.png`));
+    const player = await loadImage(`./players/${member.id}.webp`).catch(() => null);
+    const cut = player ? keyOut(player)
+      : cutFromPhoto(await (photo ??= loadImage('../assets/band-2026-720.jpg')), await loadImage(`../assets/ghost-${member.id}.png`));
 
     const tex = new THREE.CanvasTexture(cut);
     tex.colorSpace = THREE.SRGBColorSpace;
@@ -312,7 +319,9 @@ try {
   for (const m of BAND) if (Array.isArray(saved[m.id])) m.pos = [saved[m.id][0], S, saved[m.id][1]];
 } catch { /* private window or blocked storage: start from the default layout */ }
 
-const [models, band] = await Promise.all([loadModels(), loadBand()]);
+// the drums and amps straight away; the low-poly instruments only for players without a picture
+const [propModels, band] = await Promise.all([loadModels(new Set(PROPS.map(p => p.model))), loadBand()]);
+const models = { ...propModels, ...(await loadModels(new Set(band.filter(m => !m.full && m.holds).map(m => m.holds.model)))) };
 
 for (const p of PROPS) {
   const m = models[p.model].clone();
@@ -388,9 +397,27 @@ mountSetlist(document.getElementById('setlist-root'));
 setlist.loadSongs();
 const toggleSetlist = () => { setlist.open.value = !setlist.open.value; };
 $('.setlist-toggle').addEventListener('click', toggleSetlist);
-effect(() => {   // opening or closing the setlist: update its button, and move the stage over once it's drawn
-  $('.setlist-toggle').setAttribute('aria-pressed', setlist.open.value);
+// Phones: the controls are three tabs — Looks, Song (the setlist) and More.
+const tabButtons = [...document.querySelectorAll('.mtabs button')];
+function setTab(tab) {
+  document.body.dataset.mtab = tab;
+  tabButtons.forEach(b => b.setAttribute('aria-pressed', b.dataset.tab === tab));
+  if (narrow.matches && setlist.open.value !== (tab === 'song')) setlist.open.value = tab === 'song';
   setTimeout(resize);
+}
+tabButtons.forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
+setTab(narrow.matches && setlist.open.value ? 'song' : 'looks');
+narrow.addEventListener('change', () => setTimeout(resize));
+
+effect(() => {   // opening or closing the setlist: update its button, and move the stage over once it's drawn
+  const open = setlist.open.value;
+  $('.setlist-toggle').setAttribute('aria-pressed', open);
+  if (narrow.matches && open !== (document.body.dataset.mtab === 'song')) setTab(open ? 'song' : 'looks');
+  setTimeout(() => {
+    resize();
+    const drawer = document.querySelector('.setlist');
+    if (drawer && !drawer.dataset.watched) { drawer.dataset.watched = 1; new ResizeObserver(resize).observe(drawer); }
+  });
 });
 window.sim.setlist = setlist;
 const flashBtn = $('.flash');
@@ -422,6 +449,7 @@ const dmxPanel = $('.dmx');
 const toggleDmx = () => { dmxPanel.hidden = !dmxPanel.hidden; $('.dmx-toggle').setAttribute('aria-pressed', !dmxPanel.hidden); };
 $('.dmx-toggle').addEventListener('click', toggleDmx);
 $('.hide').addEventListener('click', toggleUi);
+$('.unhide').addEventListener('click', toggleUi);   // the way back on a phone, where there's no H key
 $('.credits-open').addEventListener('click', () => $('dialog.credits').showModal());
 
 addEventListener('keydown', e => {
@@ -615,12 +643,30 @@ mon.addEventListener('pointerleave', () => { hoverCh = -1; });
 
 // ── loop ────────────────────────────────────────────────────────────────────
 
+// If the device can't hold ~28 fps (an older phone), render at a lower resolution, a step at a time.
+// Frames over 250 ms are a hidden or throttled tab, not a slow device, so they don't count.
+let sampled = 0, slow = 0;
+function adaptQuality(frameTime) {
+  if (document.hidden || frameTime > 0.25) return;
+  sampled++;
+  if (frameTime > 1 / 28) slow++;
+  if (sampled < 120) return;
+  if (slow > 60 && pixelRatio > 0.75) {
+    pixelRatio = Math.max(0.75, pixelRatio - 0.25);
+    renderer.setPixelRatio(pixelRatio);
+    composer.setPixelRatio(pixelRatio);
+    resize();
+  }
+  sampled = slow = 0;
+}
+
 const beatDot = $('.beat');
 const buildBtn = $('[data-scene=build]');
 let frames = 0, fpsT = 0;
 
 renderer.setAnimationLoop(() => {
-  const dt = Math.min(clock.getDelta(), 0.1), t = clock.elapsedTime;
+  const raw = clock.getDelta(), dt = Math.min(raw, 0.1), t = clock.elapsedTime;
+  adaptQuality(raw);
 
   setlist.tick();   // a song that's playing moves the cues (and the tempo grid) along
   // mirroring a desk: the show stays out of the universes, the desk fills them

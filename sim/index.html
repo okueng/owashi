@@ -72,7 +72,7 @@
   .place{position:fixed;top:16px;left:50%;transform:translateX(-50%);padding:6px 12px;background:var(--panel);border:1px solid var(--line);border-radius:999px;
     color:var(--fg-2);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;opacity:0;transition:opacity .3s;pointer-events:none}
   .place.on{opacity:1}
-  .setlist{position:fixed;top:16px;right:16px;width:min(400px,calc(100vw - 32px));max-height:calc(100vh - var(--panel-h,180px) - 32px);
+  .setlist{position:fixed;top:16px;right:16px;width:min(400px,calc(100vw - 32px));max-height:calc(100vh - var(--panel-h,180px) - 32px);max-height:calc(100dvh - var(--panel-h,180px) - 32px);
     display:flex;flex-direction:column;gap:10px;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;
     backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
   .setlist[hidden]{display:none}
@@ -102,11 +102,30 @@
   .setlist .go-row{display:flex;gap:6px}
   .setlist .go{flex:1;padding:10px;font-size:14px;letter-spacing:.04em;background:var(--fg);color:var(--bg);border-color:var(--fg);text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .setlist .go:disabled,.setlist .back:disabled{opacity:.35;cursor:default}
-  .setlist footer{display:flex;gap:4px;flex-wrap:wrap}
+  .setlist footer{display:flex;flex-direction:column;gap:4px}
+  .setlist .actions{display:flex;gap:4px;flex-wrap:wrap}
   .setlist footer label{font:inherit;border:1px solid var(--line-2);border-radius:6px;padding:5px 9px;cursor:pointer}
   .setlist footer button:disabled{opacity:.35;cursor:default}
-  .setlist .save-status{flex-basis:100%;color:var(--fg-3);font-size:11px}
-  body.hide-ui .panel,body.hide-ui .dmx,body.hide-ui .title,body.hide-ui .place,body.hide-ui .setlist{display:none}
+  .setlist .save-status{color:var(--fg-3);font-size:11px}
+  .mtabs{display:none}
+  .unhide{display:none;position:fixed;right:16px;bottom:16px;background:var(--panel);opacity:.7}
+  body.hide-ui .unhide{display:block}
+  body.hide-ui .panel,body.hide-ui .dmx,body.hide-ui .title,body.hide-ui .place,body.hide-ui .setlist,body.hide-ui .mtabs{display:none}
+  canvas.stage{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+  body{-webkit-tap-highlight-color:transparent}
+
+  /* fingers: bigger targets, no keyboard hints, 16px fields so iPhones don't zoom in */
+  @media (pointer:coarse){
+    button{min-height:36px;padding:8px 12px;touch-action:manipulation}
+    button kbd{display:none}
+    .swatch{width:30px;height:30px;min-height:0;padding:0}
+    .swatches{grid-template-columns:auto repeat(8,30px);gap:6px}
+    input[type=range]{height:28px}
+    .setlist input,.setlist select{font-size:16px}
+    .setlist .cue .sw{width:28px;height:28px;min-height:0}
+    .setlist .cue .x{min-height:0}
+    .setlist footer label{min-height:36px;display:inline-flex;align-items:center;padding:8px 12px}
+  }
   dialog{background:var(--bg);color:var(--fg);border:1px solid var(--line-2);border-radius:10px;max-width:min(560px,calc(100vw - 32px));padding:18px 20px}
   dialog::backdrop{background:rgba(0,0,0,.6)}
   dialog h2{margin:0 0 8px;font-weight:400;font-size:15px;letter-spacing:.1em;text-transform:uppercase}
@@ -115,11 +134,21 @@
 
   @media (max-width:640px){
     .title p{display:none}
-    .panel{gap:10px 14px;padding:10px}
+    .panel{gap:10px 14px;padding:10px;bottom:72px;max-height:44vh;max-height:44dvh}
+    .panel .spacer{display:none}
+    /* phones: the controls become three tabs at the bottom */
+    .mtabs{display:flex;gap:4px;position:fixed;left:16px;right:16px;bottom:16px;padding:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+    .mtabs button{flex:1;min-height:40px}
+    body[data-mtab="looks"] .panel .group[data-tab="more"],body[data-mtab="more"] .panel .group[data-tab="looks"],body[data-mtab="song"] .panel{display:none}
     input[type=range]{width:90px}
     label.slider span{width:60px}
     .dmx{left:16px;right:16px;top:52px}
-    .setlist{top:16px;left:16px;right:16px;width:auto}
+    .setlist{top:auto;bottom:72px;left:16px;right:16px;width:auto;max-height:62vh;max-height:62dvh;gap:8px;padding:10px}
+    .setlist .timeline{height:44px}
+    .setlist .actions{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+    .setlist .actions > *{flex:none}
+    .setlist .cue{padding:4px 4px 4px 6px}
+    .setlist-toggle{display:none}
     .place{top:44px;white-space:normal;width:max-content;max-width:calc(100vw - 32px);text-align:center}
   }
 </style>
@@ -149,6 +178,8 @@
 </div>
 <div class="place" aria-live="polite"></div>
 
+<button class="unhide" aria-label="Show the controls">Show controls</button>
+<nav class="mtabs" aria-label="Controls"><button data-tab="looks">Looks</button><button data-tab="song">Song</button><button data-tab="more">More</button></nav>
 <div id="setlist-root"></div>   <!-- the setlist panel, drawn by setlist-ui.js -->
 
 <section class="dmx" hidden aria-label="DMX monitor">
@@ -160,23 +191,23 @@
 </section>
 
 <div class="panel">
-  <div class="group"><span>Scene</span><div class="row scenes"></div></div>
-  <div class="group"><span>Colours</span><div class="swatches"></div></div>
-  <div class="group"><span>Tempo</span>
+  <div class="group" data-tab="looks"><span>Scene</span><div class="row scenes"></div></div>
+  <div class="group" data-tab="looks"><span>Colours</span><div class="swatches"></div></div>
+  <div class="group" data-tab="looks"><span>Tempo</span>
     <div class="row"><span class="bpm">120</span><span class="beat"></span><button class="tap">Tap<kbd>T</kbd></button><button class="hit">Hit<kbd>Enter</kbd></button><button class="flash">Flash<kbd>Space</kbd></button></div>
   </div>
-  <div class="group">
+  <div class="group" data-tab="more">
     <label class="slider"><span>Master</span><input type="range" class="master" min="0" max="1" step="0.01" value="1"></label>
     <label class="slider"><span>Haze</span><input type="range" class="haze" min="0" max="1.5" step="0.01" value="0.8"></label>
     <label class="slider"><span>Front light</span><input type="range" class="fill" min="0" max="1" step="0.01" value="0.45"></label>
   </div>
-  <div class="group"><span>View</span><div class="row views"></div></div>
-  <div class="group artnet"><span>Real rig · Art-Net</span>
+  <div class="group" data-tab="more"><span>View</span><div class="row views"></div></div>
+  <div class="group artnet" data-tab="more"><span>Real rig · Art-Net</span>
     <div class="row"><span class="dot" aria-hidden="true"></span><button data-artnet="off">Off</button><button data-artnet="send">Drive the rig</button><button data-artnet="mirror">Mirror a desk</button></div>
     <small class="artnet-status"></small>
   </div>
   <div class="spacer"></div>
-  <div class="group"><div class="links"><button class="setlist-toggle">Setlist<kbd>L</kbd></button><button class="reset-layout">Reset stage</button><button class="dmx-toggle">DMX<kbd>D</kbd></button><button class="credits-open">Credits</button><button class="hide">Hide<kbd>H</kbd></button></div></div>
+  <div class="group" data-tab="more"><div class="links"><button class="setlist-toggle">Setlist<kbd>L</kbd></button><button class="reset-layout">Reset stage</button><button class="dmx-toggle">DMX<kbd>D</kbd></button><button class="credits-open">Credits</button><button class="hide">Hide<kbd>H</kbd></button></div></div>
 </div>
 
 <dialog class="credits">
