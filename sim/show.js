@@ -6,8 +6,7 @@
 // secondary one; the calm looks use B, the heavy ones A. Rubato looks (ambient, embers) run on
 // seconds, everything with drums on the tempo grid.
 //
-// Patterns are written along each bar from u = 0 (bottom / left) to u = 1 (top / right), so the
-// same look works on the 64-zone tubes and the 16-pixel floor bars.
+// Patterns are written along each tube from u = 0 (bottom) to u = 1 (top).
 
 import { byId, fixtures } from './dmx.js';
 
@@ -37,11 +36,9 @@ export const show = {
 };
 
 const V = ['V1', 'V2', 'V3', 'V4'].map(id => byId[id]);   // the tubes
-const H = ['H1', 'H2'].map(id => byId[id]);               // the floor bars
-const B = ['B1', 'B2', 'B3', 'B4'].map(id => byId[id]);   // the LB150s
-const BARS = [...V, ...H];
-const SIDE = [-1, 1, -1, 1];   // B1/B3 stage left, B2/B4 stage right (as the audience sees it)
-const FRONT = [0, 0, 1, 1];    // B1/B2 at the back, B3/B4 at the front corners
+const B = ['B1', 'B2'].map(id => byId[id]);               // the LB150s
+const SIDE = [-1, 1];          // B1 stage left, B2 stage right (as the audience sees it)
+const SLOW = 200;              // the P/T speed that moves the real heads smoothly and slowly
 const WHITE = [255, 255, 255];
 const BLACK = [0, 0, 0];
 
@@ -57,18 +54,20 @@ function paint(f, fn, level = 1, strobe = 0) {
   f.level(level); f.strobe(strobe);
   for (let i = 0; i < f.n; i++) { const c = fn((i + 0.5) / f.n); f.setZone(i, c[0], c[1], c[2]); }
 }
-function beam(f, { pan, tilt, color = 'White', level = 1, prism = false, strobe = 0 }) {
+function beam(f, { pan, tilt, color = 'White', level = 1, prism = false, strobe = 0, speed = 0 }) {
   if (pan !== undefined) f.aim(pan, tilt);
   f.colour(color); f.level(level); f.strobe(strobe); f.prism(prism);
-  f.set('P/T speed', 0); f.set('Gobo', 0); f.set('Function', 0);
+  f.set('P/T speed', speed); f.set('Gobo', 0); f.set('Function', 0);
 }
+// A head goes black with its dimmer and shutter; pan and tilt stay where they are.
+const dark = f => { f.level(0); f.set('Shutter', 0); };
 
 // beam positions the heavy looks jump between (always moved while dark)
 const POSITIONS = [
-  k => ({ pan: SIDE[k] * (FRONT[k] ? 18 : 8), tilt: 8 }),           // straight up, tight fan
-  k => ({ pan: SIDE[k] * (FRONT[k] ? 22 : 12), tilt: 68 }),         // down into the crowd
-  k => ({ pan: -SIDE[k] * (FRONT[k] ? 35 : 28), tilt: 42 }),        // crossing over the middle
-  k => ({ pan: SIDE[k] * (FRONT[k] ? 62 : 50), tilt: 48 }),         // wide out to the walls
+  k => ({ pan: SIDE[k] * 12, tilt: 8 }),    // straight up, tight fan
+  k => ({ pan: SIDE[k] * 16, tilt: 45 }),   // out over the crowd, as low as the limit allows
+  k => ({ pan: -SIDE[k] * 30, tilt: 38 }),  // crossing over the middle
+  k => ({ pan: SIDE[k] * 55, tilt: 42 }),   // wide out to the walls
 ];
 
 const SCENES = {
@@ -78,11 +77,10 @@ const SCENES = {
       const h = 0.4 + 0.18 * Math.sin(t * 0.21 + k * 1.7);
       paint(f, u => mul(Bc.rgb, smooth(h, h - 0.45, u) * (0.8 + 0.2 * Math.sin(t * 0.8 + u * 10 + k))), 0.7);
     });
-    H.forEach(f => paint(f, () => mul(Bc.rgb, 0.5), 0.12));
     B.forEach((f, k) => beam(f, {
-      pan: SIDE[k] * ((FRONT[k] ? 22 : 10) + 4 * Math.sin(t * 0.09 + k)),
+      pan: SIDE[k] * (14 + 4 * Math.sin(t * 0.09 + k)),
       tilt: 12 + 5 * Math.sin(t * 0.11 + k * 2),
-      color: Bc.wheel, level: 0.2,
+      color: Bc.wheel, level: 0.2, speed: SLOW,
     }));
   },
 
@@ -92,16 +90,15 @@ const SCENES = {
       const pos = frac(beat / 8 + k / 4) * 1.3 - 0.15;
       paint(f, u => mix(mul(Bc.rgb, 0.25), A.rgb, Math.exp(-(((u - pos) / 0.06) ** 2) / 2)), 0.7);
     });
-    H.forEach(f => paint(f, () => mul(Bc.rgb, 0.4), 0.3));
     B.forEach((f, k) => beam(f, {
-      pan: SIDE[k] * (FRONT[k] ? 14 : 6) + 38 * Math.sin(beat * Math.PI / 8),
-      tilt: 52 + 10 * Math.sin(beat * Math.PI / 16),
-      color: 'White', level: 0.75,
+      pan: SIDE[k] * 10 + 38 * Math.sin(beat * Math.PI / 8),
+      tilt: 34 + 10 * Math.sin(beat * Math.PI / 16),
+      color: 'White', level: 0.75, speed: SLOW,
     }));
   },
 
   // Build: 16 bars from the moment it's triggered. Tubes fill bottom-up, pulses go 1/4 → 1/8 → 1/16,
-  // beams lift from the crowd to straight up, and the last two bars strobe. Then it holds at the peak.
+  // beams lift from over the crowd to straight up, and the last two bars strobe. Then it holds at the peak.
   build({ beat, since, A, B: Bc }) {
     const p = clamp01(since / (BUILD_BARS * 4));
     const rate = p < 0.5 ? 1 : p < 0.75 ? 2 : 4;
@@ -110,38 +107,35 @@ const SCENES = {
     const top = 0.04 + 0.96 * p;                     // how far up the tubes are lit
     const col = mul(mix(Bc.rgb, A.rgb, p), pulse);
     V.forEach(f => paint(f, u => mul(col, 1 - smooth(top, top + 0.04, u)), 0.27 + 0.73 * p, strobe));
-    H.forEach(f => paint(f, () => col, 0.27 + 0.73 * p, strobe));
     B.forEach((f, k) => beam(f, {
-      pan: SIDE[k] * ((FRONT[k] ? 45 : 30) * (1 - p) + 8), tilt: 72 * (1 - p) + 6,
+      pan: SIDE[k] * (36 * (1 - p) + 8), tilt: 39 * (1 - p) + 6,
       color: A.wheel, level: (0.15 + 0.85 * p) * pulse, strobe,
     }));
   },
 
   // Riff: everything punches on the beat in colour A, the downbeat of each bar hits white.
-  // Beams hold a fan and trade front/back on alternate beats; the floor bars chug on eighths.
+  // Beams hold a fan and trade left/right on alternate beats.
   riff({ beat, A, B: Bc }) {
-    const n = Math.floor(beat), e = Math.exp(-frac(beat) * 6), e8 = Math.exp(-frac(beat * 2) * 8);
+    const n = Math.floor(beat), e = Math.exp(-frac(beat) * 6);
     const down = n % 4 === 0;
     V.forEach(f => paint(f, () => mix(mul(Bc.rgb, 0.06), down ? WHITE : A.rgb, 0.12 + 0.88 * e)));
-    H.forEach(f => paint(f, () => mul(A.rgb, 0.15 + 0.85 * e8)));
     B.forEach((f, k) => beam(f, {
-      pan: SIDE[k] * (FRONT[k] ? 38 : 24), tilt: FRONT[k] ? 30 : 40,
+      pan: SIDE[k] * 30, tilt: 38,
       color: down ? 'White' : A.wheel,
-      level: down || n % 2 === FRONT[k] ? e : 0,
+      level: down || n % 2 === k ? e : 0,
     }));
   },
 
   // Blast beats: white sparks on sixteenths (in 17 cm chunks so they read from the back of the room),
-  // floor bars ping-pong, beams whip side to side every beat.
+  // beams whip side to side every beat.
   blast({ beat, A }) {
     const s = Math.floor(beat * 4), n = Math.floor(beat);
     V.forEach((f, k) => paint(f, u => {
       const r = hash(s * 97 + k * 31 + Math.floor(u * 12));
       return r > 0.8 ? WHITE : r > 0.6 ? A.rgb : BLACK;
     }));
-    H.forEach((f, k) => paint(f, () => (Math.floor(beat * 2) % 2 === k ? WHITE : mul(A.rgb, 0.2))));
     B.forEach((f, k) => beam(f, {
-      pan: SIDE[k] * ((n + FRONT[k]) % 2 ? 48 : 8), tilt: 32,
+      pan: SIDE[k] * ((n + k) % 2 ? 48 : 8), tilt: 32,
       color: 'White', strobe: 0.75,
     }));
   },
@@ -152,7 +146,7 @@ const SCENES = {
     const half = beat / 2, h = Math.floor(half), ph = frac(half);
     const e = Math.exp(-ph * 7);
     const c = h % 4 === 0 ? WHITE : A.rgb;
-    BARS.forEach(f => paint(f, () => c, e));
+    V.forEach(f => paint(f, () => c, e));
     const pos = POSITIONS[(ph < 0.4 ? h : h + 1) % POSITIONS.length];
     B.forEach((f, k) => beam(f, {
       ...pos(k), color: h % 4 === 0 ? 'White' : A.wheel,
@@ -160,16 +154,15 @@ const SCENES = {
     }));
   },
 
-  // Wall of sound / climax: tubes full with white crowns swelling every bar, white floor line,
+  // Wall of sound / climax: tubes full with white crowns swelling every bar,
   // and a cathedral of beams fanned up through the haze, the 6-facet prism turning slowly.
   wall({ t, beat, A }) {
     const swell = 0.78 + 0.22 * Math.exp(-frac(beat / 4) * 2.5);
     V.forEach(f => paint(f, u => mix(A.rgb, WHITE, smooth(0.78, 0.86, u)), swell));
-    H.forEach(f => paint(f, () => WHITE, 0.55));   // close to the audience now — don't blind them
     B.forEach((f, k) => beam(f, {
-      pan: SIDE[k] * ((FRONT[k] ? 30 : 12) + 5 * Math.sin(t * 0.3 + k)),
+      pan: SIDE[k] * (20 + 5 * Math.sin(t * 0.3 + k)),
       tilt: 18 + 8 * Math.sin(t * 0.4 + k),
-      color: 'White', prism: 'spin',
+      color: 'White', prism: 'spin', speed: SLOW,
     }));
   },
 
@@ -180,19 +173,18 @@ const SCENES = {
       const glow = ((0.5 + 0.5 * Math.sin(u * 23 + t * 0.9 + k * 2.1)) * (0.5 + 0.5 * Math.sin(u * 9.7 - t * 0.6 + k))) ** 1.5;
       return mul(mix(amber, A.rgb, 0.5 + 0.5 * Math.sin(u * 13 + k)), glow * (1 - u * 0.85));
     }, 0.5));
-    H.forEach(f => paint(f, () => mul(PALETTE.Red.rgb, 0.6), 0.1));
-    B.forEach(f => f.level(0));
+    B.forEach(dark);
   },
 
   strobe() {
-    BARS.forEach(f => paint(f, () => WHITE, 1, 0.92));
-    B.forEach((f, k) => beam(f, { pan: SIDE[k] * (FRONT[k] ? 20 : 12), tilt: 10, strobe: 0.92 }));
+    V.forEach(f => paint(f, () => WHITE, 1, 0.92));
+    B.forEach((f, k) => beam(f, { pan: SIDE[k] * 14, tilt: 10, strobe: 0.92 }));
   },
 
   blackout() {
     // positions hold where they were, like a real desk; only the light goes
-    BARS.forEach(f => paint(f, () => BLACK, 0));
-    B.forEach(f => f.level(0));
+    V.forEach(f => paint(f, () => BLACK, 0));
+    B.forEach(dark);
   },
 };
 
@@ -222,18 +214,19 @@ export function updateShow(t) {
   // one-shot accent on top of any look: a white slam that dies in half a second
   const h = Math.exp(-(t - show.hitT) * 6);
   if (h > 0.02) {
-    for (const f of BARS) {
+    for (const f of V) {
       for (let i = 0; i < f.n; i++) f.setZone(i, ...mix(f.getZone(i, px), WHITE, h));
       f.level(Math.max(f.getLevel(), h));
     }
     for (const f of B) {
       f.level(Math.max(f.getLevel(), h));
+      if (f.get('Shutter') <= 10) f.strobe(0);   // a dark head has to open up for the hit
       if (h > 0.3) f.colour('White');
     }
   }
 
   if (show.flash) {
-    BARS.forEach(f => paint(f, () => WHITE, 1, 0.88));
+    V.forEach(f => paint(f, () => WHITE, 1, 0.88));
     B.forEach(f => { f.colour('White'); f.level(1); f.strobe(0.88); });
   }
   if (show.master < 1) for (const f of fixtures) f.level(f.getLevel() * show.master);

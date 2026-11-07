@@ -110,6 +110,35 @@ function onArtNet(msg) {
 
 const clients = new Set();
 
+// Only one sim may send to the lights at a time. A driver that has gone quiet (a crashed tab, a laptop
+// that dropped off the network) doesn't count, or it could hold the rig hostage until TCP gives up.
+const DRIVER_QUIET_MS = 3000;
+let driver = null;
+
+function setClientMode(c, mode) {
+  if (mode === c.mode) return;
+  if (mode === 'send') {
+    const quiet = driver && Date.now() - driver.lastFrame > DRIVER_QUIET_MS;
+    if (driver && driver !== c && !quiet) {
+      const addr = driver.socket.remoteAddress?.replace(/^::ffff:/, '');
+      const where = addr === '127.0.0.1' || addr === '::1' ? 'on this computer' : `from ${addr}`;
+      sendJson(c, { type: 'refused', reason: `Another sim is already driving the rig (${where}). Press Off there first.` });
+      console.log('  sim    refused: another sim is driving the rig');
+      return;
+    }
+    if (driver && driver !== c) {
+      driver.mode = 'off';
+      sendJson(driver, { type: 'refused', reason: 'This sim went quiet, so another one took over the rig.' });
+    }
+    driver = c;
+    c.lastFrame = Date.now();
+  } else if (driver === c) {
+    driver = null;
+  }
+  c.mode = mode;
+  console.log(`  sim    ${{ off: 'stopped', send: 'is driving the rig', mirror: 'is mirroring incoming Art-Net' }[mode]}`);
+}
+
 function writeFrame(c, opcode, payload) {
   const n = payload.length;
   let head;
@@ -144,15 +173,13 @@ function onFrame(c, opcode, data) {
   if (opcode === 1) {
     let m;
     try { m = JSON.parse(data.toString('utf8')); } catch { return; }
-    if (m.type === 'mode' && ['off', 'send', 'mirror'].includes(m.mode) && m.mode !== c.mode) {
-      c.mode = m.mode;
-      console.log(`  sim    ${{ off: 'stopped', send: 'is driving the rig', mirror: 'is mirroring incoming Art-Net' }[m.mode]}`);
-    }
+    if (m.type === 'mode' && ['off', 'send', 'mirror'].includes(m.mode)) setClientMode(c, m.mode);
     if (m.type === 'poll') poll();
     return;
   }
   // binary: [1, then per universe: sim number + 512 bytes]
-  if (opcode === 2 && c.mode === 'send' && data[0] === 1) {
+  if (opcode === 2 && c === driver && data[0] === 1) {
+    c.lastFrame = Date.now();
     for (let o = 1; o + 513 <= data.length; o += 513) sendUniverse(data[o], data.subarray(o + 1, o + 513));
   }
 }
@@ -261,7 +288,10 @@ server.on('upgrade', (req, socket) => {
   console.log(`  sim    connected from ${socket.remoteAddress}`);
   sendJson(c, { type: 'hello', routes, receiving, nodes: [...nodes.values()] });
   socket.on('data', chunk => { c.buf = Buffer.concat([c.buf, chunk]); readFrames(c); });
-  const drop = () => { if (clients.delete(c)) console.log('  sim    disconnected — the rig holds its last look'); };
+  const drop = () => {
+    if (driver === c) driver = null;
+    if (clients.delete(c)) console.log(c.mode === 'send' ? '  sim    disconnected — the rig holds its last look' : '  sim    disconnected');
+  };
   socket.on('close', drop);
   socket.on('error', drop);
 });

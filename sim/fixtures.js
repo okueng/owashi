@@ -4,19 +4,18 @@
 import * as THREE from 'three';
 
 const HOUSING = new THREE.MeshStandardMaterial({ color: 0x1a1a1c, roughness: 0.5, metalness: 0.6 });
-const PIXEL_GAIN = 3.2;     // pushes full-on pixels past the bloom threshold
-const BAR_SPILL = 9;        // area-light brightness of a full-white bar
 const TUBE_GAIN = 2.6;
 const TUBE_SPILL = 7;
 
-// Zone i as the fixture outputs it (0–1), straight from DMX.
+// Zone i as the fixture outputs it (0–1, or more with its white LEDs on top), straight from DMX.
+// The white LEDs draw as plain white: the strip's colour temperature isn't known.
 function zoneOut(f, i, out) {
-  const a = f.zone0 + i * 3;
-  out[0] = f.u[a] / 255; out[1] = f.u[a + 1] / 255; out[2] = f.u[a + 2] / 255;
+  const a = f.zone0 + i * 4, w = f.u[a + 3] / 255;
+  out[0] = f.u[a] / 255 + w; out[1] = f.u[a + 1] / 255 + w; out[2] = f.u[a + 2] / 255 + w;
   return out;
 }
 // RGB all on is three times the light of one colour; keep white from blooming over everything
-const whiteNorm = p => 1 / Math.max(1, (p[0] + p[1] + p[2]) / 2);
+const whiteNorm = p => 1 / Math.max(1, (p[0] + p[1] + p[2]) / 2, p[0], p[1], p[2]);
 
 // ── homemade COB tube: one continuous 3 cm diffuser, 64 zones, light all the way round ──
 
@@ -66,58 +65,6 @@ export class CobTube {
       if (peak > 0) l.color.setRGB(r / peak, g / peak, b / peak);
       l.intensity = (peak / this.n) * TUBE_SPILL;
     }
-  }
-}
-
-// ── pixel bar (the floor bars, until we know their model) ──
-
-export class LedBar {
-  constructor(fixture, { length = 2, horizontal = false } = {}) {
-    this.f = fixture;
-    this.n = fixture.n;
-    this.group = new THREE.Group();
-    const body = new THREE.Group();
-    if (horizontal) body.rotation.z = -Math.PI / 2;   // pixel 1 ends up on the left
-    this.group.add(body);
-
-    const depth = 0.06, cell = length / this.n;
-    body.add(new THREE.Mesh(new THREE.BoxGeometry(0.075, length + 0.04, depth), HOUSING));
-
-    this.pixels = new THREE.InstancedMesh(
-      new THREE.PlaneGeometry(0.046, cell * 0.84),
-      new THREE.MeshBasicMaterial({ toneMapped: false }),
-      this.n,
-    );
-    const m = new THREE.Matrix4();
-    for (let i = 0; i < this.n; i++) {
-      this.pixels.setMatrixAt(i, m.makeTranslation(0, -length / 2 + (i + 0.5) * cell, depth / 2 + 0.002));
-      this.pixels.setColorAt(i, new THREE.Color(0));
-    }
-    body.add(this.pixels);
-
-    this.light = new THREE.RectAreaLight(0xffffff, 0, 0.07, length);
-    this.light.position.z = depth / 2 + 0.01;
-    this.light.rotation.y = Math.PI;   // area lights shine down their -Z; turn it to face out of the bar
-    body.add(this.light);
-
-    this.px = [0, 0, 0];
-    this.c = new THREE.Color();
-  }
-
-  update(t) {
-    const f = this.f;
-    const k = (f.get('Dimmer') / 255) * f.def.gate(f.get('Strobe'), t);
-    let r = 0, g = 0, b = 0;
-    for (let i = 0; i < this.n; i++) {
-      const p = zoneOut(f, i, this.px);
-      r += p[0]; g += p[1]; b += p[2];
-      const gain = k * PIXEL_GAIN * whiteNorm(p);
-      this.pixels.setColorAt(i, this.c.setRGB(p[0] * gain, p[1] * gain, p[2] * gain));
-    }
-    this.pixels.instanceColor.needsUpdate = true;
-    const peak = Math.max(r, g, b);
-    if (peak > 0) this.light.color.setRGB(r / peak, g / peak, b / peak);
-    this.light.intensity = (peak / this.n) * k * BAR_SPILL;
   }
 }
 

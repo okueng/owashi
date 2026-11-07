@@ -9,25 +9,25 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 import { byId, channelMaps, PATCH, PROFILES, universes } from './dmx.js';
 import { buildProgress, cue, hit, PALETTE, SCENE_LIST, show, tap, updateShow } from './show.js';
-import { BeamHead, CobTube, LedBar } from './fixtures.js';
+import { BeamHead, CobTube } from './fixtures.js';
 import { artnet, pump, setMode } from './artnet.js';
 import { effect } from '@preact/signals';
 import * as setlist from './setlist.js';
 import { mountSetlist } from './setlist-ui.js';
 
 // ── layout (metres; x = stage left→right as the audience sees it, z = towards the audience) ──
-// A first guess — tweak freely once we have the real stage plot.
+// The rig is placed for the audience's sightlines and the beams' distance from the band's eyes. The stage
+// itself is a guess — tweak freely once we have the real stage plot.
 
 const DECK = { w: 6, d: 4, h: 0.5, front: 1.5 };      // a small club stage: deck runs from z = -2.5 to z = +1.5
 const S = DECK.h;
 const KIT_Z = -1.0;                                    // drums on the deck with everyone else, no riser
 
 const RIG = {
-  V1: { pos: [-2.4, S, -2.3] }, V2: { pos: [-0.8, S, -2.3] }, V3: { pos: [0.8, S, -2.3] }, V4: { pos: [2.4, S, -2.3] },
-  H1: { pos: [-1.02, S + 0.04, KIT_Z + 0.8], horizontal: true },   // on the floor, along the front of the kit
-  H2: { pos: [1.02, S + 0.04, KIT_Z + 0.8], horizontal: true },
-  B1: { pos: [-1.6, S, -2.25] }, B2: { pos: [1.6, S, -2.25] },     // on the floor at the back, between the tubes
-  B3: { pos: [-2.75, S, 1.25] }, B4: { pos: [2.75, S, 1.25] },     // front corners
+  // two tubes framing the band at the sides, two at the back on either side of the kit and amps
+  V1: { pos: [-2.8, S, 0.3] }, V2: { pos: [-1.7, S, -2.3] }, V3: { pos: [1.7, S, -2.3] }, V4: { pos: [2.8, S, 0.3] },
+  // behind everyone, so nobody faces them, and on low cases to keep the beams clear of the amps and above eye level
+  B1: { pos: [-2.4, S, -2.25], riser: 0.5 }, B2: { pos: [2.4, S, -2.25], riser: 0.5 },
 };
 
 // Left to right as in the rehearsal room: Fab, Cyril, Romain (back), Olivier.
@@ -187,15 +187,12 @@ for (const [id, place] of Object.entries(RIG)) {
     foot.position.set(x, y + 0.01, z);
     scene.add(tube.group, foot);
     bars.push(tube);
-  } else if (f.profile === 'pixelBar') {
-    const bar = new LedBar(f, { horizontal: place.horizontal });
-    bar.group.position.set(x, y, z);
-    scene.add(bar.group);
-    bars.push(bar);
   } else {
     const head = new BeamHead(f);
-    head.group.position.set(...place.pos);
-    scene.add(head.group);
+    head.group.position.set(x, y + place.riser, z);
+    const flightCase = new THREE.Mesh(new THREE.BoxGeometry(0.4, place.riser, 0.4), new THREE.MeshStandardMaterial({ color: 0x151517, roughness: 0.6 }));
+    flightCase.position.set(x, y + place.riser / 2, z);
+    scene.add(head.group, flightCase);
     heads.push(head);
   }
 }
@@ -352,7 +349,10 @@ function button(label, key, onClick) {
   return b;
 }
 
-const clock = new THREE.Clock();
+const clock = new THREE.Clock();   // for drawing: how long since the last frame
+// The show's own time. It has to keep running when the browser stops drawing, or the real lights would stall with it.
+const showStart = performance.now();
+const showTime = () => (performance.now() - showStart) / 1000;
 
 const sceneButtons = SCENE_LIST.map(([id, label, key]) => {
   const b = button(label, key, () => setScene(id));
@@ -361,7 +361,7 @@ const sceneButtons = SCENE_LIST.map(([id, label, key]) => {
   return b;
 });
 function setScene(id) {
-  cue(id, clock.elapsedTime);
+  cue(id, showTime());
   sceneButtons.forEach(b => b.setAttribute('aria-pressed', b.dataset.scene === id));
   setlist.recordLook(id);
 }
@@ -383,10 +383,10 @@ for (const slot of ['A', 'B']) {
 function syncSwatches() { swatchButtons.forEach(b => b.setAttribute('aria-pressed', show['color' + b.dataset.slot] === b.dataset.name)); }
 syncSwatches();
 
-$('.tap').addEventListener('click', () => { tap(clock.elapsedTime); $('.bpm').textContent = show.bpm; setlist.onTap(); });
+$('.tap').addEventListener('click', () => { tap(showTime()); $('.bpm').textContent = show.bpm; setlist.onTap(); });
 
 setlist.configure({
-  now: () => clock.elapsedTime,
+  now: () => showTime(),
   onApplied() {   // a cue changed the look: bring the buttons along
     sceneButtons.forEach(b => b.setAttribute('aria-pressed', b.dataset.scene === show.scene));
     syncSwatches();
@@ -424,7 +424,7 @@ const flashBtn = $('.flash');
 const setFlash = on => { show.flash = on; flashBtn.setAttribute('aria-pressed', on); };
 flashBtn.addEventListener('pointerdown', () => setFlash(true));
 for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) flashBtn.addEventListener(ev, () => setFlash(false));
-$('.hit').addEventListener('pointerdown', () => hit(clock.elapsedTime));
+$('.hit').addEventListener('pointerdown', () => hit(showTime()));
 
 $('.master').addEventListener('input', e => { show.master = +e.target.value; });
 $('.haze').addEventListener('input', e => { ui.haze = +e.target.value; });
@@ -458,7 +458,7 @@ addEventListener('keydown', e => {
   const s = SCENE_LIST.find(([, , key]) => key === e.key);
   if (s) setScene(s[0]);
   else if (e.code === 'Space') { e.preventDefault(); setFlash(true); }
-  else if (e.key === 'Enter') { e.preventDefault(); hit(clock.elapsedTime); }
+  else if (e.key === 'Enter') { e.preventDefault(); hit(showTime()); }
   else if (e.key === 't' || e.key === 'T') $('.tap').click();
   else if (e.key === 'd' || e.key === 'D') toggleDmx();
   else if (e.key === 'l' || e.key === 'L') toggleSetlist();
@@ -573,15 +573,22 @@ $('.reset-layout').addEventListener('click', () => {
 // ── the real rig, over Art-Net ──────────────────────────────────────────────
 
 const artnetButtons = [...document.querySelectorAll('[data-artnet]')];
-artnetButtons.forEach(b => b.addEventListener('click', () => setMode(b.dataset.artnet)));
+const RIG_START_MASTER = 0.2;   // the real lights always come on dim; Master goes up by hand from there
+artnetButtons.forEach(b => b.addEventListener('click', () => {
+  if (b.dataset.artnet === 'send' && artnet.mode !== 'send') {
+    show.master = Math.min(show.master, RIG_START_MASTER);
+    $('.master').value = show.master;
+  }
+  setMode(b.dataset.artnet);
+}));
 const artnetDot = $('.artnet .dot'), artnetStatus = $('.artnet-status');
 
 function artnetText() {
   const found = artnet.nodes.length ? ` · found ${artnet.nodes.map(n => n.name || n.ip).join(', ')}` : '';
-  if (artnet.mode === 'off') return "The sim isn't talking to the real lights.";
+  if (artnet.mode === 'off') return artnet.notice || "The sim isn't talking to the real lights.";
   if (artnet.state === 'connecting') return 'Connecting to the bridge…';
   if (artnet.state === 'offline') return 'Bridge not running — start it with: node sim/bridge/artnet-bridge.mjs';
-  if (artnet.mode === 'send') return `Live: the real lights follow the sim${found}`;
+  if (artnet.mode === 'send') return `Live: the real lights follow the sim. They start dim, so raise Master when you're ready${found}`;
   if (!artnet.receiving) return "The bridge can't listen on port 6454 — another app on this computer has it.";
   const fresh = artnet.lastIn && performance.now() - artnet.lastIn < 2000;
   return (fresh ? 'Mirroring the desk' : 'Waiting for Art-Net from a desk…') + found;
@@ -664,14 +671,21 @@ const beatDot = $('.beat');
 const buildBtn = $('[data-scene=build]');
 let frames = 0, fpsT = 0;
 
-renderer.setAnimationLoop(() => {
-  const raw = clock.getDelta(), dt = Math.min(raw, 0.1), t = clock.elapsedTime;
-  adaptQuality(raw);
-
+// One step of what the lights do: nothing here depends on drawing, so it can run without a frame.
+function stepShow(t) {
   setlist.tick();   // a song that's playing moves the cues (and the tempo grid) along
   // mirroring a desk: the show stays out of the universes, the desk fills them
   const beat = artnet.mode === 'mirror' ? (t - show.beat0) * show.bpm / 60 : updateShow(t);
   pump(performance.now());
+  return beat;
+}
+artnet.onTick = () => stepShow(showTime());   // while driving the rig, whatever the tab is doing
+
+renderer.setAnimationLoop(() => {
+  const raw = clock.getDelta(), dt = Math.min(raw, 0.1), t = showTime();
+  adaptQuality(raw);
+
+  const beat = stepShow(t);
 
   for (const bar of bars) bar.update(t);
   for (const head of heads) head.update(t, dt, camera, ui.haze);

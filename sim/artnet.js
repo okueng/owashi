@@ -11,10 +11,24 @@ export const artnet = {
   routes: [],
   receiving: true,       // false if the bridge couldn't open port 6454 (then it can't mirror)
   lastIn: 0,             // performance.now() of the last frame from a desk
+  notice: '',            // why we're not driving, if the bridge said no
   onChange: () => {},
+  onTick: () => {},      // advance the show; called steadily while driving the rig
 };
 
-let ws = null, retry = 0, lastSend = 0;
+let ws = null, retry = 0, lastSend = 0, ticker = null;
+
+// Browsers throttle drawing and timers in a hidden or unfocused tab, but not in a worker,
+// so while driving the rig a worker's timer keeps the show and the DMX going.
+function runTicker(on) {
+  if (on && !ticker) {
+    ticker = new Worker(URL.createObjectURL(new Blob(['setInterval(() => postMessage(0), 25)'], { type: 'text/javascript' })));
+    ticker.onmessage = () => artnet.onTick();
+  } else if (!on && ticker) {
+    ticker.terminate();
+    ticker = null;
+  }
+}
 const url = () => `ws://${location.hostname || 'localhost'}:8770`;
 
 function connect() {
@@ -37,6 +51,12 @@ function connect() {
     if (typeof e.data === 'string') {
       let m;
       try { m = JSON.parse(e.data); } catch { return; }
+      if (m.type === 'refused') {   // only one sim drives the rig at a time
+        setMode('off');
+        artnet.notice = m.reason;
+        artnet.onChange();
+        return;
+      }
       if (m.routes) artnet.routes = m.routes;
       if (m.nodes) artnet.nodes = m.nodes;
       if ('receiving' in m) artnet.receiving = m.receiving;
@@ -53,6 +73,8 @@ function connect() {
 
 export function setMode(mode) {
   artnet.mode = mode;
+  artnet.notice = '';
+  runTicker(mode === 'send');
   if (mode === 'off') {
     clearTimeout(retry);
     if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'mode', mode }));
