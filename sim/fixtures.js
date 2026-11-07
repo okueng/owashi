@@ -50,6 +50,7 @@ export class CobTube {
       return l;
     });
     this.px = [0, 0, 0];
+    this.output = [0, 0, 0];   // the tube's average colour right now, 0–1, for its label
   }
 
   update() {
@@ -60,6 +61,7 @@ export class CobTube {
       this.data[i * 4] = p[0] * k; this.data[i * 4 + 1] = p[1] * k; this.data[i * 4 + 2] = p[2] * k; this.data[i * 4 + 3] = 255;
     }
     this.tex.needsUpdate = true;
+    this.output[0] = r / this.n; this.output[1] = g / this.n; this.output[2] = b / this.n;
     const peak = Math.max(r, g, b);
     for (const l of this.lights) {
       if (peak > 0) l.color.setRGB(r / peak, g / peak, b / peak);
@@ -189,6 +191,7 @@ export class BeamHead {
     this.head.add(this.glare);
 
     this.dir = new THREE.Vector3(); this.lensW = new THREE.Vector3(); this.toCam = new THREE.Vector3();
+    this.output = [0, 0, 0];   // the beam's colour right now, 0–1, for its label
   }
 
   update(t, dt, camera, haze) {
@@ -204,6 +207,7 @@ export class BeamHead {
     const [r0, g0, b0] = def.decodeColour(f.get('Colour'), t)[1];
     const norm = 1 / Math.max(1, (r0 + g0 + b0) / 1.5);   // keep open white from out-blinding the colours
     const r = r0 * norm, g = g0 * norm, b = b0 * norm;
+    this.output[0] = r * k; this.output[1] = g * k; this.output[2] = b * k;
     const prism = def.decodePrism(f.get('Prism'));
     this.prismAngle += prism.spin * dt * 4;
 

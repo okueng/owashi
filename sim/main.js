@@ -8,12 +8,14 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 import { byId, channelMaps, PATCH, PROFILES, universes } from './dmx.js';
-import { buildProgress, cue, hit, PALETTE, SCENE_LIST, show, tap, updateShow } from './show.js';
+import { cue, hit, lookProgress, PALETTE, SCENE_LIST, show, tap, updateShow } from './show.js';
 import { BeamHead, CobTube } from './fixtures.js';
 import { artnet, pump, setMode } from './artnet.js';
 import { effect } from '@preact/signals';
 import * as setlist from './setlist.js';
 import { mountSetlist } from './setlist-ui.js';
+import { createLabels } from './labels.js';
+import { actions as pedalActions, connect as connectPedal, connectIfAllowed, pedal } from './pedal.js';
 
 // ── layout (metres; x = stage left→right as the audience sees it, z = towards the audience) ──
 // The rig is placed for the audience's sightlines and the beams' distance from the band's eyes. The stage
@@ -26,6 +28,9 @@ const KIT_Z = -1.0;                                    // drums on the deck with
 const RIG = {
   // two tubes framing the band at the sides, two at the back on either side of the kit and amps
   V1: { pos: [-2.8, S, 0.3] }, V2: { pos: [-1.7, S, -2.3] }, V3: { pos: [1.7, S, -2.3] }, V4: { pos: [2.8, S, 0.3] },
+  // horizontal on the floor at the stage front, on low feet: the only light on the band's faces.
+  // Raising them gives more light, but the line then cuts across the players' legs.
+  H1: { pos: [-1.2, S, 1.3], raise: 0.05 }, H2: { pos: [1.2, S, 1.3], raise: 0.05 },
   // behind everyone, so nobody faces them, and on low cases to keep the beams clear of the amps and above eye level
   B1: { pos: [-2.4, S, -2.25], riser: 0.5 }, B2: { pos: [2.4, S, -2.25], riser: 0.5 },
 };
@@ -104,7 +109,7 @@ function resize() {
   camera.aspect = w / h;
   camera.fov = Math.min(72, 42 * Math.max(1, 1.3 / camera.aspect));
   const drawer = document.querySelector('.setlist');
-  const bottom = [panel, document.querySelector('.mtabs'), narrow.matches && drawer].filter(shown);
+  const bottom = [panel, narrow.matches && drawer].filter(shown);
   const covered = document.body.classList.contains('hide-ui') ? 0 : Math.max(0, ...bottom.map(el => h - el.getBoundingClientRect().top));
   document.documentElement.style.setProperty('--panel-h', `${shown(panel) ? h - panel.getBoundingClientRect().top : 0}px`);
   // on wide screens the setlist sits on the right: slide the stage left of it
@@ -182,10 +187,24 @@ for (const [id, place] of Object.entries(RIG)) {
   const [x, y, z] = place.pos;
   if (f.profile === 'tube') {
     const tube = new CobTube(f);
-    tube.group.position.set(x, y + 0.02 + 0.03 + 1, z);   // foot, end cap, half the tube
-    const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.11, 0.02, 24), new THREE.MeshStandardMaterial({ color: 0x151517, roughness: 0.6 }));
-    foot.position.set(x, y + 0.01, z);
-    scene.add(tube.group, foot);
+    const standMat = new THREE.MeshStandardMaterial({ color: 0x151517, roughness: 0.6 });
+    if (place.raise) {
+      tube.group.rotation.z = -Math.PI / 2;   // zone 1 ends up on the audience's left
+      tube.group.position.set(x, y + place.raise, z);
+      for (const dx of [-0.8, 0.8]) {
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, place.raise, 10), standMat);
+        post.position.set(x + dx, y + place.raise / 2, z);
+        const base = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.09, 0.015, 20), standMat);
+        base.position.set(x + dx, y + 0.0075, z);
+        scene.add(post, base);
+      }
+      scene.add(tube.group);
+    } else {
+      tube.group.position.set(x, y + 0.02 + 0.03 + 1, z);   // foot, end cap, half the tube
+      const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.11, 0.02, 24), standMat);
+      foot.position.set(x, y + 0.01, z);
+      scene.add(tube.group, foot);
+    }
     bars.push(tube);
   } else {
     const head = new BeamHead(f);
@@ -341,6 +360,27 @@ window.sim = { scene, camera, controls, renderer, composer, models, band, show, 
 const $ = s => document.querySelector(s);
 const ui = { haze: 0.8, fill: 0.45 };
 
+// One panel open at a time, the setlist included.
+const SHEETS = ['.look-sheet', '.more-sheet', '.dmx', '.pedal'].map($);
+function showOnly(el) {
+  SHEETS.forEach(s => { s.hidden = s !== el; });
+  if (el) setlist.open.value = false;
+  $('.look-open').setAttribute('aria-pressed', !$('.look-sheet').hidden);
+  $('.more-open').setAttribute('aria-pressed', !$('.more-sheet').hidden);
+  if ($('.pedal').hidden && pedal.learning) { pedal.learning = null; pedal.onChange(); }
+}
+const toggleSheet = el => showOnly(el.hidden ? el : null);
+canvas.addEventListener('pointerdown', () => showOnly(null));   // clicking the stage puts it all away
+
+const toastEl = $('.toast');
+let toastTimer = 0;
+function toast(text) {
+  toastEl.textContent = text;
+  toastEl.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('on'), 1800);
+}
+
 function button(label, key, onClick) {
   const b = document.createElement('button');
   b.textContent = label;
@@ -354,15 +394,23 @@ const clock = new THREE.Clock();   // for drawing: how long since the last frame
 const showStart = performance.now();
 const showTime = () => (performance.now() - showStart) / 1000;
 
-const sceneButtons = SCENE_LIST.map(([id, label, key]) => {
-  const b = button(label, key, () => setScene(id));
-  b.dataset.scene = id;
+const sceneButtons = SCENE_LIST.map(([id, label, key, , hint]) => {
+  const b = button(label, null, () => setScene(id));
+  b.dataset.scene = id; b.title = `${hint} (key ${key.toUpperCase()})`;
   $('.scenes').append(b);
   return b;
 });
+function syncLooks() {
+  sceneButtons.forEach(b => {
+    const on = b.dataset.scene === show.scene;
+    b.setAttribute('aria-pressed', on);
+    if (!on) b.style.setProperty('--p', 0);
+  });
+  $('.look-name').textContent = SCENE_LIST.find(s => s[0] === show.scene)[1];
+}
 function setScene(id) {
   cue(id, showTime());
-  sceneButtons.forEach(b => b.setAttribute('aria-pressed', b.dataset.scene === id));
+  syncLooks();
   setlist.recordLook(id);
 }
 setScene(show.scene);
@@ -380,15 +428,21 @@ for (const slot of ['A', 'B']) {
     swatchButtons.push(b);
   }
 }
-function syncSwatches() { swatchButtons.forEach(b => b.setAttribute('aria-pressed', show['color' + b.dataset.slot] === b.dataset.name)); }
+function syncSwatches() {
+  swatchButtons.forEach(b => b.setAttribute('aria-pressed', show['color' + b.dataset.slot] === b.dataset.name));
+  $('.dot-a').style.setProperty('--c', `rgb(${PALETTE[show.colorA].rgb})`);
+  $('.dot-b').style.setProperty('--c', `rgb(${PALETTE[show.colorB].rgb})`);
+}
 syncSwatches();
 
+$('.look-open').addEventListener('click', () => toggleSheet($('.look-sheet')));
+$('.more-open').addEventListener('click', () => toggleSheet($('.more-sheet')));
 $('.tap').addEventListener('click', () => { tap(showTime()); $('.bpm').textContent = show.bpm; setlist.onTap(); });
 
 setlist.configure({
   now: () => showTime(),
   onApplied() {   // a cue changed the look: bring the buttons along
-    sceneButtons.forEach(b => b.setAttribute('aria-pressed', b.dataset.scene === show.scene));
+    syncLooks();
     syncSwatches();
     $('.bpm').textContent = show.bpm;
   },
@@ -396,29 +450,26 @@ setlist.configure({
 mountSetlist(document.getElementById('setlist-root'));
 setlist.loadSongs();
 const toggleSetlist = () => { setlist.open.value = !setlist.open.value; };
-$('.setlist-toggle').addEventListener('click', toggleSetlist);
-// Phones: the controls are three tabs — Looks, Song (the setlist) and More.
-const tabButtons = [...document.querySelectorAll('.mtabs button')];
-function setTab(tab) {
-  document.body.dataset.mtab = tab;
-  tabButtons.forEach(b => b.setAttribute('aria-pressed', b.dataset.tab === tab));
-  if (narrow.matches && setlist.open.value !== (tab === 'song')) setlist.open.value = tab === 'song';
-  setTimeout(resize);
-}
-tabButtons.forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
-setTab(narrow.matches && setlist.open.value ? 'song' : 'looks');
+$('.song-open').addEventListener('click', toggleSetlist);
 narrow.addEventListener('change', () => setTimeout(resize));
 
-effect(() => {   // opening or closing the setlist: update its button, and move the stage over once it's drawn
+effect(() => {   // opening or closing the setlist: close the rest, and move the stage over once it's drawn
   const open = setlist.open.value;
-  $('.setlist-toggle').setAttribute('aria-pressed', open);
-  if (narrow.matches && open !== (document.body.dataset.mtab === 'song')) setTab(open ? 'song' : 'looks');
+  $('.song-open').setAttribute('aria-pressed', open);
+  if (open) showOnly(null);
   setTimeout(() => {
     resize();
     const drawer = document.querySelector('.setlist');
     if (drawer && !drawer.dataset.watched) { drawer.dataset.watched = 1; new ResizeObserver(resize).observe(drawer); }
   });
 });
+effect(() => {   // the bar: which song, and what the next cue is
+  const next = setlist.cues.value[setlist.index.value + 1], go = $('.go-btn');
+  $('.song-open').textContent = setlist.song.value?.title || 'Setlist';
+  go.hidden = !next;
+  go.textContent = next ? `Next: ${next.name}` : '';
+});
+$('.go-btn').addEventListener('click', () => setlist.go());
 window.sim.setlist = setlist;
 const flashBtn = $('.flash');
 const setFlash = on => { show.flash = on; flashBtn.setAttribute('aria-pressed', on); };
@@ -426,10 +477,18 @@ flashBtn.addEventListener('pointerdown', () => setFlash(true));
 for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) flashBtn.addEventListener(ev, () => setFlash(false));
 $('.hit').addEventListener('pointerdown', () => hit(showTime()));
 
-$('.master').addEventListener('input', e => { show.master = +e.target.value; });
-$('.beams').addEventListener('input', e => { show.beams = +e.target.value; });
-$('.haze').addEventListener('input', e => { ui.haze = +e.target.value; });
-$('.fill').addEventListener('input', e => { ui.fill = +e.target.value; });
+// a fader's filled track, and its readout if it has one, follow its value however it was set
+function syncFader(input) {
+  input.style.setProperty('--v', `${(+input.value / +input.max) * 100}%`);
+  const out = input.parentElement.querySelector('output');
+  if (out) out.textContent = `${Math.round(+input.value * 100)}%`;
+}
+const FADERS = { master: v => { show.master = v; }, beams: v => { show.beams = v; }, haze: v => { ui.haze = v; }, fill: v => { ui.fill = v; } };
+for (const [name, set] of Object.entries(FADERS)) {
+  const input = $(`.${name}`);
+  input.addEventListener('input', () => { set(+input.value); syncFader(input); });
+  syncFader(input);
+}
 
 let flight = null;
 const viewButtons = Object.keys(VIEWS).map(name => {
@@ -447,16 +506,18 @@ viewButtons[0].setAttribute('aria-pressed', true);
 controls.addEventListener('start', () => { flight = null; viewButtons.forEach(b => b.setAttribute('aria-pressed', false)); });
 
 const dmxPanel = $('.dmx');
-const toggleDmx = () => { dmxPanel.hidden = !dmxPanel.hidden; $('.dmx-toggle').setAttribute('aria-pressed', !dmxPanel.hidden); };
+const toggleDmx = () => toggleSheet(dmxPanel);
 $('.dmx-toggle').addEventListener('click', toggleDmx);
-$('.hide').addEventListener('click', toggleUi);
+$('.hide').addEventListener('click', () => { showOnly(null); toggleUi(); });
 $('.unhide').addEventListener('click', toggleUi);   // the way back on a phone, where there's no H key
 $('.credits-open').addEventListener('click', () => $('dialog.credits').showModal());
+const showKeys = () => $('dialog.shortcuts').showModal();
+$('.keys-open').addEventListener('click', showKeys);
 
 addEventListener('keydown', e => {
   if (e.target.closest('input, select, textarea, dialog') || e.metaKey || e.ctrlKey) return;
   if (e.repeat) { if (e.code === 'Space') e.preventDefault(); return; }
-  const s = SCENE_LIST.find(([, , key]) => key === e.key);
+  const s = SCENE_LIST.find(([, , key]) => key === e.key.toLowerCase());
   if (s) setScene(s[0]);
   else if (e.code === 'Space') { e.preventDefault(); setFlash(true); }
   else if (e.key === 'Enter') { e.preventDefault(); hit(showTime()); }
@@ -468,6 +529,10 @@ addEventListener('keydown', e => {
   else if (e.key === 'ArrowRight' || e.key === 'g' || e.key === 'G') { e.preventDefault(); setlist.go(); }
   else if (e.key === 'ArrowLeft') { e.preventDefault(); setlist.back(); }
   else if (e.key === 'h' || e.key === 'H') toggleUi();
+  else if (e.key === 'n' || e.key === 'N') toggleLabels();
+  else if (e.key === 'm' || e.key === 'M') togglePedal();
+  else if (e.key === '?') showKeys();
+  else if (e.key === 'Escape') showOnly(null);
   else if (e.key === 'v' || e.key === 'V') {
     const names = Object.keys(VIEWS), cur = viewButtons.findIndex(b => b.getAttribute('aria-pressed') === 'true');
     flyTo(names[(cur + 1) % names.length]);
@@ -573,33 +638,41 @@ $('.reset-layout').addEventListener('click', () => {
 
 // ── the real rig, over Art-Net ──────────────────────────────────────────────
 
-const artnetButtons = [...document.querySelectorAll('[data-artnet]')];
 const RIG_START_MASTER = 0.2;   // the real lights always come on dim; Master goes up by hand from there
-artnetButtons.forEach(b => b.addEventListener('click', () => {
-  if (b.dataset.artnet === 'send' && artnet.mode !== 'send') {
-    show.master = Math.min(show.master, RIG_START_MASTER);
-    $('.master').value = show.master;
-  }
-  setMode(b.dataset.artnet);
-}));
-const artnetDot = $('.artnet .dot'), artnetStatus = $('.artnet-status');
+$('.rig').addEventListener('click', () => {
+  if (artnet.mode !== 'off') return setMode('off');
+  show.master = Math.min(show.master, RIG_START_MASTER);
+  $('.master').value = show.master;
+  syncFader($('.master'));
+  setMode('send');
+});
+$('.mirror').addEventListener('click', () => setMode(artnet.mode === 'mirror' ? 'off' : 'mirror'));
 
 function artnetText() {
   const found = artnet.nodes.length ? ` · found ${artnet.nodes.map(n => n.name || n.ip).join(', ')}` : '';
   if (artnet.mode === 'off') return artnet.notice || "The sim isn't talking to the real lights.";
   if (artnet.state === 'connecting') return 'Connecting to the bridge…';
-  if (artnet.state === 'offline') return 'Bridge not running — start it with: node sim/bridge/artnet-bridge.mjs';
-  if (artnet.mode === 'send') return `Live: the real lights follow the sim. They start dim, so raise Master when you're ready${found}`;
-  if (!artnet.receiving) return "The bridge can't listen on port 6454 — another app on this computer has it.";
+  if (artnet.state === 'offline') return 'Bridge not running. Start it with: node sim/bridge/artnet-bridge.mjs';
+  if (artnet.mode === 'send') return `The real lights follow the sim${found}`;
+  if (!artnet.receiving) return "The bridge can't listen on port 6454: another app on this computer has it.";
   const fresh = artnet.lastIn && performance.now() - artnet.lastIn < 2000;
   return (fresh ? 'Mirroring the desk' : 'Waiting for Art-Net from a desk…') + found;
 }
+let shownProblem = '';
 function syncArtnet() {
-  artnetButtons.forEach(b => b.setAttribute('aria-pressed', b.dataset.artnet === artnet.mode));
-  artnetDot.dataset.state = artnet.mode === 'off' ? 'off' : artnet.state;
-  artnetStatus.textContent = artnetText();
-  artnetStatus.title = artnet.routes.map(r => `U${r.sim} → Art-Net universe ${r.artnet} → ${r.to}`).join('\n');
+  const rig = $('.rig'), live = artnet.mode === 'send' && artnet.state === 'connected', off = artnet.mode === 'off';
+  document.body.classList.toggle('live', live);
   document.body.classList.toggle('mirroring', artnet.mode === 'mirror');
+  rig.dataset.on = !off;
+  rig.textContent = off ? 'Drive rig' : artnet.state === 'connecting' ? 'Connecting… Stop'
+    : artnet.state === 'offline' ? 'Bridge offline · Stop' : live ? 'LIVE · Stop' : 'Mirroring · Stop';
+  const routes = artnet.routes.map(r => `U${r.sim} → ${r.to}`).join('\n');
+  rig.title = artnetText() + (routes ? `\n${routes}` : '');
+  $('.mirror').setAttribute('aria-pressed', artnet.mode === 'mirror');
+  // only the things you have to act on get said out loud
+  const problem = (off && artnet.notice) || (!off && artnet.state === 'offline' && artnetText()) || (artnet.mode === 'mirror' && !artnet.receiving && artnetText()) || '';
+  if (problem && problem !== shownProblem) toast(problem);
+  shownProblem = problem;
 }
 artnet.onChange = syncArtnet;
 syncArtnet();
@@ -618,7 +691,7 @@ function syncMonitor() {
   uButtons.forEach((b, i) => b.setAttribute('aria-pressed', i === shownU));
   $('.patch').innerHTML = PATCH.filter(p => p.universe === shownU + 1).map(p => {
     const n = PROFILES[p.profile].channels.length;
-    return `<li>${p.id} · ${String(p.address).padStart(3, '0')}–${String(p.address + n - 1).padStart(3, '0')} · ${PROFILES[p.profile].name}</li>`;
+    return `<li>${p.id} · ${String(p.address).padStart(3, '0')}–${String(p.address + n - 1).padStart(3, '0')} · ${p.label}</li>`;
   }).join('');
 }
 syncMonitor();
@@ -649,6 +722,90 @@ mon.addEventListener('pointermove', e => {
 });
 mon.addEventListener('pointerleave', () => { hoverCh = -1; });
 
+// ── names on the lights ─────────────────────────────────────────────────────
+
+const LABELS_KEY = 'owashi-sim:labels';
+const labels = createLabels($('.tags'), [...bars, ...heads].map(({ f }) => {
+  const [x, y, z] = RIG[f.id].pos;
+  const at = f.profile === 'lb150' ? [x, y + RIG[f.id].riser / 2, z + 0.25]   // on the front of its flight case
+    : RIG[f.id].raise ? [x, y - 0.14, DECK.front]                              // on the front edge of the deck
+    : [x, y + 2.2, z];                                                         // just above the tube
+  return { f, at };
+}), camera);
+function setLabels(on) {
+  document.body.classList.toggle('no-tags', !on);
+  $('.labels-toggle').setAttribute('aria-pressed', on);
+  try { localStorage.setItem(LABELS_KEY, on ? '1' : '0'); } catch { /* it just won't be remembered */ }
+}
+const toggleLabels = () => setLabels(document.body.classList.contains('no-tags'));
+$('.labels-toggle').addEventListener('click', toggleLabels);
+let labelsWanted = true;
+try { labelsWanted = localStorage.getItem(LABELS_KEY) !== '0'; } catch { /* private window: leave them on */ }
+setLabels(labelsWanted);
+
+// ── foot pedal ──────────────────────────────────────────────────────────────
+// Four switches: scene and song, each way. What happened shows up big on screen, to read from the stage.
+
+const LOOK_CYCLE = SCENE_LIST.filter(s => s[3] !== 'Cut').map(s => s[0]);   // never lands on Strobe or Blackout by accident
+const labelOf = id => SCENE_LIST.find(s => s[0] === id)[1];
+function stepLook(dir) {
+  const i = LOOK_CYCLE.indexOf(show.scene);
+  const next = LOOK_CYCLE[i < 0 ? 0 : (i + dir + LOOK_CYCLE.length) % LOOK_CYCLE.length];
+  setScene(next);
+  return labelOf(next);
+}
+// A song with cues steps through them; one without steps through the looks, so the switch always does something.
+function stepScene(dir) {
+  const cues = setlist.cues.value;
+  if (!cues.length) return stepLook(dir);
+  const to = cues[setlist.index.value + dir];
+  if (!to) return dir > 0 ? 'End of the song' : 'First cue';
+  if (dir > 0) setlist.go(); else setlist.back();
+  return `${to.name} · ${labelOf(to.scene)}`;
+}
+function stepSong(dir) {
+  const list = setlist.songs.value;
+  if (!list.length) return 'No songs';
+  const i = list.findIndex(s => s.id === setlist.songId.value);
+  const next = list[Math.min(list.length - 1, Math.max(0, i + dir))];
+  if (next.id !== setlist.songId.value) setlist.selectSong(next.id);   // the lights stay as they are until the next scene
+  return next.title;
+}
+const PEDAL_DO = { nextScene: () => stepScene(1), prevScene: () => stepScene(-1), nextSong: () => stepSong(1), prevSong: () => stepSong(-1) };
+pedal.onAction = id => {
+  // a desk is in charge while mirroring, so the pedal can only move between songs
+  if (artnet.mode === 'mirror' && id.endsWith('Scene')) return toast('Mirroring a desk');
+  toast(PEDAL_DO[id]());
+};
+
+const togglePedal = () => toggleSheet($('.pedal'));
+$('.pedal-toggle').addEventListener('click', togglePedal);
+$('.pedal-connect').addEventListener('click', connectPedal);
+const pedalRows = pedalActions.map(({ id, label }) => {
+  const li = document.createElement('li');
+  li.innerHTML = `<span>${label}</span><small></small><button class="learn">Learn</button>`;
+  li.querySelector('.learn').addEventListener('click', () => { pedal.learning = pedal.learning === id ? null : id; syncPedal(); });
+  $('.pedal-map').append(li);
+  return { id, set: li.querySelector('small'), learn: li.querySelector('.learn') };
+});
+function syncPedal() {
+  $('.pedal-connect').hidden = pedal.state === 'ready' || pedal.state === 'unsupported';
+  $('.pedal-status').textContent = pedal.learning ? 'Press the switch…'
+    : pedal.state === 'unsupported' ? 'This browser has no MIDI. Use Chrome.'
+    : pedal.state === 'denied' ? 'MIDI is blocked here. Use Chrome and allow it.'
+    : pedal.state === 'off' ? 'Not connected'
+    : !pedal.inputs.length ? 'No pedal found. Plug it in.'
+    : pedal.inputs.join(', ');
+  for (const r of pedalRows) {
+    const key = pedal.map[r.id];
+    r.set.textContent = key ? pedal.describe(key) : '';
+    r.learn.setAttribute('aria-pressed', pedal.learning === r.id);
+  }
+}
+pedal.onChange = syncPedal;
+syncPedal();
+connectIfAllowed();   // already allowed once on this computer: ready without a click at the gig
+
 // ── loop ────────────────────────────────────────────────────────────────────
 
 // If the device can't hold ~28 fps (an older phone), render at a lower resolution, a step at a time.
@@ -668,8 +825,7 @@ function adaptQuality(frameTime) {
   sampled = slow = 0;
 }
 
-const beatDot = $('.beat');
-const buildBtn = $('[data-scene=build]');
+const beatDots = [...document.querySelectorAll('.beats i')];
 let frames = 0, fpsT = 0;
 
 // One step of what the lights do: nothing here depends on drawing, so it can run without a frame.
@@ -712,8 +868,10 @@ renderer.setAnimationLoop(() => {
   controls.update();
   composer.render();
 
-  beatDot.style.opacity = 0.15 + 0.85 * nod;
-  buildBtn.style.setProperty('--p', show.scene === 'build' ? buildProgress(t) : 0);
+  const beatNow = ((Math.floor(beat) % 4) + 4) % 4;
+  beatDots.forEach((d, i) => { d.style.opacity = i === beatNow ? 0.25 + 0.75 * nod : 0.15; });
+  sceneButtons.find(b => b.dataset.scene === show.scene).style.setProperty('--p', lookProgress(t));
+  if (uiShown) labels.update(innerWidth, innerHeight);
   if (!dmxPanel.hidden) {
     drawMonitor();
     const owner = channelMaps[shownU][hoverCh];

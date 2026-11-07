@@ -2,7 +2,7 @@
 // Everything that drives the lights (the built-in show, later Art-Net or a real desk) writes here;
 // everything that draws them reads from here.
 
-export const universes = [1, 2, 3].map(() => new Uint8Array(512));
+export const universes = [1, 2, 3, 4].map(() => new Uint8Array(512));
 
 const zones = n => Array.from({ length: n }, (_, i) => ['R', 'G', 'B', 'W'].map(c => `Z${i + 1} ${c}`)).flat();
 const frac = x => x - Math.floor(x);
@@ -78,13 +78,17 @@ export const PROFILES = {
 
 export const PATCH = [
   // universe 1 — the Art-Net box, whose two DMX ports carry the same universe: B1 on DMX1, B2 on DMX2
-  { id: 'B1', label: 'Beam left', profile: 'lb150', universe: 1, address: 1 },
-  { id: 'B2', label: 'Beam right', profile: 'lb150', universe: 1, address: 13 },
+  // left and right as the audience sees them; tag is the short name on the 3D labels
+  { id: 'B1', tag: 'Beam L', label: 'Moving head, back left', profile: 'lb150', universe: 1, address: 1 },
+  { id: 'B2', tag: 'Beam R', label: 'Moving head, back right', profile: 'lb150', universe: 1, address: 13 },
   // universes 2–3 — the tubes on WLED, outputs 1–4 of the Dig-Quad: 256 channels each, two per universe
-  { id: 'V1', label: 'Tube 1', profile: 'tube', universe: 2, address: 1 },
-  { id: 'V2', label: 'Tube 2', profile: 'tube', universe: 2, address: 257 },
-  { id: 'V3', label: 'Tube 3', profile: 'tube', universe: 3, address: 1 },
-  { id: 'V4', label: 'Tube 4', profile: 'tube', universe: 3, address: 257 },
+  { id: 'V1', tag: 'Side L', label: 'Tube, side left', profile: 'tube', universe: 2, address: 1 },
+  { id: 'V2', tag: 'Back L', label: 'Tube, back left', profile: 'tube', universe: 2, address: 257 },
+  { id: 'V3', tag: 'Back R', label: 'Tube, back right', profile: 'tube', universe: 3, address: 1 },
+  { id: 'V4', tag: 'Side R', label: 'Tube, side right', profile: 'tube', universe: 3, address: 257 },
+  // universe 4 — the two horizontal bars at the stage front. Not built yet, so rig.json has no route for it.
+  { id: 'H1', tag: 'Front L', label: 'Floor bar, front left', planned: true, profile: 'tube', universe: 4, address: 1 },
+  { id: 'H2', tag: 'Front R', label: 'Floor bar, front right', planned: true, profile: 'tube', universe: 4, address: 257 },
 ];
 
 export class Fixture {

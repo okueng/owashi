@@ -13,6 +13,7 @@ export const LOOK_LABEL = Object.fromEntries(LOOKS.map(l => [l.id, l.label]));
 export const LOOK_COLOUR = {
   ambient: '#4a6cff', sweep: '#9cc2ff', build: '#e0a21e', riff: '#e0301e', blast: '#ffffff',
   breakdown: '#a51c14', wall: '#f3f2ee', embers: '#ff7a1a', strobe: '#ffffff', blackout: '#555555',
+  slab: '#b0382c', shimmer: '#c9b6ff', silhouette: '#c4c4c4', searchlight: '#6fd3c7', collapse: '#b86a2c',
 };
 export const COLOURS = Object.keys(PALETTE);
 

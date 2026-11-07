@@ -17,69 +17,113 @@
   :root{
     --bg:#0b0b0c;
     --fg:#f3f2ee;
-    --fg-2:rgba(243,242,238,.64);
-    --fg-3:rgba(243,242,238,.40);
+    --fg-2:rgba(243,242,238,.68);
+    --fg-3:rgba(243,242,238,.48);
     --line:rgba(243,242,238,.12);
     --line-2:rgba(243,242,238,.22);
-    --panel:rgba(11,11,12,.78);
+    --tint:rgba(243,242,238,.06);
+    --panel:rgba(14,14,16,.86);
+    --live:#e5352a;
+    --amber:#e0a21e;
+    --ok:#3ccf6e;
     --font:"Jost",system-ui,-apple-system,"Segoe UI",sans-serif;
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:400 13px/1.4 var(--font);overflow:hidden}
   canvas.stage{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+  [hidden]{display:none !important}
+  .loading{position:fixed;inset:0;display:grid;place-items:center;color:var(--fg-3);letter-spacing:.12em;text-transform:uppercase;font-size:12px;pointer-events:none}
+  .loading.done{display:none}
 
-  .title{position:fixed;top:16px;left:16px;pointer-events:none}
-  .title h1{margin:0;font-weight:400;font-size:15px;letter-spacing:.14em;text-transform:uppercase}
-  .title p{margin:2px 0 0;color:var(--fg-3);font-size:12px}
-  .loading{position:fixed;inset:0;display:grid;place-items:center;color:var(--fg-3);letter-spacing:.12em;text-transform:uppercase;font-size:12px;pointer-events:none;transition:opacity .6s}
-  .loading.done{opacity:0}
-
-  .panel{position:fixed;left:16px;right:16px;bottom:16px;display:flex;flex-wrap:wrap;gap:10px 22px;align-items:flex-end;
-    padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:10px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-    max-height:46vh;overflow-y:auto}
-  .group{display:flex;flex-direction:column;gap:6px;min-width:0}
-  .group > span{color:var(--fg-3);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
-  .row{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
   button{font:inherit;color:var(--fg);background:transparent;border:1px solid var(--line-2);border-radius:6px;padding:5px 9px;cursor:pointer;line-height:1.2}
-  button:hover{border-color:var(--fg-2)}
+  button:hover{border-color:var(--fg-2);background:var(--tint)}
+  button:focus-visible,summary:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
   button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
-  button kbd{font:inherit;opacity:.45;margin-left:4px;font-size:11px}
-  button[data-scene=build]{position:relative;overflow:hidden}
-  button[data-scene=build]::after{content:"";position:absolute;left:0;bottom:0;height:3px;width:calc(var(--p,0) * 100%);background:#e0301e}
-  .swatch{width:22px;height:22px;padding:0;border-radius:50%;border:2px solid transparent;background:var(--c)}
-  .swatch[aria-pressed="true"]{border-color:var(--fg);background:var(--c);box-shadow:0 0 0 2px var(--bg) inset}
-  .swatches{display:grid;grid-template-columns:auto repeat(8,22px);gap:4px 4px;align-items:center}
+  kbd{font:inherit;font-size:10.5px;letter-spacing:.02em;text-transform:uppercase;opacity:.55;margin-left:5px;font-variant-numeric:tabular-nums}
+  h2{margin:0;color:var(--fg-3);font-weight:400;font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+  .row{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+  .glass{background:var(--panel);border:1px solid var(--line);border-radius:10px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+  .segment{display:inline-flex;border:1px solid var(--line-2);border-radius:7px;padding:2px;gap:2px;background:rgba(14,14,16,.6)}
+  .segment button{border:0;border-radius:5px;padding:4px 9px}
+
+
+  /* names on the lights: just text, and never in the way of dragging the view */
+  .tags{position:fixed;inset:0;z-index:1;overflow:hidden;pointer-events:none}
+  .tag{position:absolute;left:0;top:0;color:var(--fg-2);font-size:11px;line-height:1.2;white-space:nowrap;will-change:transform;text-shadow:0 0 3px #000,0 0 3px #000}
+  .tag b{font-weight:500;color:var(--fg)}
+
+  /* the bar */
+  .panel{position:fixed;z-index:5;left:16px;right:16px;bottom:16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px}
+  body.live .panel{border-color:var(--live);box-shadow:0 0 0 1px var(--live)}
+  .panel .spacer{flex:1}
+  .look-open{display:inline-flex;align-items:center;gap:6px;font-size:14px;padding:6px 12px}
+  .look-open i{width:10px;height:10px;border-radius:50%;background:var(--c)}
+  .look-open i + i{margin-left:-9px;box-shadow:0 0 0 1px var(--bg)}
+  .look-name{margin-left:3px}
+  .song-open,.go-btn,.more-open,.rig{padding:6px 12px}
+  .go-btn{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .master-fader{display:flex;align-items:center;gap:8px;color:var(--fg-2);padding:0 4px}
+  .master-fader input{width:110px}
+  .master-fader output{width:34px;text-align:right;color:var(--fg-3);font-variant-numeric:tabular-nums;font-size:12px}
+  .rig[data-on="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+  body.live .rig{background:var(--live);color:#fff;border-color:var(--live);font-weight:500}
+
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:20px;margin:0;background:transparent;cursor:pointer;--track:var(--fg)}
+  input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:linear-gradient(to right,var(--track) var(--v,0%),var(--line-2) var(--v,0%))}
+  input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:var(--line-2)}
+  input[type=range]::-moz-range-progress{height:4px;border-radius:2px;background:var(--track)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:18px;margin-top:-7px;border-radius:3px;background:var(--fg);border:1px solid var(--bg)}
+  input[type=range]::-moz-range-thumb{width:12px;height:18px;border-radius:3px;background:var(--fg);border:1px solid var(--bg)}
+  body.live input.master{--track:var(--live)}
+
+  /* what opens above the bar, one at a time */
+  .sheet{position:fixed;z-index:6;left:16px;bottom:calc(var(--panel-h,70px) + 24px);padding:12px;display:flex;flex-direction:column;gap:12px;max-height:calc(100vh - var(--panel-h,70px) - 48px);max-height:calc(100dvh - var(--panel-h,70px) - 48px);overflow-y:auto}
+  .more-sheet,.pedal{left:auto;right:16px}
+  .look-sheet{width:min(560px,calc(100vw - 32px))}
+  .scenes{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+  .scenes button{position:relative;overflow:hidden;padding:8px 4px;text-align:center}
+  .scenes button::after{content:"";position:absolute;left:0;bottom:0;height:3px;width:calc(var(--p,0) * 100%);background:var(--live)}
+  .look-sheet .row{gap:12px;justify-content:space-between}
+  .swatches{display:grid;grid-template-columns:auto repeat(8,20px);gap:6px 4px;align-items:center}
   .swatches b{font-weight:400;color:var(--fg-3);font-size:11px;width:12px}
-  .bpm{font-variant-numeric:tabular-nums;font-size:20px;font-weight:300;min-width:3ch}
-  .beat{width:8px;height:8px;border-radius:50%;background:var(--fg);opacity:.15}
-  label.slider{display:flex;align-items:center;gap:8px;color:var(--fg-2)}
-  label.slider span{width:72px}
-  input[type=range]{width:110px;accent-color:var(--fg)}
-  .spacer{flex:1}
-  .artnet .dot{width:8px;height:8px;border-radius:50%;background:var(--fg-3);margin-right:2px}
-  .artnet .dot[data-state="connecting"]{background:#e0a21e}
-  .artnet .dot[data-state="connected"]{background:#3ccf6e}
-  .artnet .dot[data-state="offline"]{background:#e0301e}
-  .artnet button[data-artnet="send"][aria-pressed="true"]{background:#e0301e;border-color:#e0301e;color:#fff}
-  .artnet-status{color:var(--fg-3);font-size:11px;max-width:320px;user-select:text}
+  .swatch{width:20px;height:20px;padding:0;border-radius:50%;border:2px solid transparent;background:var(--c)}
+  .swatch:hover{background:var(--c);border-color:var(--fg-2)}
+  .swatch[aria-pressed="true"]{border-color:var(--fg);background:var(--c);box-shadow:0 0 0 2px var(--bg) inset}
+  .tempo{display:flex;align-items:center;gap:6px}
+  .tempo .bpm{font-variant-numeric:tabular-nums;font-size:20px;line-height:1;font-weight:300;min-width:3ch}
+  .beats{display:inline-flex;gap:3px;margin-right:4px}
+  .beats i{width:6px;height:6px;border-radius:50%;background:var(--fg);opacity:.15}
   body.mirroring .scenes,body.mirroring .swatches,body.mirroring .hit,body.mirroring .flash{opacity:.35;pointer-events:none}
-  .links{display:flex;gap:4px}
 
-  .dmx{position:fixed;top:84px;left:16px;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
-  .dmx[hidden]{display:none}
-  .dmx header{display:flex;justify-content:space-between;color:var(--fg-3);font-size:11px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
-  .dmx .universes{margin-bottom:8px}
+  .more-sheet{width:min(300px,calc(100vw - 32px))}
+  .more-sheet .views{display:flex}
+  .more-sheet .views button{flex:1}
+  label.slider{display:grid;grid-template-columns:1fr 130px;align-items:center;gap:8px;color:var(--fg-2)}
+  .more-list{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+  .mirror[aria-pressed="true"]{background:var(--live);border-color:var(--live);color:#fff}
+
+  .dmx header{display:flex;justify-content:space-between;color:var(--fg-3);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
   .dmx canvas{display:block;image-rendering:pixelated;max-width:100%}
-  .dmx .hover{height:18px;margin-top:6px;color:var(--fg-2);font-variant-numeric:tabular-nums;font-size:12px}
-  .dmx ul{list-style:none;margin:6px 0 0;padding:0;color:var(--fg-3);font-size:11px;font-variant-numeric:tabular-nums;columns:2;column-gap:16px}
+  .dmx .hover{height:18px;color:var(--fg-2);font-variant-numeric:tabular-nums;font-size:12px}
+  .dmx ul{list-style:none;margin:0;padding:0;color:var(--fg-3);font-size:11.5px;font-variant-numeric:tabular-nums}
 
-  .place{position:fixed;top:16px;left:50%;transform:translateX(-50%);padding:6px 12px;background:var(--panel);border:1px solid var(--line);border-radius:999px;
-    color:var(--fg-2);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;opacity:0;transition:opacity .3s;pointer-events:none}
+  .pedal{width:min(320px,calc(100vw - 32px))}
+  .pedal-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .pedal-status{margin:0;color:var(--fg-2);font-size:12px}
+  .pedal-map{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+  .pedal-map li{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center}
+  .pedal-map small{color:var(--fg-3);font-size:11.5px;font-variant-numeric:tabular-nums}
+  .pedal-map button{padding:3px 8px;font-size:12px}
+  .pedal-map button[aria-pressed="true"]{background:var(--amber);border-color:var(--amber);color:#111}
+
+  .place,.toast{position:fixed;z-index:8;left:50%;top:16px;transform:translateX(-50%);max-width:calc(100vw - 32px);opacity:0;pointer-events:none}
+  .place{padding:6px 12px;background:var(--panel);border:1px solid var(--line);border-radius:999px;color:var(--fg-2);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;transition:opacity .3s}
   .place.on{opacity:1}
-  .setlist{position:fixed;top:16px;right:16px;width:min(400px,calc(100vw - 32px));max-height:calc(100vh - var(--panel-h,180px) - 32px);max-height:calc(100dvh - var(--panel-h,180px) - 32px);
+  .toast{width:max-content;padding:10px 18px;border-radius:10px;background:var(--fg);color:var(--bg);font-size:17px;font-weight:500;text-align:center;transition:opacity .25s}
+  .toast.on{opacity:1;transition:none}
+  .setlist{position:fixed;z-index:6;top:16px;right:16px;width:min(400px,calc(100vw - 32px));max-height:calc(100vh - var(--panel-h,70px) - 48px);max-height:calc(100dvh - var(--panel-h,70px) - 48px);
     display:flex;flex-direction:column;gap:10px;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;
     backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
-  .setlist[hidden]{display:none}
   .setlist header{display:flex;gap:6px;align-items:center}
   .setlist header > span{color:var(--fg-3);font-size:11px;letter-spacing:.12em;text-transform:uppercase;margin-right:auto}
   .setlist select,.setlist input{font:inherit;color:var(--fg);background:rgba(243,242,238,.06);border:1px solid var(--line-2);border-radius:6px;padding:4px 6px}
@@ -111,20 +155,22 @@
   .setlist footer label{font:inherit;border:1px solid var(--line-2);border-radius:6px;padding:5px 9px;cursor:pointer}
   .setlist footer button:disabled{opacity:.35;cursor:default}
   .setlist .save-status{color:var(--fg-3);font-size:11px}
-  .mtabs{display:none}
-  .unhide{display:none;position:fixed;right:16px;bottom:16px;background:var(--panel);opacity:.7}
+  .unhide{display:none;position:fixed;z-index:7;right:16px;bottom:16px;background:var(--panel);opacity:.7}
   body.hide-ui .unhide{display:block}
-  body.hide-ui .panel,body.hide-ui .dmx,body.hide-ui .title,body.hide-ui .place,body.hide-ui .setlist,body.hide-ui .mtabs{display:none}
+  body.hide-ui .panel,body.hide-ui .sheet,body.hide-ui .tags,body.hide-ui .place,body.hide-ui .setlist{display:none !important}
+  body.no-tags .tags{display:none}
   canvas.stage{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
   body{-webkit-tap-highlight-color:transparent}
 
   /* fingers: bigger targets, no keyboard hints, 16px fields so iPhones don't zoom in */
   @media (pointer:coarse){
     button{min-height:36px;padding:8px 12px;touch-action:manipulation}
-    button kbd{display:none}
-    .swatch{width:30px;height:30px;min-height:0;padding:0}
-    .swatches{grid-template-columns:auto repeat(8,30px);gap:6px}
+    kbd{display:none}
+    .segment button{min-height:32px}
+    .swatch{width:28px;height:28px;min-height:0;padding:0}
+    .swatches{grid-template-columns:auto repeat(8,28px);gap:5px}
     input[type=range]{height:28px}
+    .tag{min-height:0;padding:2px 7px 2px 5px}
     .setlist input,.setlist select{font-size:16px}
     .setlist .cue .sw{width:28px;height:28px;min-height:0}
     .setlist .cue .x{min-height:0}
@@ -135,25 +181,28 @@
   dialog h2{margin:0 0 8px;font-weight:400;font-size:15px;letter-spacing:.1em;text-transform:uppercase}
   dialog ul{padding-left:18px;color:var(--fg-2)}
   dialog a{color:var(--fg)}
+  .keys{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;margin:10px 0 16px;color:var(--fg-2)}
+  .keys kbd{margin:0;opacity:1;color:var(--fg);font-size:12px;white-space:nowrap}
 
   @media (max-width:640px){
-    .title p{display:none}
-    .panel{gap:10px 14px;padding:10px;bottom:72px;max-height:44vh;max-height:44dvh}
+    .panel{left:12px;right:12px;bottom:12px}
     .panel .spacer{display:none}
-    /* phones: the controls become three tabs at the bottom */
-    .mtabs{display:flex;gap:4px;position:fixed;left:16px;right:16px;bottom:16px;padding:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
-    .mtabs button{flex:1;min-height:40px}
-    body[data-mtab="looks"] .panel .group[data-tab="more"],body[data-mtab="more"] .panel .group[data-tab="looks"],body[data-mtab="song"] .panel{display:none}
-    input[type=range]{width:90px}
-    label.slider span{width:60px}
-    .dmx{left:16px;right:16px;top:52px}
-    .setlist{top:auto;bottom:72px;left:16px;right:16px;width:auto;max-height:62vh;max-height:62dvh;gap:8px;padding:10px}
+    .look-open{flex:1;justify-content:flex-start}
+    .go-btn{order:2;flex:1;max-width:none}
+    .song-open{order:1}
+    .more-open{order:0}
+    .master-fader{order:3;flex:1}
+    .master-fader input{width:100%}
+    .rig{order:4}
+    .sheet,.more-sheet,.pedal{left:12px;right:12px;width:auto}
+    .tag span{display:none}
+    .look-sheet .row{justify-content:flex-start}
+    .scenes{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .setlist{top:auto;bottom:calc(var(--panel-h,110px) + 20px);left:12px;right:12px;width:auto;max-height:62vh;max-height:62dvh;gap:8px;padding:10px}
     .setlist .timeline{height:44px}
     .setlist .actions{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
     .setlist .actions > *{flex:none}
     .setlist .cue{padding:4px 4px 4px 6px}
-    .setlist-toggle{display:none}
-    .place{top:44px;white-space:normal;width:max-content;max-width:calc(100vw - 32px);text-align:center}
   }
 </style>
 <!-- libraries live in vendor/ (see vendor/README.md), so the sim starts with no internet -->
@@ -175,18 +224,41 @@
 <canvas class="stage" aria-label="3D view of the stage"></canvas>
 <div class="loading">Rigging the stage…</div>
 
-<div class="title">
-  <h1>Ōwashi · Light sim</h1>
-  <p>4 COB tubes · 2 Betopper LB150 · 3 universes</p>
-  <p>Drag Fab, Cyril or Olivier to move them around the stage</p>
-</div>
+<div class="tags"></div>
 <div class="place" aria-live="polite"></div>
+<div class="toast" aria-live="polite"></div>
 
 <button class="unhide" aria-label="Show the controls">Show controls</button>
-<nav class="mtabs" aria-label="Controls"><button data-tab="looks">Looks</button><button data-tab="song">Song</button><button data-tab="more">More</button></nav>
 <div id="setlist-root"></div>   <!-- the setlist panel, drawn by setlist-ui.js -->
 
-<section class="dmx" hidden aria-label="DMX monitor">
+<section class="sheet look-sheet glass" hidden aria-label="Look">
+  <div class="scenes"></div>
+  <div class="row">
+    <div class="swatches"></div>
+    <div class="tempo"><output class="bpm">120</output><span class="beats" aria-hidden="true"><i></i><i></i><i></i><i></i></span><button class="tap" title="Tap along to set the tempo">Tap</button><button class="hit" title="A white slam on top of the look">Hit</button><button class="flash" title="Everything white and strobing, while held">Flash</button></div>
+  </div>
+</section>
+
+<section class="sheet more-sheet glass" hidden aria-label="More">
+  <div class="segment views" role="group" aria-label="View"></div>
+  <div>
+    <label class="slider"><span>Beams</span><input type="range" class="beams" min="0" max="1" step="0.01" value="0.5"></label>
+    <label class="slider"><span>Haze, in the sim</span><input type="range" class="haze" min="0" max="1.5" step="0.01" value="0.8"></label>
+    <label class="slider"><span>Front light, in the sim</span><input type="range" class="fill" min="0" max="1" step="0.01" value="0.45"></label>
+  </div>
+  <div class="more-list">
+    <button class="labels-toggle">Labels</button>
+    <button class="pedal-toggle">Foot pedal</button>
+    <button class="dmx-toggle">DMX</button>
+    <button class="mirror" title="Show what a lighting desk sends, instead of running the show">Mirror a desk</button>
+    <button class="reset-layout">Reset stage</button>
+    <button class="hide">Hide all</button>
+    <button class="keys-open">Shortcuts</button>
+    <button class="credits-open">Credits</button>
+  </div>
+</section>
+
+<section class="sheet dmx glass" hidden aria-label="DMX monitor">
   <header><span>DMX</span><span class="fps"></span></header>
   <div class="row universes"></div>
   <canvas width="320" height="160"></canvas>
@@ -194,25 +266,19 @@
   <ul class="patch"></ul>
 </section>
 
-<div class="panel">
-  <div class="group" data-tab="looks"><span>Scene</span><div class="row scenes"></div></div>
-  <div class="group" data-tab="looks"><span>Colours</span><div class="swatches"></div></div>
-  <div class="group" data-tab="looks"><span>Tempo</span>
-    <div class="row"><span class="bpm">120</span><span class="beat"></span><button class="tap">Tap<kbd>T</kbd></button><button class="hit">Hit<kbd>Enter</kbd></button><button class="flash">Flash<kbd>Space</kbd></button></div>
-  </div>
-  <div class="group" data-tab="more">
-    <label class="slider"><span>Master</span><input type="range" class="master" min="0" max="1" step="0.01" value="1"></label>
-    <label class="slider"><span>Beams</span><input type="range" class="beams" min="0" max="1" step="0.01" value="0.5"></label>
-    <label class="slider"><span>Haze</span><input type="range" class="haze" min="0" max="1.5" step="0.01" value="0.8"></label>
-    <label class="slider"><span>Front light</span><input type="range" class="fill" min="0" max="1" step="0.01" value="0.45"></label>
-  </div>
-  <div class="group" data-tab="more"><span>View</span><div class="row views"></div></div>
-  <div class="group artnet" data-tab="more"><span>Real rig · Art-Net</span>
-    <div class="row"><span class="dot" aria-hidden="true"></span><button data-artnet="off">Off</button><button data-artnet="send">Drive the rig</button><button data-artnet="mirror">Mirror a desk</button></div>
-    <small class="artnet-status"></small>
-  </div>
-  <div class="spacer"></div>
-  <div class="group" data-tab="more"><div class="links"><button class="setlist-toggle">Setlist<kbd>L</kbd></button><button class="reset-layout">Reset stage</button><button class="dmx-toggle">DMX<kbd>D</kbd></button><button class="credits-open">Credits</button><button class="hide">Hide<kbd>H</kbd></button></div></div>
+<section class="sheet pedal glass" hidden aria-label="Foot pedal">
+  <div class="pedal-top"><p class="pedal-status"></p><button class="pedal-connect">Connect</button></div>
+  <ul class="pedal-map"></ul>
+</section>
+
+<div class="panel glass">
+  <button class="more-open" aria-label="More">⋯</button>
+  <button class="look-open" aria-label="Choose a look"><i class="dot-a"></i><i class="dot-b"></i><span class="look-name"></span></button>
+  <button class="song-open" title="Setlist"></button>
+  <button class="go-btn" title="Next cue" hidden></button>
+  <span class="spacer"></span>
+  <label class="master-fader"><span>Master</span><input type="range" class="master" min="0" max="1" step="0.01" value="1"><output></output></label>
+  <button class="rig">Drive rig</button>
 </div>
 
 <dialog class="credits">
@@ -227,6 +293,22 @@
     <li><a href="https://poly.pizza/m/8Qzh7Jl1n3V" target="_blank" rel="noopener">Amp</a> by Poly by Google</li>
   </ul>
   <p>Built with <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a>.</p>
+  <form method="dialog"><button>Close</button></form>
+</dialog>
+
+<dialog class="shortcuts">
+  <h2>Shortcuts</h2>
+  <div class="keys">
+    <kbd>1–0, Q W E A S</kbd><span>Choose a look. Hover a look's button to see its key</span>
+    <kbd>→ or G / ←</kbd><span>Next cue / previous cue</span>
+    <kbd>T</kbd><span>Tap the tempo</span>
+    <kbd>Enter / Space</kbd><span>Hit / Flash while held</span>
+    <kbd>P / R</kbd><span>Play or pause the song / record cues</span>
+    <kbd>L / M / D / N</kbd><span>Setlist / foot pedal / DMX / labels</span>
+    <kbd>V / H</kbd><span>Next view / hide everything</span>
+    <kbd>Esc</kbd><span>Close the open panel</span>
+  </div>
+  <p style="color:var(--fg-2)">Drag Fab, Cyril or Olivier to move them around the stage. Drag anywhere else to look around.</p>
   <form method="dialog"><button>Close</button></form>
 </dialog>
 

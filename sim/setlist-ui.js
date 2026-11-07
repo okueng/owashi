@@ -37,9 +37,9 @@ function SoundCloud({ url, title }) {
 
 function Transport() {
   return html`<div class="transport">
-    <button class="play" aria-pressed=${S.playing.value} onClick=${S.playPause}>${S.playing.value ? 'Pause' : 'Play'}<kbd>P</kbd></button>
+    <button class="play" aria-pressed=${S.playing.value} onClick=${S.playPause}>${S.playing.value ? 'Pause' : 'Play'}</button>
     <span class="clock">${clock}</span>
-    <button class="rec" aria-pressed=${S.recording.value} title="Look keys and taps become cues at the playhead" onClick=${S.toggleRecord}>Record<kbd>R</kbd></button>
+    <button class="rec" aria-pressed=${S.recording.value} title="Look keys and taps become cues at the playhead" onClick=${S.toggleRecord}>Record</button>
     <label class="check">
       <input type="checkbox" class="follow" checked=${S.follow.value} onChange=${e => { S.follow.value = e.currentTarget.checked; }} /> Follow cues
     </label>
