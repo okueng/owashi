@@ -427,6 +427,7 @@ for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) flashBtn.addEve
 $('.hit').addEventListener('pointerdown', () => hit(showTime()));
 
 $('.master').addEventListener('input', e => { show.master = +e.target.value; });
+$('.beams').addEventListener('input', e => { show.beams = +e.target.value; });
 $('.haze').addEventListener('input', e => { ui.haze = +e.target.value; });
 $('.fill').addEventListener('input', e => { ui.fill = +e.target.value; });
 

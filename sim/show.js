@@ -31,6 +31,7 @@ export const show = {
   colorA: 'Red',
   colorB: 'Blue',
   master: 1,
+  beams: 0.5,        // the heads' share of Master: a 150 W beam outshines the diffuse tubes at the same level
   flash: false,      // held: everything white and strobing
   hitT: -10,         // last one-shot hit (s)
 };
@@ -229,6 +230,7 @@ export function updateShow(t) {
     V.forEach(f => paint(f, () => WHITE, 1, 0.88));
     B.forEach(f => { f.colour('White'); f.level(1); f.strobe(0.88); });
   }
+  for (const f of B) f.level(f.getLevel() * show.beams);
   if (show.master < 1) for (const f of fixtures) f.level(f.getLevel() * show.master);
   for (const f of fixtures) f.commit(t);
   return beat;
