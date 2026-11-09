@@ -8,14 +8,14 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 import { byId, channelMaps, PATCH, PROFILES, universes } from './dmx.js';
-import { cue, hit, lookProgress, PALETTE, SCENE_LIST, show, tap, updateShow } from './show.js';
+import { beamHit, cue, hit, lookProgress, PALETTE, SCENE_LIST, show, tap, tubeHit, updateShow } from './show.js';
 import { BeamHead, CobTube } from './fixtures.js';
-import { artnet, pump, setMode } from './artnet.js';
+import { artnet, bridgeUrl, pump, setMode } from './artnet.js';
 import { effect } from '@preact/signals';
 import * as setlist from './setlist.js';
 import { mountSetlist } from './setlist-ui.js';
 import { createLabels } from './labels.js';
-import { actions as pedalActions, connect as connectPedal, connectIfAllowed, pedal } from './pedal.js';
+import { actions as pedalActions, connect as connectPedal, connectBridge, connectIfAllowed, learnPads, PAD_COUNT, pedal, SMC_PAD_POCKET } from './pedal.js';
 
 // ── layout (metres; x = stage left→right as the audience sees it, z = towards the audience) ──
 // The rig is placed for the audience's sightlines and the beams' distance from the band's eyes. The stage
@@ -360,12 +360,11 @@ window.sim = { scene, camera, controls, renderer, composer, models, band, show, 
 const $ = s => document.querySelector(s);
 const ui = { haze: 0.8, fill: 0.45 };
 
-// One panel open at a time, the setlist included.
-const SHEETS = ['.look-sheet', '.more-sheet', '.dmx', '.pedal'].map($);
+// One panel open at a time.
+const SHEETS = ['.more-sheet', '.dmx', '.pedal'].map($);
+const labelOf = id => SCENE_LIST.find(s => s[0] === id)[1];
 function showOnly(el) {
   SHEETS.forEach(s => { s.hidden = s !== el; });
-  if (el) setlist.open.value = false;
-  $('.look-open').setAttribute('aria-pressed', !$('.look-sheet').hidden);
   $('.more-open').setAttribute('aria-pressed', !$('.more-sheet').hidden);
   if ($('.pedal').hidden && pedal.learning) { pedal.learning = null; pedal.onChange(); }
 }
@@ -397,16 +396,17 @@ const showTime = () => (performance.now() - showStart) / 1000;
 const sceneButtons = SCENE_LIST.map(([id, label, key, , hint]) => {
   const b = button(label, null, () => setScene(id));
   b.dataset.scene = id; b.title = `${hint} (key ${key.toUpperCase()})`;
-  $('.scenes').append(b);
+  if (id !== 'blackout') $('.scenes').append(b);   // Blackout has its own button on the bar, in every mode
   return b;
 });
 function syncLooks() {
-  sceneButtons.forEach(b => {
+  document.querySelectorAll('.panel [data-scene]').forEach(b => {
     const on = b.dataset.scene === show.scene;
     b.setAttribute('aria-pressed', on);
     if (!on) b.style.setProperty('--p', 0);
   });
-  $('.look-name').textContent = SCENE_LIST.find(s => s[0] === show.scene)[1];
+  $('.blackout').setAttribute('aria-pressed', show.scene === 'blackout');
+  syncHud();
 }
 function setScene(id) {
   cue(id, showTime());
@@ -430,46 +430,45 @@ for (const slot of ['A', 'B']) {
 }
 function syncSwatches() {
   swatchButtons.forEach(b => b.setAttribute('aria-pressed', show['color' + b.dataset.slot] === b.dataset.name));
-  $('.dot-a').style.setProperty('--c', `rgb(${PALETTE[show.colorA].rgb})`);
-  $('.dot-b').style.setProperty('--c', `rgb(${PALETTE[show.colorB].rgb})`);
 }
 syncSwatches();
 
-$('.look-open').addEventListener('click', () => toggleSheet($('.look-sheet')));
 $('.more-open').addEventListener('click', () => toggleSheet($('.more-sheet')));
-$('.tap').addEventListener('click', () => { tap(showTime()); $('.bpm').textContent = show.bpm; setlist.onTap(); });
+function doTap() { tap(showTime()); $('.tempo .bpm').textContent = show.bpm; setlist.onTap(); }
+$('.tap').addEventListener('click', doTap);
 
 setlist.configure({
   now: () => showTime(),
   onApplied() {   // a cue changed the look: bring the buttons along
     syncLooks();
     syncSwatches();
-    $('.bpm').textContent = show.bpm;
+    $('.tempo .bpm').textContent = show.bpm;
   },
 });
 mountSetlist(document.getElementById('setlist-root'));
 setlist.loadSongs();
-const toggleSetlist = () => { setlist.open.value = !setlist.open.value; };
-$('.song-open').addEventListener('click', toggleSetlist);
 narrow.addEventListener('change', () => setTimeout(resize));
 
-effect(() => {   // opening or closing the setlist: close the rest, and move the stage over once it's drawn
-  const open = setlist.open.value;
-  $('.song-open').setAttribute('aria-pressed', open);
-  if (open) showOnly(null);
+effect(() => {   // the setlist opens and closes with Setup: move the stage over once it's drawn
+  setlist.open.value;
   setTimeout(() => {
     resize();
     const drawer = document.querySelector('.setlist');
     if (drawer && !drawer.dataset.watched) { drawer.dataset.watched = 1; new ResizeObserver(resize).observe(drawer); }
   });
 });
-effect(() => {   // the bar: which song, and what the next cue is
-  const next = setlist.cues.value[setlist.index.value + 1], go = $('.go-btn');
-  $('.song-open').textContent = setlist.song.value?.title || 'Setlist';
-  go.hidden = !next;
-  go.textContent = next ? `Next: ${next.name}` : '';
-});
-$('.go-btn').addEventListener('click', () => setlist.go());
+const nextSong = () => { const l = setlist.songs.value, i = l.findIndex(x => x.id === setlist.songId.value); return i >= 0 ? l[i + 1] : null; };
+// Show mode's readout: the song, where we are in it, and what comes next
+function syncHud() {
+  const s = setlist.song.value, cues = setlist.cues.value, i = setlist.index.value, cur = cues[i], next = cues[i + 1];
+  $('.hud-song').textContent = s?.title || 'No song';
+  $('.song-name').textContent = s?.title || 'No song';
+  $('.hud-cue').textContent = show.scene === 'blackout' ? 'Blackout' : cur ? `${cur.name} · ${labelOf(show.scene)}` : labelOf(show.scene);
+  $('.hud-next').textContent = !cues.length ? 'No cues yet: Next steps through the looks'
+    : next ? `Next: ${next.name} · ${labelOf(next.scene)}`
+    : nextSong() ? `Next song: ${nextSong().title}` : 'End of the set';
+}
+effect(syncHud);
 window.sim.setlist = setlist;
 const flashBtn = $('.flash');
 const setFlash = on => { show.flash = on; flashBtn.setAttribute('aria-pressed', on); };
@@ -517,26 +516,37 @@ $('.keys-open').addEventListener('click', showKeys);
 addEventListener('keydown', e => {
   if (e.target.closest('input, select, textarea, dialog') || e.metaKey || e.ctrlKey) return;
   if (e.repeat) { if (e.code === 'Space') e.preventDefault(); return; }
-  const s = SCENE_LIST.find(([, , key]) => key === e.key.toLowerCase());
-  if (s) setScene(s[0]);
-  else if (e.code === 'Space') { e.preventDefault(); setFlash(true); }
-  else if (e.key === 'Enter') { e.preventDefault(); hit(showTime()); }
-  else if (e.key === 't' || e.key === 'T') $('.tap').click();
-  else if (e.key === 'd' || e.key === 'D') toggleDmx();
-  else if (e.key === 'l' || e.key === 'L') toggleSetlist();
-  else if (e.key === 'p' || e.key === 'P') setlist.playPause();
-  else if (e.key === 'r' || e.key === 'R') setlist.toggleRecord();
-  else if (e.key === 'ArrowRight' || e.key === 'g' || e.key === 'G') { e.preventDefault(); setlist.go(); }
-  else if (e.key === 'ArrowLeft') { e.preventDefault(); setlist.back(); }
-  else if (e.key === 'h' || e.key === 'H') toggleUi();
-  else if (e.key === 'n' || e.key === 'N') toggleLabels();
-  else if (e.key === 'm' || e.key === 'M') togglePedal();
-  else if (e.key === '?') showKeys();
-  else if (e.key === 'Escape') showOnly(null);
-  else if (e.key === 'v' || e.key === 'V') {
+  const k = e.key.toLowerCase();
+  // the same in every mode
+  if (k === 'escape') { if (pedal.padLearn !== null) learnPads(false); return showOnly(null); }
+  if (k === '?') return showKeys();
+  if (k === 'b') return toggleBlackout();
+  if (k === 'h') return toggleUi();
+  if (k === 'd') return toggleDmx();
+  if (k === 'm') return togglePedal();
+  if (k === 'n') return toggleLabels();
+  if (k === 'v') {
     const names = Object.keys(VIEWS), cur = viewButtons.findIndex(b => b.getAttribute('aria-pressed') === 'true');
-    flyTo(names[(cur + 1) % names.length]);
+    return flyTo(names[(cur + 1) % names.length]);
   }
+  // Show: only moving through the set, so a stray key can't change a look mid-song
+  if (mode === 'show') {
+    if (k === 'arrowright' || k === 'g') { e.preventDefault(); PEDAL_DO.nextScene(); }
+    else if (k === 'arrowleft') { e.preventDefault(); PEDAL_DO.prevScene(); }
+    else if (k === ']') PEDAL_DO.nextSong();
+    else if (k === '[') PEDAL_DO.prevSong();
+    return;
+  }
+  const s = SCENE_LIST.find(([, , key]) => key === k);
+  if (s) s[0] === 'blackout' ? toggleBlackout() : setScene(s[0]);
+  else if (e.code === 'Space') { e.preventDefault(); setFlash(true); }
+  else if (k === 'enter') { e.preventDefault(); hit(showTime()); }
+  else if (k === 't') $('.tap').click();
+  else if (mode !== 'setup') return;
+  else if (k === 'p') setlist.playPause();
+  else if (k === 'r') setlist.toggleRecord();
+  else if (k === 'arrowright' || k === 'g') { e.preventDefault(); setlist.go(); }
+  else if (k === 'arrowleft') { e.preventDefault(); setlist.back(); }
 });
 addEventListener('keyup', e => { if (e.code === 'Space') { e.preventDefault(); setFlash(false); } });
 
@@ -724,7 +734,7 @@ mon.addEventListener('pointerleave', () => { hoverCh = -1; });
 
 // ── names on the lights ─────────────────────────────────────────────────────
 
-const LABELS_KEY = 'owashi-sim:labels';
+const LABELS_KEY = 'owashi-sim:labels-on';   // off unless turned on in Settings
 const labels = createLabels($('.tags'), [...bars, ...heads].map(({ f }) => {
   const [x, y, z] = RIG[f.id].pos;
   const at = f.profile === 'lb150' ? [x, y + RIG[f.id].riser / 2, z + 0.25]   // on the front of its flight case
@@ -739,15 +749,77 @@ function setLabels(on) {
 }
 const toggleLabels = () => setLabels(document.body.classList.contains('no-tags'));
 $('.labels-toggle').addEventListener('click', toggleLabels);
-let labelsWanted = true;
-try { labelsWanted = localStorage.getItem(LABELS_KEY) !== '0'; } catch { /* private window: leave them on */ }
+let labelsWanted = false;
+try { labelsWanted = localStorage.getItem(LABELS_KEY) === '1'; } catch { /* private window: leave them off */ }
 setLabels(labelsWanted);
+
+// ── the pad (Manual) ────────────────────────────────────────────────────────
+// Mirrors the SMC-PAD: two rows of looks, then a row to tap and a row to hold. Velocity sets how hard a hit lands.
+
+const PADS = [
+  { scene: 'ambient' }, { scene: 'sweep' }, { scene: 'searchlight' }, { scene: 'build' },
+  { scene: 'riff' }, { scene: 'slab' }, { scene: 'blast' }, { scene: 'wall' },
+  { label: 'Hit', kind: 'tap', tap: v => hit(showTime(), v) },
+  { label: 'Beams hit', kind: 'tap', tap: v => beamHit(showTime(), v) },
+  { label: 'Tubes hit', kind: 'tap', tap: v => tubeHit(showTime(), v) },
+  { label: 'Tap tempo', kind: 'tap', tap: doTap },
+  { label: 'Flash', kind: 'hold', hold: on => setFlash(on) },
+  { label: 'Choke', kind: 'hold', hold: on => { show.choke = on; } },
+  { label: 'Swap A·B', kind: 'hold', hold: on => { show.swap = on; } },
+  { label: 'Blackout', kind: 'tap', tap: () => toggleBlackout() },
+];
+const padButtons = PADS.map((p, i) => {
+  const b = document.createElement('button');
+  if (p.scene) { b.dataset.scene = p.scene; b.textContent = labelOf(p.scene); b.title = SCENE_LIST.find(s => s[0] === p.scene)[4]; }
+  else { b.className = `fx ${p.label === 'Blackout' ? 'stop' : p.kind}`; b.innerHTML = `${p.label}<small>${p.kind}</small>`; }
+  b.addEventListener('pointerdown', e => { e.preventDefault(); padDown(i, 1); });
+  for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => padUp(i));
+  $('.padgrid').append(b);
+  return b;
+});
+// the looks that aren't on the pad, as plain buttons beside it
+for (const [id, label, key, , hint] of SCENE_LIST) {
+  if (id === 'blackout' || PADS.some(p => p.scene === id)) continue;
+  const b = button(label, null, () => setScene(id));
+  b.dataset.scene = id; b.title = `${hint} (key ${key.toUpperCase()})`;
+  $('.more-looks').append(b);
+}
+const padTimers = [];
+function padDown(i, v) {
+  if (artnet.mode === 'mirror') return;   // the desk is in charge
+  const p = PADS[i], b = padButtons[i];
+  if (p.scene) return setScene(p.scene);
+  if (p.hold) { p.hold(true); b.classList.add('on'); return; }
+  p.tap(v);
+  b.classList.add('on');   // a tap lights the pad on screen for a moment
+  clearTimeout(padTimers[i]);
+  padTimers[i] = setTimeout(() => b.classList.remove('on'), 150);
+}
+function padUp(i) {
+  const p = PADS[i];
+  if (p.hold && padButtons[i].classList.contains('on')) { p.hold(false); padButtons[i].classList.remove('on'); }
+}
+pedal.tapPads = new Set(PADS.flatMap((p, i) => (p.kind === 'tap' ? [i] : [])));
+pedal.onPad = (i, down, v) => {
+  if (mode === 'show') { if (down) toast('The pad works in Manual and Setup'); return; }
+  if (down) padDown(i, v); else padUp(i);
+};
+function syncPadLearn() {
+  const i = pedal.padLearn;
+  padButtons.forEach((b, k) => b.classList.toggle('learn', k === i));
+  $('.pad-hint').hidden = i === null;
+  if (i !== null) $('.pad-hint').textContent = `Press the pad marked here: ${i + 1} of ${PAD_COUNT}. Esc stops.`;
+}
+$('.pad-setup').addEventListener('click', () => {
+  if (pedal.padLearn !== null) return learnPads(false);
+  setUiMode('manual');   // the pad is drawn there
+  learnPads(true);
+});
 
 // ── foot pedal ──────────────────────────────────────────────────────────────
 // Four switches: scene and song, each way. What happened shows up big on screen, to read from the stage.
 
 const LOOK_CYCLE = SCENE_LIST.filter(s => s[3] !== 'Cut').map(s => s[0]);   // never lands on Strobe or Blackout by accident
-const labelOf = id => SCENE_LIST.find(s => s[0] === id)[1];
 function stepLook(dir) {
   const i = LOOK_CYCLE.indexOf(show.scene);
   const next = LOOK_CYCLE[i < 0 ? 0 : (i + dir + LOOK_CYCLE.length) % LOOK_CYCLE.length];
@@ -771,12 +843,78 @@ function stepSong(dir) {
   if (next.id !== setlist.songId.value) setlist.selectSong(next.id);   // the lights stay as they are until the next scene
   return next.title;
 }
-const PEDAL_DO = { nextScene: () => stepScene(1), prevScene: () => stepScene(-1), nextSong: () => stepSong(1), prevSong: () => stepSong(-1) };
-pedal.onAction = id => {
-  // a desk is in charge while mirroring, so the pedal can only move between songs
-  if (artnet.mode === 'mirror' && id.endsWith('Scene')) return toast('Mirroring a desk');
-  toast(PEDAL_DO[id]());
+// Through the set with one foot: Next runs through a song's scenes and, after its last one, into the next song
+// at its first scene. Back retraces exactly that, so a press too many can always be undone.
+function forward() {
+  const cues = setlist.cues.value;
+  if (!cues.length || setlist.index.value + 1 < cues.length) return stepScene(1);
+  const list = setlist.songs.value, i = list.findIndex(s => s.id === setlist.songId.value);
+  if (i < 0 || i + 1 >= list.length) return 'End of the set';
+  setlist.selectSong(list[i + 1].id);
+  if (setlist.cues.value.length) setlist.go();
+  return list[i + 1].title;
+}
+function backward() {
+  const cues = setlist.cues.value;
+  if (!cues.length || setlist.index.value > 0) return stepScene(-1);
+  const list = setlist.songs.value, i = list.findIndex(s => s.id === setlist.songId.value);
+  if (i <= 0) return 'Start of the set';
+  setlist.selectSong(list[i - 1].id);
+  const last = setlist.cues.value.length - 1;
+  if (last >= 0) setlist.jumpTo(last);
+  return list[i - 1].title;
+}
+const PEDAL_DO = { nextScene: forward, prevScene: backward, nextSong: () => stepSong(1), prevSong: () => stepSong(-1) };
+// The foot pedal: next and back move through the set (through the looks in Manual); Blackout and Tap work anywhere.
+const PEDAL = {
+  next: forward,
+  back: backward,
+  blackout: () => { toggleBlackout(); return show.scene === 'blackout' ? 'Blackout' : labelOf(show.scene); },
+  tap: () => { doTap(); return `Tap · ${show.bpm} BPM`; },
 };
+pedal.onAction = id => {
+  const moves = id === 'next' || id === 'back';
+  if (moves && artnet.mode === 'mirror') return toast('Mirroring a desk');   // the desk is in charge
+  if (moves && mode === 'manual') return toast(stepLook(id === 'next' ? 1 : -1));
+  const said = PEDAL[id]?.();
+  if (said && (mode !== 'show' || id === 'tap')) toast(said);   // in Show the readout already says where we are
+};
+
+// Blackout, from the bar, the B key or anywhere: press again to come back to the look it interrupted.
+let beforeBlackout = 'ambient';
+function toggleBlackout() {
+  if (artnet.mode === 'mirror') return;
+  if (show.scene === 'blackout') return setScene(beforeBlackout === 'blackout' ? 'ambient' : beforeBlackout);
+  beforeBlackout = show.scene;
+  setScene('blackout');
+}
+$('.blackout').addEventListener('click', toggleBlackout);
+
+// ── modes ───────────────────────────────────────────────────────────────────
+// Manual for other bands, Show for our set, Setup for editing. Switching only changes the screen, never the lights.
+
+const MODE_KEY = 'owashi-sim:mode';
+let mode = 'manual';
+const modeButtons = [...document.querySelectorAll('[data-mode]')];
+function setUiMode(next) {
+  if (mode === 'setup' && next !== 'setup') setlist.pause();   // a song playing in Setup would keep firing cues
+  mode = next;
+  document.body.dataset.mode = next;
+  modeButtons.forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === next));
+  setlist.open.value = next === 'setup';
+  showOnly(null);
+  syncHud();
+  setTimeout(resize);
+  try { localStorage.setItem(MODE_KEY, next); } catch { /* starts in Manual next time */ }
+}
+modeButtons.forEach(b => b.addEventListener('click', () => setUiMode(b.dataset.mode)));
+$('.cue-next').addEventListener('click', () => PEDAL_DO.nextScene());
+$('.cue-back').addEventListener('click', () => PEDAL_DO.prevScene());
+$('.song-next').addEventListener('click', () => PEDAL_DO.nextSong());
+$('.song-prev').addEventListener('click', () => PEDAL_DO.prevSong());
+let savedMode = 'manual';
+try { savedMode = localStorage.getItem(MODE_KEY) || 'manual'; } catch { /* private window */ }
+setUiMode(['manual', 'show', 'setup'].includes(savedMode) ? savedMode : 'manual');
 
 const togglePedal = () => toggleSheet($('.pedal'));
 $('.pedal-toggle').addEventListener('click', togglePedal);
@@ -789,10 +927,16 @@ const pedalRows = pedalActions.map(({ id, label }) => {
   return { id, set: li.querySelector('small'), learn: li.querySelector('.learn') };
 });
 function syncPedal() {
-  $('.pedal-connect').hidden = pedal.state === 'ready' || pedal.state === 'unsupported';
+  const padsSet = pedal.pads.filter(Boolean).length;
+  const builtIn = pedal.pads.join() === SMC_PAD_POCKET.join();
+  $('.pad-status').textContent = pedal.padLearn !== null ? 'Setting up the pad…' : builtIn ? 'Pad: SMC-PAD Pocket, as it comes' : padsSet ? `Pad: ${padsSet} of ${PAD_COUNT} pads set` : 'Pad: not set up';
+  $('.pad-setup').textContent = pedal.padLearn !== null ? 'Stop' : padsSet ? 'Set up again' : 'Set up pad';
+  syncPadLearn();
+  $('.pedal-connect').hidden = !!pedal.bridge || pedal.state === 'ready' || pedal.state === 'unsupported';
   $('.pedal-status').textContent = pedal.learning ? 'Press the switch…'
-    : pedal.state === 'unsupported' ? 'This browser has no MIDI. Use Chrome.'
-    : pedal.state === 'denied' ? 'MIDI is blocked here. Use Chrome and allow it.'
+    : pedal.bridge ? (pedal.bridge.length ? `Through the bridge: ${pedal.bridge.join(', ')}` : 'Through the bridge: no MIDI device found')
+    : pedal.state === 'unsupported' ? 'This browser has no MIDI. Start the bridge, or use Chrome.'
+    : pedal.state === 'denied' ? 'This browser blocks MIDI. Start the bridge, or use Chrome.'
     : pedal.state === 'off' ? 'Not connected'
     : !pedal.inputs.length ? 'No pedal found. Plug it in.'
     : pedal.inputs.join(', ');
@@ -804,7 +948,8 @@ function syncPedal() {
 }
 pedal.onChange = syncPedal;
 syncPedal();
-connectIfAllowed();   // already allowed once on this computer: ready without a click at the gig
+connectBridge(bridgeUrl());   // the bridge passes on the Mac's MIDI, in any browser
+connectIfAllowed();   // or the browser's own MIDI, if it was allowed once on this computer
 
 // ── loop ────────────────────────────────────────────────────────────────────
 
@@ -838,7 +983,14 @@ function stepShow(t) {
 }
 artnet.onTick = () => stepShow(showTime());   // while driving the rig, whatever the tab is doing
 
-renderer.setAnimationLoop(() => {
+// Drawing at the screen's own rate (120 Hz on a recent Mac) doubles the work for nothing the eye can see,
+// and over a long show it heats a fanless laptop until it slows down. 60 frames a second is plenty;
+// the real lights don't depend on it (they get their DMX ~40 times a second either way).
+const FRAME_MS = 1000 / 60;
+let lastDraw = 0;
+renderer.setAnimationLoop(now => {
+  if (now - lastDraw < FRAME_MS - 2) return;
+  lastDraw = now;
   const raw = clock.getDelta(), dt = Math.min(raw, 0.1), t = showTime();
   adaptQuality(raw);
 
@@ -870,7 +1022,8 @@ renderer.setAnimationLoop(() => {
 
   const beatNow = ((Math.floor(beat) % 4) + 4) % 4;
   beatDots.forEach((d, i) => { d.style.opacity = i === beatNow ? 0.25 + 0.75 * nod : 0.15; });
-  sceneButtons.find(b => b.dataset.scene === show.scene).style.setProperty('--p', lookProgress(t));
+  const progress = lookProgress(t);
+  document.querySelectorAll(`.panel [data-scene="${show.scene}"]`).forEach(b => b.style.setProperty('--p', progress));
   if (uiShown) labels.update(innerWidth, innerHeight);
   if (!dmxPanel.hidden) {
     drawMonitor();

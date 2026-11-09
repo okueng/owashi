@@ -29,7 +29,9 @@ function runTicker(on) {
     ticker = null;
   }
 }
-const url = () => `ws://${location.hostname || 'localhost'}:8770`;
+// the bridge's port: 8770, or another one given as ?bridge=8771
+export const bridgeUrl = () => `ws://${location.hostname || 'localhost'}:${new URLSearchParams(location.search).get('bridge') || 8770}`;
+const url = bridgeUrl;
 
 function connect() {
   clearTimeout(retry);

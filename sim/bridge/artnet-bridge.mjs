@@ -2,26 +2,30 @@
 // The light sim's bridge, for rehearsals and gigs. Plain Node, no dependencies. On :8770 it
 //   · serves the sim itself (http://localhost:8770/sim/), so the laptop needs nothing else, offline;
 //   · saves the show — setlist and cues — as JSON files in sim/show/, ready to commit;
-//   · relays between the sim (WebSocket) and Art-Net (UDP :6454), which browsers can't speak.
+//   · relays between the sim (WebSocket) and Art-Net (UDP :6454), which browsers can't speak;
+//   · on a Mac, passes the foot pedal and the pad (any MIDI device) to every open sim, so they work in any browser.
 //
 //   node sim/bridge/artnet-bridge.mjs          the sim on this computer only
 //   node sim/bridge/artnet-bridge.mjs --lan    also phones and laptops on the same network
 //   node sim/bridge/artnet-bridge.mjs --rig=other.json    use another routing file instead of rig.json
+//   node sim/bridge/artnet-bridge.mjs --port=8771         another port (the sim then needs ?bridge=8771)
 //
 // "Drive the rig": the sim's universes go out as ArtDmx, routed by rig.json.
 // "Mirror a desk": ArtDmx arriving from a desk is passed to the sim, which just draws it.
 // It also sends ArtPoll every 10 s and lists the Art-Net boxes and WLED controllers that answer.
 
+import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
-import { networkInterfaces } from 'node:os';
+import { homedir, networkInterfaces } from 'node:os';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dgram from 'node:dgram';
 
-const WS_PORT = 8770, ARTNET_PORT = 6454;
+const portArg = process.argv.find(a => a.startsWith('--port='));
+const WS_PORT = portArg ? Number(portArg.slice(7)) : 8770, ARTNET_PORT = 6454;
 const LAN = process.argv.includes('--lan');
 const rigArg = process.argv.find(a => a.startsWith('--rig='));
 const rigFile = rigArg ? rigArg.slice(6) : new URL('./rig.json', import.meta.url);
@@ -104,6 +108,50 @@ function onArtNet(msg) {
       for (const c of clients) sendJson(c, { type: 'nodes', nodes: [...nodes.values()] });
     }
   }
+}
+
+// ── MIDI: the pedal and the pad ─────────────────────────────────────────────
+// Browsers that won't give a page MIDI (the Claude app's browser, Safari) get it from here instead.
+// midi-in.swift reads macOS's MIDI; it's built once with swiftc and kept in ~/Library/Caches.
+
+let midiSources = [];
+async function startMidi() {
+  if (process.platform !== 'darwin') return;
+  const src = fileURLToPath(new URL('./midi-in.swift', import.meta.url));
+  const code = await readFile(src);
+  const bin = join(homedir(), 'Library', 'Caches', 'owashi-sim', `midi-in-${createHash('sha1').update(code).digest('hex').slice(0, 10)}`);
+  if (!existsSync(bin)) {
+    await mkdir(join(bin, '..'), { recursive: true });
+    console.log('  midi   building the MIDI reader (once, takes a moment)…');
+    const built = await new Promise(res => {
+      const p = spawn('swiftc', ['-O', '-o', bin, src], { stdio: ['ignore', 'ignore', 'pipe'] });
+      let err = '';
+      p.stderr.on('data', d => { err += d; });
+      p.on('error', e => res(e.message));
+      p.on('close', c => res(c === 0 ? '' : err.trim().split('\n').pop()));
+    });
+    if (built) { console.warn(`  midi   can't build the MIDI reader (${built}). Pedal and pad then need Chrome. Fix: xcode-select --install`); return; }
+  }
+  const run = () => {
+    const p = spawn(bin, [], { stdio: ['ignore', 'pipe', 'inherit'] });
+    let rest = '';
+    p.stdout.on('data', chunk => {
+      const lines = (rest + chunk).split('\n');
+      rest = lines.pop();
+      for (const line of lines) {
+        const [from, hex] = line.split('\t');
+        if (from === 'sources') {
+          midiSources = hex ? hex.split('|') : [];
+          console.log(`  midi   ${midiSources.length ? midiSources.join(', ') : 'no MIDI devices'}`);
+          announce({ type: 'midi-sources', names: midiSources });
+        } else if (hex) {
+          announce({ type: 'midi', from, data: hex.split(' ').map(h => parseInt(h, 16)) });
+        }
+      }
+    });
+    p.on('close', () => { console.warn('  midi   the MIDI reader stopped; starting it again'); setTimeout(run, 2000); });
+  };
+  run();
 }
 
 // ── WebSocket (just enough of RFC 6455 for one page) ────────────────────────
@@ -286,7 +334,7 @@ server.on('upgrade', (req, socket) => {
   const c = { socket, mode: 'off', buf: Buffer.alloc(0) };
   clients.add(c);
   console.log(`  sim    connected from ${socket.remoteAddress}`);
-  sendJson(c, { type: 'hello', routes, receiving, nodes: [...nodes.values()] });
+  sendJson(c, { type: 'hello', routes, receiving, nodes: [...nodes.values()], midiSources });
   socket.on('data', chunk => { c.buf = Buffer.concat([c.buf, chunk]); readFrames(c); });
   const drop = () => {
     if (driver === c) driver = null;
@@ -319,5 +367,6 @@ server.listen(WS_PORT, LAN ? '0.0.0.0' : '127.0.0.1', () => {
   console.log('  looking for Art-Net boxes and WLED…\n');
   poll();
   setInterval(poll, 10_000);
+  startMidi().catch(err => console.warn(`  midi   ${err.message}`));
 });
 server.on('error', err => { console.error(`  can't listen on :${WS_PORT} — ${err.message}`); process.exit(1); });

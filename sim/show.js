@@ -36,6 +36,11 @@ export const show = {
   beams: 0.5,        // the heads' share of Master: a 150 W beam outshines the diffuse tubes at the same level
   flash: false,      // held: everything white and strobing
   hitT: -10,         // last one-shot hit (s)
+  hitV: 1,           // and how hard (a pad's velocity, 0–1)
+  beamHitT: -10, beamHitV: 1,   // a hit on the heads only
+  tubeHitT: -10, tubeHitV: 1,   // a hit on the tubes and bars only
+  choke: false,      // held: everything dark, for the band's stops
+  swap: false,       // held: colours A and B trade places
 };
 
 const V = ['V1', 'V2', 'V3', 'V4'].map(id => byId[id]);   // the tubes
@@ -331,7 +336,9 @@ export function cue(id, t) {
   show.cueT = t;
 }
 
-export function hit(t) { show.hitT = t; }
+export function hit(t, v = 1) { show.hitT = t; show.hitV = v; }
+export function beamHit(t, v = 1) { show.beamHitT = t; show.beamHitV = v; }
+export function tubeHit(t, v = 1) { show.tubeHitT = t; show.tubeHitV = v; }
 
 // 0–1 through a look that takes a set number of bars, for the UI; 0 for the rest
 const TIMED = { build: BUILD_BARS, shimmer: SHIMMER_BARS, collapse: COLLAPSE_BARS };
@@ -341,25 +348,34 @@ const px = [0, 0, 0];
 export function updateShow(t) {
   const beat = (t - show.beat0) * show.bpm / 60;
   const since = (t - show.cueT) * show.bpm / 60;
-  SCENES[show.scene]({ t, beat, since, A: PALETTE[show.colorA], B: PALETTE[show.colorB] });
+  const [a, b] = show.swap ? [show.colorB, show.colorA] : [show.colorA, show.colorB];
+  SCENES[show.scene]({ t, beat, since, A: PALETTE[a], B: PALETTE[b] });
 
-  // one-shot accent on top of any look: a white slam that dies in half a second
-  const h = Math.exp(-(t - show.hitT) * 6);
-  if (h > 0.02) {
+  // one-shot accents on top of any look: a white slam that dies in half a second, as hard as it was hit
+  const slam = (at, v) => Math.exp(-(t - at) * 6) * v;
+  const h = slam(show.hitT, show.hitV);
+  const ht = Math.max(h, slam(show.tubeHitT, show.tubeHitV)), hb = Math.max(h, slam(show.beamHitT, show.beamHitV));
+  if (ht > 0.02) {
     for (const f of BARS) {
-      for (let i = 0; i < f.n; i++) f.setZone(i, ...mix(f.getZone(i, px), WHITE, h));
-      f.level(Math.max(f.getLevel(), h));
+      for (let i = 0; i < f.n; i++) f.setZone(i, ...mix(f.getZone(i, px), WHITE, ht));
+      f.level(Math.max(f.getLevel(), ht));
     }
+  }
+  if (hb > 0.02) {
     for (const f of B) {
-      f.level(Math.max(f.getLevel(), h));
+      f.level(Math.max(f.getLevel(), hb));
       if (f.get('Shutter') <= 10) f.strobe(0);   // a dark head has to open up for the hit
-      if (h > 0.3) f.colour('White');
+      if (hb > 0.3) f.colour('White');
     }
   }
 
   if (show.flash) {
     BARS.forEach(f => paint(f, () => WHITE, 1, 0.88));
     B.forEach(f => { f.colour('White'); f.level(1); f.strobe(0.88); });
+  }
+  if (show.choke) {   // heads keep their position, like Blackout
+    BARS.forEach(f => f.level(0));
+    B.forEach(dark);
   }
   for (const f of H) f.level(f.getLevel() * FRONT_BAR_MAX);
   for (const f of B) f.level(f.getLevel() * show.beams);

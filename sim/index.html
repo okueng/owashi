@@ -52,21 +52,55 @@
   .tag{position:absolute;left:0;top:0;color:var(--fg-2);font-size:11px;line-height:1.2;white-space:nowrap;will-change:transform;text-shadow:0 0 3px #000,0 0 3px #000}
   .tag b{font-weight:500;color:var(--fg)}
 
-  /* the bar */
-  .panel{position:fixed;z-index:5;left:16px;right:16px;bottom:16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px}
+  /* the panel at the bottom: what this mode needs, then the bar */
+  .panel{position:fixed;z-index:5;left:16px;right:16px;bottom:16px;display:flex;flex-direction:column;gap:10px;padding:8px;max-height:62vh;max-height:62dvh;overflow:hidden}
   body.live .panel{border-color:var(--live);box-shadow:0 0 0 1px var(--live)}
-  .panel .spacer{flex:1}
-  .look-open{display:inline-flex;align-items:center;gap:6px;font-size:14px;padding:6px 12px}
-  .look-open i{width:10px;height:10px;border-radius:50%;background:var(--c)}
-  .look-open i + i{margin-left:-9px;box-shadow:0 0 0 1px var(--bg)}
-  .look-name{margin-left:3px}
-  .song-open,.go-btn,.more-open,.rig{padding:6px 12px}
-  .go-btn{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .bar .spacer{flex:1}
+  .bar > button,.show-ctl button{padding:6px 10px}
+  .show-ctl{display:flex;align-items:center;gap:4px;min-width:0}
+  .song-prev,.song-next{padding:6px 8px !important}
+  .song-name{min-width:0;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 2px}
+  .cue-next{font-weight:500}
   .master-fader{display:flex;align-items:center;gap:8px;color:var(--fg-2);padding:0 4px}
-  .master-fader input{width:110px}
-  .master-fader output{width:34px;text-align:right;color:var(--fg-3);font-variant-numeric:tabular-nums;font-size:12px}
+  .master-fader input{width:90px}
+  .master-fader output{width:30px;text-align:right;color:var(--fg-3);font-variant-numeric:tabular-nums;font-size:12px}
+  .more-open{font-size:15px;line-height:1.05}
+  @media (max-width:1000px) and (min-width:641px){.master-fader output{display:none}}
   .rig[data-on="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
   body.live .rig{background:var(--live);color:#fff;border-color:var(--live);font-weight:500}
+  .dock{display:flex;flex-direction:column;gap:10px;min-height:0;overflow-y:auto}   /* the bar always stays in view */
+  .bar{flex:none}
+  .dock .row{gap:16px;justify-content:space-between}
+  body[data-mode="manual"] .scenes,body[data-mode="manual"] .tempo button,body:not([data-mode="manual"]) .manual-dock{display:none}
+
+  /* Manual: the pad, as it sits on the table */
+  .manual-dock{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+  .padgrid{display:grid;grid-template-columns:repeat(4,96px);gap:6px}
+  .padgrid button{position:relative;overflow:hidden;height:50px;padding:4px;border-radius:8px;line-height:1.15}
+  .padgrid .fx{background:var(--tint)}
+  /* the same colours as the real pads: looks cyan, taps orange, holds magenta, Blackout red */
+  .padgrid [data-scene]{border-color:rgba(64,224,240,.55)}
+  .padgrid .tap{border-color:rgba(245,150,40,.6)}
+  .padgrid .hold{border-color:rgba(230,60,250,.6)}
+  .padgrid .stop{border-color:rgba(240,70,60,.7)}
+  .padgrid .fx small{display:block;color:var(--fg-3);font-size:10.5px}
+  .padgrid button.on,.padgrid button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+  .padgrid button.on small{color:inherit}
+  .padgrid button.learn{outline:2px solid var(--amber);outline-offset:2px}
+  .manual-side{display:flex;flex-direction:column;gap:8px;flex:1;min-width:220px}
+  .more-looks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+  .pad-hint{margin:0;color:var(--amber)}
+  [data-scene]{position:relative;overflow:hidden}
+  [data-scene]::after{content:"";position:absolute;left:0;bottom:0;height:3px;width:calc(var(--p,0) * 100%);background:var(--live)}
+  body[data-mode="show"] .dock,body:not([data-mode="show"]) .show-ctl,body:not([data-mode="show"]) .hud{display:none}
+
+  /* Show mode: where we are in the song, big enough to read from the stage */
+  .hud{position:fixed;z-index:4;top:16px;left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100vw - 32px);text-align:center;pointer-events:none;text-shadow:0 0 8px #000,0 0 3px #000}
+  .hud p{margin:0}
+  .hud-song{color:var(--fg-2);font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+  .hud-cue{font-size:34px;font-weight:500;line-height:1.15}
+  .hud-next{color:var(--fg-2);font-size:15px}
 
   input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:20px;margin:0;background:transparent;cursor:pointer;--track:var(--fg)}
   input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:linear-gradient(to right,var(--track) var(--v,0%),var(--line-2) var(--v,0%))}
@@ -79,11 +113,8 @@
   /* what opens above the bar, one at a time */
   .sheet{position:fixed;z-index:6;left:16px;bottom:calc(var(--panel-h,70px) + 24px);padding:12px;display:flex;flex-direction:column;gap:12px;max-height:calc(100vh - var(--panel-h,70px) - 48px);max-height:calc(100dvh - var(--panel-h,70px) - 48px);overflow-y:auto}
   .more-sheet,.pedal{left:auto;right:16px}
-  .look-sheet{width:min(560px,calc(100vw - 32px))}
-  .scenes{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
-  .scenes button{position:relative;overflow:hidden;padding:8px 4px;text-align:center}
-  .scenes button::after{content:"";position:absolute;left:0;bottom:0;height:3px;width:calc(var(--p,0) * 100%);background:var(--live)}
-  .look-sheet .row{gap:12px;justify-content:space-between}
+  .scenes{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:4px}
+  .scenes button{padding:8px 4px;text-align:center}
   .swatches{display:grid;grid-template-columns:auto repeat(8,20px);gap:6px 4px;align-items:center}
   .swatches b{font-weight:400;color:var(--fg-3);font-size:11px;width:12px}
   .swatch{width:20px;height:20px;padding:0;border-radius:50%;border:2px solid transparent;background:var(--c)}
@@ -186,17 +217,19 @@
 
   @media (max-width:640px){
     .panel{left:12px;right:12px;bottom:12px}
-    .panel .spacer{display:none}
-    .look-open{flex:1;justify-content:flex-start}
-    .go-btn{order:2;flex:1;max-width:none}
-    .song-open{order:1}
-    .more-open{order:0}
-    .master-fader{order:3;flex:1}
+    .bar .spacer{display:none}
+    .modes,.show-ctl{flex:1 0 100%}
+    .modes button,.cue-next{flex:1}
+    .master-fader{flex:1 0 100%;order:1}
     .master-fader input{width:100%}
-    .rig{order:4}
+    .blackout,.rig,.more-open{flex:1;order:2}
+    body[data-mode="setup"] .dock{display:none}
+    .padgrid{grid-template-columns:repeat(4,minmax(0,1fr));width:100%}
+    .manual-side{min-width:0}
+    .dock .row{justify-content:flex-start}
+    .hud-cue{font-size:26px}
     .sheet,.more-sheet,.pedal{left:12px;right:12px;width:auto}
     .tag span{display:none}
-    .look-sheet .row{justify-content:flex-start}
     .scenes{grid-template-columns:repeat(3,minmax(0,1fr))}
     .setlist{top:auto;bottom:calc(var(--panel-h,110px) + 20px);left:12px;right:12px;width:auto;max-height:62vh;max-height:62dvh;gap:8px;padding:10px}
     .setlist .timeline{height:44px}
@@ -231,15 +264,9 @@
 <button class="unhide" aria-label="Show the controls">Show controls</button>
 <div id="setlist-root"></div>   <!-- the setlist panel, drawn by setlist-ui.js -->
 
-<section class="sheet look-sheet glass" hidden aria-label="Look">
-  <div class="scenes"></div>
-  <div class="row">
-    <div class="swatches"></div>
-    <div class="tempo"><output class="bpm">120</output><span class="beats" aria-hidden="true"><i></i><i></i><i></i><i></i></span><button class="tap" title="Tap along to set the tempo">Tap</button><button class="hit" title="A white slam on top of the look">Hit</button><button class="flash" title="Everything white and strobing, while held">Flash</button></div>
-  </div>
-</section>
+<div class="hud" aria-live="polite"><p class="hud-song"></p><p class="hud-cue"></p><p class="hud-next"></p></div>
 
-<section class="sheet more-sheet glass" hidden aria-label="More">
+<section class="sheet more-sheet glass" hidden aria-label="Settings">
   <div class="segment views" role="group" aria-label="View"></div>
   <div>
     <label class="slider"><span>Beams</span><input type="range" class="beams" min="0" max="1" step="0.01" value="0.5"></label>
@@ -248,7 +275,7 @@
   </div>
   <div class="more-list">
     <button class="labels-toggle">Labels</button>
-    <button class="pedal-toggle">Foot pedal</button>
+    <button class="pedal-toggle">Pedal &amp; pad</button>
     <button class="dmx-toggle">DMX</button>
     <button class="mirror" title="Show what a lighting desk sends, instead of running the show">Mirror a desk</button>
     <button class="reset-layout">Reset stage</button>
@@ -266,19 +293,43 @@
   <ul class="patch"></ul>
 </section>
 
-<section class="sheet pedal glass" hidden aria-label="Foot pedal">
+<section class="sheet pedal glass" hidden aria-label="Pedal and pad">
   <div class="pedal-top"><p class="pedal-status"></p><button class="pedal-connect">Connect</button></div>
   <ul class="pedal-map"></ul>
+  <div class="pedal-top"><p class="pad-status"></p><button class="pad-setup">Set up pad</button></div>
 </section>
 
 <div class="panel glass">
-  <button class="more-open" aria-label="More">⋯</button>
-  <button class="look-open" aria-label="Choose a look"><i class="dot-a"></i><i class="dot-b"></i><span class="look-name"></span></button>
-  <button class="song-open" title="Setlist"></button>
-  <button class="go-btn" title="Next cue" hidden></button>
-  <span class="spacer"></span>
-  <label class="master-fader"><span>Master</span><input type="range" class="master" min="0" max="1" step="0.01" value="1"><output></output></label>
-  <button class="rig">Drive rig</button>
+  <div class="dock">
+    <div class="manual-dock">
+      <div class="padgrid" aria-label="Pad"></div>
+      <div class="manual-side">
+        <p class="pad-hint" hidden></p>
+        <div class="more-looks"></div>
+      </div>
+    </div>
+    <div class="scenes"></div>
+    <div class="row">
+      <div class="swatches"></div>
+      <div class="tempo"><output class="bpm">120</output><span class="beats" aria-hidden="true"><i></i><i></i><i></i><i></i></span><button class="tap" title="Tap along to set the tempo">Tap</button><button class="hit" title="A white slam on top of the look">Hit</button><button class="flash" title="Everything white and strobing, while held">Flash</button></div>
+    </div>
+  </div>
+  <div class="bar">
+    <div class="segment modes" role="group" aria-label="Mode">
+      <button data-mode="manual" title="Pick the looks by hand, for another band">Manual</button>
+      <button data-mode="show" title="Our set: step through the cues with the pedal">Show</button>
+      <button data-mode="setup" title="Edit the songs and their cues">Setup</button>
+    </div>
+    <div class="show-ctl">
+      <button class="song-prev" aria-label="Previous song">‹</button><span class="song-name"></span><button class="song-next" aria-label="Next song">›</button>
+      <button class="cue-back">‹ Back</button><button class="cue-next">Next ›</button>
+    </div>
+    <span class="spacer"></span>
+    <button class="blackout" title="Everything dark; press again to come back (B)">Blackout</button>
+    <label class="master-fader"><span>Master</span><input type="range" class="master" min="0" max="1" step="0.01" value="1"><output></output></label>
+    <button class="rig">Drive rig</button>
+    <button class="more-open" aria-label="Settings" title="Settings">⚙</button>
+  </div>
 </div>
 
 <dialog class="credits">
@@ -299,14 +350,14 @@
 <dialog class="shortcuts">
   <h2>Shortcuts</h2>
   <div class="keys">
-    <kbd>1–0, Q W E A S</kbd><span>Choose a look. Hover a look's button to see its key</span>
-    <kbd>→ or G / ←</kbd><span>Next cue / previous cue</span>
-    <kbd>T</kbd><span>Tap the tempo</span>
-    <kbd>Enter / Space</kbd><span>Hit / Flash while held</span>
-    <kbd>P / R</kbd><span>Play or pause the song / record cues</span>
-    <kbd>L / M / D / N</kbd><span>Setlist / foot pedal / DMX / labels</span>
-    <kbd>V / H</kbd><span>Next view / hide everything</span>
-    <kbd>Esc</kbd><span>Close the open panel</span>
+    <kbd>B</kbd><span>Blackout, and back (any mode)</span>
+    <kbd>1–0, Q W E A S</kbd><span>Choose a look (Manual, Setup). Hover a look to see its key</span>
+    <kbd>T / Enter / Space</kbd><span>Tap the tempo / Hit / Flash while held (Manual, Setup)</span>
+    <kbd>→ or G / ←</kbd><span>Next / previous scene (Show, Setup)</span>
+    <kbd>] / [</kbd><span>Next / previous song (Show)</span>
+    <kbd>P / R</kbd><span>Play or pause the song / record cues (Setup)</span>
+    <kbd>M / D / N</kbd><span>Foot pedal / DMX / labels</span>
+    <kbd>V / H / Esc</kbd><span>Next view / hide everything / close a panel</span>
   </div>
   <p style="color:var(--fg-2)">Drag Fab, Cyril or Olivier to move them around the stage. Drag anywhere else to look around.</p>
   <form method="dialog"><button>Close</button></form>
