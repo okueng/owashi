@@ -43,7 +43,7 @@ export const REACTS = ['off', 'crash', 'guitar', 'all'];
 
 // ── state ───────────────────────────────────────────────────────────────────
 
-export const songs = signal([]);          // [{ id, title, soundcloud?, cues }]
+export const songs = signal([]);          // [{ id, title, soundcloud?, audio?, cues }]
 export const songId = signal(null);
 export const song = computed(() => songs.value.find(s => s.id === songId.value) || null);
 export const cues = computed(() => song.value?.cues || []);
@@ -94,7 +94,7 @@ export function selectSong(id) {
   batch(() => {
     songId.value = id;
     index.value = -1; duration.value = 0; wave.value = null; scNote.value = ''; playhead.value = 0;
-    follow.value = !!s.soundcloud;   // a recording can drive the cues; live, you press GO
+    follow.value = !!(s.audio || s.soundcloud);   // a recording can drive the cues; live, you press GO
   });
 }
 
@@ -183,6 +183,32 @@ export function connectSoundCloud(frame) {
     poll = setInterval(() => { if (alive && playing.value) check(); }, 1000);
   }).catch(() => { if (alive) scNote.value = "Couldn't reach SoundCloud — the stopwatch runs instead."; });
   return () => { alive = false; widget = null; clearInterval(poll); };
+}
+
+// A rehearsal recording kept on this computer (sim/show/recordings/, not in git): an <audio> element in place of
+// SoundCloud. Its waveform is the song's energy curve, so nothing has to decode 18 minutes of audio.
+export function connectRecording(el) {
+  let alive = true;
+  const s = song.value;
+  const on = (type, fn) => el.addEventListener(type, e => { if (alive) fn(e); });
+  on('loadedmetadata', () => {
+    widget = { play: () => el.play().catch(() => {}), pause: () => el.pause(), seekTo: ms => { el.currentTime = ms / 1000; } };
+    duration.value = el.duration;
+    const v = s?.energy?.values;
+    wave.value = v?.length ? v.map(x => x / 100) : false;
+    if (pos) el.currentTime = pos;
+  });
+  const sync = () => { pos = el.currentTime; at = performance.now(); };
+  on('timeupdate', sync);
+  on('seeked', sync);
+  on('playing', () => { sync(); playing.value = true; });
+  on('pause', () => { sync(); playing.value = false; });
+  on('ended', () => { pos = duration.value; playing.value = false; });
+  on('error', () => {
+    widget = null;
+    scNote.value = "This recording isn't on this computer (sim/show/recordings/) — the stopwatch runs instead.";
+  });
+  return () => { alive = false; widget = null; el.pause(); };
 }
 
 export function position() {
@@ -322,9 +348,9 @@ export function draft() {
 }
 
 export function exportSong() {
-  const { id, title, soundcloud, energy, hits } = song.value;
+  const { id, title, soundcloud, audio, energy, hits } = song.value;
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([JSON.stringify({ id, title, soundcloud, cues: cues.value, hits, energy }, null, 2)], { type: 'application/json' }));
+  a.href = URL.createObjectURL(new Blob([JSON.stringify({ id, title, soundcloud, audio, cues: cues.value, hits, energy }, null, 2)], { type: 'application/json' }));
   a.download = `${id}.json`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);

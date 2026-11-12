@@ -21,7 +21,7 @@
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
+import { createReadStream, existsSync, readFileSync } from 'node:fs';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { homedir, networkInterfaces } from 'node:os';
 import { extname, join, normalize } from 'node:path';
@@ -301,7 +301,7 @@ const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml',
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.ico': 'image/x-icon',
-  '.glb': 'model/gltf-binary', '.woff2': 'font/woff2',
+  '.glb': 'model/gltf-binary', '.woff2': 'font/woff2', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.wav': 'audio/wav',
 };
 
 async function serveFile(req, res, path) {
@@ -309,14 +309,29 @@ async function serveFile(req, res, path) {
   let file = normalize(join(ROOT, path));
   if (!file.startsWith(ROOT) || path.split('/').some(p => p.startsWith('.'))) { res.writeHead(403); res.end(); return; }
   try {
-    if ((await stat(file)).isDirectory()) file = join(file, 'index.html');
-    const body = await readFile(file);
-    res.writeHead(200, {
+    let info = await stat(file);
+    if (info.isDirectory()) { file = join(file, 'index.html'); info = await stat(file); }
+    const head = {
       'content-type': TYPES[extname(file).toLowerCase()] || 'application/octet-stream',
       'cache-control': 'no-cache',
+      'accept-ranges': 'bytes',
       'x-owashi-bridge': '1',   // tells the sim it can save the show here
-    });
-    res.end(req.method === 'HEAD' ? undefined : body);
+    };
+    // a recording: the browser asks for it in ranges, and can only seek in it if it gets them
+    const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+    if (range && (range[1] || range[2])) {
+      const size = info.size;
+      let a = range[1] ? Number(range[1]) : size - Number(range[2]), b = range[1] && range[2] ? Number(range[2]) : size - 1;
+      a = Math.max(0, a); b = Math.min(b, size - 1);
+      if (a > b) { res.writeHead(416, { 'content-range': `bytes */${size}` }); res.end(); return; }
+      res.writeHead(206, { ...head, 'content-range': `bytes ${a}-${b}/${size}`, 'content-length': b - a + 1 });
+      if (req.method === 'HEAD') { res.end(); return; }
+      createReadStream(file, { start: a, end: b }).on('error', () => res.destroy()).pipe(res);
+      return;
+    }
+    res.writeHead(200, { ...head, 'content-length': info.size });
+    if (req.method === 'HEAD') { res.end(); return; }
+    createReadStream(file).on('error', () => res.destroy()).pipe(res);
   } catch {
     res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
     res.end('not found\n');
@@ -336,8 +351,9 @@ const readJson = async (file, fallback) => { try { return JSON.parse(await readF
 const writeJson = (file, data) => writeFile(file, JSON.stringify(data, null, 2) + '\n');
 const announce = msg => { for (const c of clients) sendJson(c, msg); };
 const SONG_ID = /^[a-z0-9][a-z0-9-]{0,59}$/;
+const AUDIO_PATH = /^recordings\/[\w .-]{1,80}\.(mp3|m4a|wav)$/;   // a song's own recording, in sim/show/recordings/
 
-// PUT /api/show/songs/<id>  { title, soundcloud?, cues, hits?, energy? }  → sim/show/songs/<id>.json (and the setlist, if it's new)
+// PUT /api/show/songs/<id>  { title, soundcloud?, audio?, cues, hits?, energy? }  → sim/show/songs/<id>.json (and the setlist, if it's new)
 // PUT /api/show/setlist     { songs: [{ id, title, soundcloud? }] } → sim/show/setlist.json
 async function handleApi(req, res, path) {
   const send = (code, obj) => { res.writeHead(code, { 'content-type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(obj)); };
@@ -354,12 +370,13 @@ async function handleApi(req, res, path) {
     if (!SONG_ID.test(id) || !Array.isArray(body.cues)) return send(400, { error: 'expected { title, cues: [...] } for a lowercase-dashed song id' });
     const entry = { id, title: String(body.title || id).slice(0, 80), ...(body.soundcloud ? { soundcloud: String(body.soundcloud) } : {}) };
     await mkdir(join(SHOW, 'songs'), { recursive: true });
+    const audio = typeof body.audio === 'string' && AUDIO_PATH.test(body.audio) ? { audio: body.audio } : {};
     // hits (accents) and energy (the recording's loudness curve) come from the analysis; keep them through edits
     const extras = {
       ...(Array.isArray(body.hits) ? { hits: body.hits } : {}),
       ...(body.energy && Array.isArray(body.energy.values) ? { energy: body.energy } : {}),
     };
-    await writeJson(join(SHOW, 'songs', `${id}.json`), { ...entry, cues: body.cues, ...extras });
+    await writeJson(join(SHOW, 'songs', `${id}.json`), { ...entry, ...audio, cues: body.cues, ...extras });
     const list = await readJson(join(SHOW, 'setlist.json'), { songs: [] });
     if (!list.songs.some(s => s.id === id)) { list.songs.push(entry); await writeJson(join(SHOW, 'setlist.json'), list); }
     console.log(`  saved  sim/show/songs/${id}.json · ${body.cues.length} cues`);

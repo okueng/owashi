@@ -35,6 +35,15 @@ function SoundCloud({ url, title }) {
   </div>`;
 }
 
+function Recording({ src, title }) {
+  const el = useRef();
+  useEffect(() => S.connectRecording(el.current), []);
+  return html`<div class="sc rec" data-note=${S.scNote.value || undefined}>
+    <audio ref=${el} src=${`./show/${src}`} preload="metadata" title=${`${title} (rehearsal recording)`}></audio>
+    <span>${S.scNote.value ? '' : `Rehearsal recording · ${src.replace(/^recordings\//, '')}`}</span>
+  </div>`;
+}
+
 function Transport() {
   return html`<div class="transport">
     <button class="play" aria-pressed=${S.playing.value} onClick=${S.playPause}>${S.playing.value ? 'Pause' : 'Play'}</button>
@@ -142,7 +151,7 @@ function Footer() {
   const w = S.wave.value;
   const draftNote = w ? 'Rough cues from the loud and quiet parts — then fix them by ear'
     : w === false ? "SoundCloud didn't share this track's waveform"
-    : S.song.value?.soundcloud ? "Waiting for the track's waveform" : 'Needs a recording';
+    : S.song.value?.soundcloud || S.song.value?.audio ? "Waiting for the track's waveform" : 'Needs a recording';
   const pick = e => { const f = e.currentTarget.files[0]; e.currentTarget.value = ''; if (f) S.importFile(f); };
   return html`<footer>
     <div class="actions">
@@ -159,7 +168,8 @@ function Setlist() {
   const s = S.song.value;
   return html`<section class="setlist" hidden=${!S.open.value} aria-label="Setlist">
     <${Header} />
-    ${s?.soundcloud ? html`<${SoundCloud} key=${s.id} url=${s.soundcloud} title=${s.title} />` : null}
+    ${s?.audio ? html`<${Recording} key=${s.id} src=${s.audio} title=${s.title} />`
+      : s?.soundcloud ? html`<${SoundCloud} key=${s.id} url=${s.soundcloud} title=${s.title} />` : null}
     <${Transport} />
     <${Timeline} />
     <${CueList} />

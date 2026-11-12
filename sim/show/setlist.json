@@ -1,9 +1,8 @@
 {
   "songs": [
-    {
-      "id": "kepler-1-b",
-      "title": "Kepler 1-b",
-      "soundcloud": "https://soundcloud.com/owashi-band-official/kepler-1b"
-    }
+    { "id": "new-land", "title": "New Land" },
+    { "id": "kepler-1-b", "title": "Kepler 1-b", "soundcloud": "https://soundcloud.com/owashi-band-official/kepler-1b" },
+    { "id": "fm", "title": "FM" },
+    { "id": "liberated", "title": "Liberated" }
   ]
 }
