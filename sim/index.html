@@ -112,7 +112,7 @@
 
   /* what opens above the bar, one at a time */
   .sheet{position:fixed;z-index:6;left:16px;bottom:calc(var(--panel-h,70px) + 24px);padding:12px;display:flex;flex-direction:column;gap:12px;max-height:calc(100vh - var(--panel-h,70px) - 48px);max-height:calc(100dvh - var(--panel-h,70px) - 48px);overflow-y:auto}
-  .more-sheet,.pedal{left:auto;right:16px}
+  .more-sheet,.pedal,.inputs{left:auto;right:16px}
   .scenes{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:4px}
   .scenes button{padding:8px 4px;text-align:center}
   .swatches{display:grid;grid-template-columns:auto repeat(8,20px);gap:6px 4px;align-items:center}
@@ -147,6 +147,18 @@
   .pedal-map button{padding:3px 8px;font-size:12px}
   .pedal-map button[aria-pressed="true"]{background:var(--amber);border-color:var(--amber);color:#111}
 
+  .inputs{width:min(340px,calc(100vw - 32px));max-height:calc(100vh - 160px);overflow-y:auto}
+  .inputs-status{margin:0;color:var(--fg-2);font-size:12px}
+  .inputs .check{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--fg-2)}
+  .inputs-list{list-style:none;margin:0;padding:0;display:grid;gap:3px}
+  .inputs-list .ch{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .inputs-list li{display:grid;grid-template-columns:minmax(22px,84px) 112px 1fr 10px;gap:8px;align-items:center;font-size:12px;color:var(--fg-3);font-variant-numeric:tabular-nums}
+  .inputs-list select{padding:2px 4px;font-size:12px}
+  .inputs-list .meter{height:6px;border-radius:3px;background:var(--line-2);overflow:hidden}
+  .inputs-list .meter i{display:block;height:100%;width:0;background:var(--fg-2)}
+  .inputs-list .hit{width:8px;height:8px;border-radius:50%;background:var(--line-2)}
+  .inputs-list .hit.on{background:var(--amber)}
+
   .place,.toast{position:fixed;z-index:8;left:50%;top:16px;transform:translateX(-50%);max-width:calc(100vw - 32px);opacity:0;pointer-events:none}
   .place{padding:6px 12px;background:var(--panel);border:1px solid var(--line);border-radius:999px;color:var(--fg-2);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;transition:opacity .3s}
   .place.on{opacity:1}
@@ -174,7 +186,8 @@
   .setlist .cue .t{width:64px;font-variant-numeric:tabular-nums}
   .setlist .cue .n{flex:1;min-width:0}
   .setlist .cue .look{flex:1;min-width:0}
-  .setlist .cue .bpm{width:58px}
+  .setlist .cue .bpm,.setlist .cue .fade{width:58px}
+  .setlist .cue .lead{flex:1;min-width:0}
   .setlist .cue .l2 span{color:var(--fg-3);font-size:11px}
   .setlist .cue .x{padding:2px 8px;border-color:transparent;color:var(--fg-3)}
   .setlist .cue .sw{width:18px;height:18px;padding:0;border-radius:50%;border:1px solid var(--line-2);background:var(--c)}
@@ -228,7 +241,7 @@
     .manual-side{min-width:0}
     .dock .row{justify-content:flex-start}
     .hud-cue{font-size:26px}
-    .sheet,.more-sheet,.pedal{left:12px;right:12px;width:auto}
+    .sheet,.more-sheet,.pedal,.inputs{left:12px;right:12px;width:auto}
     .tag span{display:none}
     .scenes{grid-template-columns:repeat(3,minmax(0,1fr))}
     .setlist{top:auto;bottom:calc(var(--panel-h,110px) + 20px);left:12px;right:12px;width:auto;max-height:62vh;max-height:62dvh;gap:8px;padding:10px}
@@ -276,6 +289,7 @@
   <div class="more-list">
     <button class="labels-toggle">Labels</button>
     <button class="pedal-toggle">Pedal &amp; pad</button>
+    <button class="inputs-toggle">Inputs</button>
     <button class="dmx-toggle">DMX</button>
     <button class="mirror" title="Show what a lighting desk sends, instead of running the show">Mirror a desk</button>
     <button class="reset-layout">Reset stage</button>
@@ -297,6 +311,13 @@
   <div class="pedal-top"><p class="pedal-status"></p><button class="pedal-connect">Connect</button></div>
   <ul class="pedal-map"></ul>
   <div class="pedal-top"><p class="pad-status"></p><button class="pad-setup">Set up pad</button></div>
+</section>
+
+<section class="sheet inputs glass" hidden aria-label="Inputs from the mixer">
+  <p class="inputs-status"></p>
+  <ul class="inputs-list"></ul>
+  <p class="inputs-status inputs-live"></p>
+  <label class="check"><input type="checkbox" class="dark-on-stop"> Dark when the band stops dead</label>
 </section>
 
 <div class="panel glass">

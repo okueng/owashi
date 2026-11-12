@@ -105,6 +105,18 @@ function CueRow({ c, i, on }) {
         onClick=${e => S.cycleColour(i, slot, e.shiftKey ? -1 : 1)}></button>`)}
       <input class="bpm" type="number" min="40" max="240" value=${c.bpm} aria-label="Tempo" onChange=${e => S.updateCue(i, { bpm: e.currentTarget.value })} /><span>bpm</span>
     </div>
+    ${on ? html`<div class="l2">
+      <input class="fade" type="number" min="0" max="16" step="0.5" value=${c.fade} aria-label="Fade in, in bars"
+        title="Bars to fade in from the previous cue; 0 cuts" onChange=${e => S.updateCue(i, { fade: e.currentTarget.value })} /><span>bars fade</span>
+      <select class="lead" aria-label="Lead guitar" value=${c.lead} title="The beam on the soloist's side stays up, the other drops back (as the audience sees it)"
+        onChange=${e => S.updateCue(i, { lead: e.currentTarget.value })}>
+        <option value="">No lead</option><option value="left">Lead left</option><option value="right">Lead right</option><option value="trade">Leads trade</option>
+      </select>
+      <select class="lead" aria-label="Live accents" value=${c.react} title="Live, from the mixer: which accents fire during this cue"
+        onChange=${e => S.updateCue(i, { react: e.currentTarget.value })}>
+        <option value="off">No accents</option><option value="crash">Crashes</option><option value="guitar">Crashes, guitars</option><option value="all">Crashes, guitars, fills</option>
+      </select>
+    </div>` : null}
   </li>`;
 }
 

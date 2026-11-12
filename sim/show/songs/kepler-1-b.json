@@ -4,58 +4,497 @@
   "soundcloud": "https://soundcloud.com/owashi-band-official/kepler-1b",
   "cues": [
     {
-      "t": 0,
-      "name": "Intro",
-      "scene": "sweep",
-      "a": "Ice",
-      "b": "Blue",
-      "bpm": 120,
-      "phase": 0
-    },
-    {
-      "t": 24,
-      "name": "Build 1",
-      "scene": "build",
+      "t": 0.0,
+      "name": "Dark for the pickup",
+      "scene": "blackout",
       "a": "Red",
       "b": "Blue",
-      "bpm": 120,
-      "phase": 0
+      "bpm": 105,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "off"
     },
     {
-      "t": 44,
-      "name": "Riff 1",
+      "t": 2.8,
+      "name": "A Foundry ignites",
+      "scene": "riff",
+      "a": "Red",
+      "b": "Amber",
+      "bpm": 105,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "crash"
+    },
+    {
+      "t": 12.0,
+      "name": "B Scream over the riff",
+      "scene": "riff",
+      "a": "Amber",
+      "b": "Red",
+      "bpm": 105,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "guitar"
+    },
+    {
+      "t": 21.1,
+      "name": "C Verse 1, prowling",
+      "scene": "sweep",
+      "a": "Red",
+      "b": "Amber",
+      "bpm": 105,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "crash"
+    },
+    {
+      "t": 39.4,
+      "name": "D Chorus 1, the ridge",
+      "scene": "slab",
+      "a": "Amber",
+      "b": "Ice",
+      "bpm": 105,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "crash"
+    },
+    {
+      "t": 57.7,
+      "name": "D Tremolo, the storm",
+      "scene": "slab",
+      "a": "White",
+      "b": "Ice",
+      "bpm": 105,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "crash"
+    },
+    {
+      "t": 71.4,
+      "name": "D Held chord, exhale",
+      "scene": "collapse",
+      "a": "Amber",
+      "b": "Ice",
+      "bpm": 105,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "crash"
+    },
+    {
+      "t": 78.3,
+      "name": "E Verse 2, the stride again",
+      "scene": "sweep",
+      "a": "Red",
+      "b": "Amber",
+      "bpm": 105,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "all"
+    },
+    {
+      "t": 108.0,
+      "name": "F Solo 1, lightning prism",
+      "scene": "blast",
+      "a": "Ice",
+      "b": "White",
+      "bpm": 105,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "guitar"
+    },
+    {
+      "t": 128.6,
+      "name": "G Chug march",
       "scene": "riff",
       "a": "Red",
       "b": "UV",
-      "bpm": 120,
-      "phase": 0
+      "bpm": 105,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "all"
     },
     {
-      "t": 237,
-      "name": "Ambient 1",
-      "scene": "ambient",
-      "a": "Red",
-      "b": "Blue",
-      "bpm": 120,
-      "phase": 0
+      "t": 156.0,
+      "name": "G Second pass, darker",
+      "scene": "riff",
+      "a": "UV",
+      "b": "Red",
+      "bpm": 105,
+      "phase": 0,
+      "fade": 1,
+      "lead": "",
+      "react": "all"
     },
     {
-      "t": 324,
-      "name": "Sweep 2",
-      "scene": "sweep",
-      "a": "Ice",
-      "b": "Blue",
-      "bpm": 120,
-      "phase": 0
+      "t": 185.7,
+      "name": "H Chorus 2, hotter",
+      "scene": "slab",
+      "a": "Amber",
+      "b": "White",
+      "bpm": 105,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "crash"
     },
     {
-      "t": 438,
-      "name": "Embers 1",
-      "scene": "embers",
+      "t": 204.0,
+      "name": "H Tremolo, the storm",
+      "scene": "slab",
+      "a": "White",
+      "b": "Ice",
+      "bpm": 105,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "crash"
+    },
+    {
+      "t": 222.3,
+      "name": "I Opening riff, no lead-in",
+      "scene": "riff",
       "a": "Amber",
       "b": "Red",
-      "bpm": 120,
-      "phase": 0
+      "bpm": 105,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "guitar"
+    },
+    {
+      "t": 240.6,
+      "name": "J Titan sinks (8 bars)",
+      "scene": "collapse",
+      "a": "Red",
+      "b": "Blue",
+      "bpm": 105,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "crash"
+    },
+    {
+      "t": 258.8,
+      "name": "K Clean, the planet shadow",
+      "scene": "ambient",
+      "a": "Red",
+      "b": "Teal",
+      "bpm": 105,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "off"
+    },
+    {
+      "t": 272.6,
+      "name": "K Two guitars, two beams",
+      "scene": "searchlight",
+      "a": "Red",
+      "b": "Blue",
+      "bpm": 105,
+      "phase": 0,
+      "fade": 2,
+      "lead": "",
+      "react": "off"
+    },
+    {
+      "t": 293.1,
+      "name": "K Snare roll in the dark",
+      "scene": "blackout",
+      "a": "Red",
+      "b": "Blue",
+      "bpm": 105,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "off"
+    },
+    {
+      "t": 295.4,
+      "name": "L Into the sunlight",
+      "scene": "wall",
+      "a": "Amber",
+      "b": "Ice",
+      "bpm": 105,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "guitar"
+    },
+    {
+      "t": 313.7,
+      "name": "L Octave lift",
+      "scene": "wall",
+      "a": "White",
+      "b": "Amber",
+      "bpm": 105,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "guitar"
+    },
+    {
+      "t": 329.7,
+      "name": "M War machine, squeals",
+      "scene": "riff",
+      "a": "Red",
+      "b": "UV",
+      "bpm": 105,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "guitar"
+    },
+    {
+      "t": 368.6,
+      "name": "N Solo 2, liquid gold",
+      "scene": "sweep",
+      "a": "Amber",
+      "b": "Amber",
+      "bpm": 105,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "guitar"
+    },
+    {
+      "t": 386.8,
+      "name": "N Shred, crucible heats",
+      "scene": "blast",
+      "a": "Amber",
+      "b": "White",
+      "bpm": 105,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "guitar"
+    },
+    {
+      "t": 421.1,
+      "name": "N Crucible shatters",
+      "scene": "strobe",
+      "a": "White",
+      "b": "White",
+      "bpm": 105,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "off"
+    },
+    {
+      "t": 425.7,
+      "name": "O Star collapses",
+      "scene": "breakdown",
+      "a": "Red",
+      "b": "UV",
+      "bpm": 105,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "crash"
+    },
+    {
+      "t": 432.6,
+      "name": "O Feedback hold, frozen",
+      "scene": "silhouette",
+      "a": "Red",
+      "b": "UV",
+      "bpm": 105,
+      "phase": 0,
+      "fade": 1,
+      "lead": "",
+      "react": "off"
+    },
+    {
+      "t": 441.7,
+      "name": "P Leaving the planet (loop)",
+      "scene": "orbit",
+      "a": "Red",
+      "b": "Blue",
+      "bpm": 105,
+      "phase": 0,
+      "fade": 2,
+      "lead": "",
+      "react": "off"
+    },
+    {
+      "t": 478.2,
+      "name": "P Darker, warmer",
+      "scene": "embers",
+      "a": "Red",
+      "b": "Blue",
+      "bpm": 105,
+      "phase": 0,
+      "fade": 4,
+      "lead": "",
+      "react": "off"
+    },
+    {
+      "t": 498.0,
+      "name": "Q Last chord rings out",
+      "scene": "blackout",
+      "a": "Red",
+      "b": "Blue",
+      "bpm": 105,
+      "phase": 0,
+      "fade": 3,
+      "lead": "",
+      "react": "off"
     }
-  ]
+  ],
+  "hits": [
+    {
+      "t": 7.4,
+      "on": "tubes",
+      "v": 0.5,
+      "what": "riff turnaround stab"
+    },
+    {
+      "t": 12.0,
+      "on": "beams",
+      "v": 0.9,
+      "what": "scream enters"
+    },
+    {
+      "t": 16.5,
+      "on": "beams",
+      "v": 0.6,
+      "what": "pinch-harmonic cry"
+    },
+    {
+      "t": 66.8,
+      "on": "all",
+      "v": 0.6,
+      "what": "peak of the shred, rhythm stabs"
+    },
+    {
+      "t": 71.4,
+      "on": "all",
+      "v": 1,
+      "what": "massive held chord"
+    },
+    {
+      "t": 105.7,
+      "on": "beams",
+      "v": 0.7,
+      "what": "high bend into the solo"
+    },
+    {
+      "t": 112.5,
+      "on": "beams",
+      "v": 0.7,
+      "what": "harmonic scream"
+    },
+    {
+      "t": 121.7,
+      "on": "beams",
+      "v": 0.8,
+      "what": "highest bends"
+    },
+    {
+      "t": 124.0,
+      "on": "tubes",
+      "v": 0.8,
+      "what": "cymbals drop, kick/snare punches"
+    },
+    {
+      "t": 153.7,
+      "on": "tubes",
+      "v": 0.6,
+      "what": "fill, end of the first pass"
+    },
+    {
+      "t": 183.4,
+      "on": "tubes",
+      "v": 0.7,
+      "what": "drum build into chorus 2"
+    },
+    {
+      "t": 217.7,
+      "on": "all",
+      "v": 1,
+      "what": "chord hit, cut short"
+    },
+    {
+      "t": 220.0,
+      "on": "tubes",
+      "v": 0.6,
+      "what": "gritty pickup"
+    },
+    {
+      "t": 231.4,
+      "on": "beams",
+      "v": 0.9,
+      "what": "scream returns"
+    },
+    {
+      "t": 238.3,
+      "on": "beams",
+      "v": 1,
+      "what": "scream at the cliff edge"
+    },
+    {
+      "t": 311.4,
+      "on": "tubes",
+      "v": 0.6,
+      "what": "drum fill"
+    },
+    {
+      "t": 327.4,
+      "on": "beams",
+      "v": 0.9,
+      "what": "fever-pitch scream"
+    },
+    {
+      "t": 329.7,
+      "on": "beams",
+      "v": 0.9,
+      "what": "whammy scream"
+    },
+    {
+      "t": 338.8,
+      "on": "beams",
+      "v": 0.8,
+      "what": "pinch-harmonic lick"
+    },
+    {
+      "t": 348.0,
+      "on": "all",
+      "v": 0.7,
+      "what": "crash, second pass"
+    },
+    {
+      "t": 357.1,
+      "on": "beams",
+      "v": 0.8,
+      "what": "harmonic cry"
+    },
+    {
+      "t": 366.3,
+      "on": "tubes",
+      "v": 0.6,
+      "what": "fill into solo 2"
+    },
+    {
+      "t": 425.7,
+      "on": "all",
+      "v": 1,
+      "what": "half-time slam"
+    }
+  ],
+  "energy": {
+    "step": 0.5,
+    "values": [21,45,71,73,72,77,83,88,87,85,85,85,86,88,88,87,86,84,84,84,85,86,87,87,88,89,91,92,92,91,91,90,91,93,93,93,92,92,92,90,88,87,86,84,83,82,82,82,82,82,84,86,88,87,86,84,83,83,85,87,88,87,86,84,83,83,82,82,85,88,88,87,87,86,87,86,86,84,86,89,90,89,88,89,88,88,89,90,90,89,87,86,87,89,89,88,87,88,88,88,87,87,87,86,86,88,89,89,88,89,89,90,89,90,90,91,90,90,89,88,88,89,88,89,89,90,90,90,90,90,91,91,90,90,90,90,89,88,88,88,88,87,89,91,93,94,93,92,90,88,86,85,84,84,84,82,80,79,79,84,85,85,84,83,82,82,84,86,86,84,81,80,80,81,80,80,80,82,82,81,79,80,83,86,88,87,86,85,84,83,83,84,85,85,84,83,82,82,82,89,88,87,85,82,81,80,81,83,83,86,87,87,87,87,88,90,92,93,92,92,93,94,93,92,91,89,88,86,84,86,88,90,91,92,94,94,95,94,92,91,91,94,95,96,95,94,93,93,92,91,90,90,91,92,92,90,88,85,83,81,80,79,78,76,74,73,73,73,73,74,74,74,73,72,73,75,76,74,72,71,77,77,77,76,76,77,79,82,81,80,79,77,76,76,77,76,76,76,77,76,75,75,77,77,77,76,77,79,79,78,77,79,83,83,82,80,78,77,78,77,77,79,79,78,78,78,81,83,82,81,80,80,81,81,81,80,78,77,76,78,80,80,79,78,78,79,79,80,79,78,78,81,85,85,83,80,77,77,80,81,83,84,84,82,81,81,83,87,88,86,82,81,84,87,88,89,90,89,89,90,91,90,89,88,89,92,93,92,90,89,89,92,91,90,90,91,93,93,94,93,92,92,92,93,92,91,90,91,93,94,95,94,94,93,92,91,91,90,92,92,92,92,93,95,97,98,97,96,95,93,92,91,90,91,91,94,94,97,96,95,94,91,89,88,90,92,91,90,87,86,86,88,90,90,90,89,89,90,91,90,89,88,90,92,93,93,92,92,91,91,91,92,92,92,92,92,93,93,92,91,89,88,86,83,79,76,73,70,68,69,70,69,66,63,61,60,58,58,62,65,64,61,57,54,52,51,49,48,48,53,54,53,55,54,55,59,62,58,49,40,31,25,20,15,12,11,12,17,21,21,20,18,15,11,7,7,9,16,18,17,15,12,9,8,14,20,26,24,21,19,18,16,13,13,14,23,24,21,19,16,14,12,12,14,19,22,20,17,12,9,10,14,20,23,24,22,18,15,13,14,22,27,27,24,19,15,14,23,38,44,61,72,87,87,86,84,83,83,83,83,81,81,81,81,79,77,76,77,79,79,81,81,80,79,78,77,77,79,80,82,81,81,80,79,78,78,79,82,86,88,87,87,86,85,84,84,85,84,84,83,83,83,85,86,88,89,89,88,87,86,86,87,90,92,93,93,92,92,91,91,90,89,89,91,91,90,88,87,86,85,85,85,87,88,89,88,88,88,90,91,90,91,91,90,89,88,87,87,87,86,87,88,88,88,87,86,88,92,93,92,91,90,89,88,88,87,87,85,84,86,87,87,87,86,86,88,91,93,94,93,91,89,87,86,86,88,88,88,87,86,85,84,83,81,80,82,87,92,93,92,90,89,88,87,89,90,90,90,89,88,87,87,88,87,88,90,91,90,89,87,86,86,88,91,91,90,89,88,87,88,91,92,92,93,93,92,90,88,87,87,86,86,88,89,89,89,88,87,86,87,87,91,91,90,89,87,86,85,84,84,85,86,87,90,91,91,91,90,87,85,85,87,87,87,87,87,86,85,87,90,91,90,88,87,87,86,88,87,87,87,87,88,89,90,90,90,90,89,89,88,87,88,90,91,92,93,94,95,94,91,86,81,77,74,74,78,80,82,81,79,77,76,76,77,79,79,81,84,86,85,83,80,79,80,80,80,79,79,80,80,78,76,73,71,69,67,63,59,56,54,53,53,54,56,58,61,61,61,59,59,63,64,62,59,56,56,55,59,58,57,55,53,53,57,65,65,66,64,61,56,50,47,46,45,45,45,45,45,44,42,43,47,53,55,53,49,47,46,44,44,46,48,48,46,46,45,43,38,35,36,40,40,41,41,37,33,29,27,25,24,26,27,28,31,33,33,30,31,35,38,38,36,33,31,29,28,26,24,23,23,25,27,32,34,35,31,28,26,25,23,21,22,27,39,38,36,28,20,17,14,11,9,8,6,5,3,2,1,1,1,0,0,0,0,0,0,0,0,0,0],
+    "source": "Kepler 1-B_mix 6 RR.mp3: loudness, guitar, presence and cymbal bands"
+  }
 }

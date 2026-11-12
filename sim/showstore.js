@@ -46,7 +46,7 @@ export async function loadShow() {
 }
 
 export function saveSong(song) {
-  const { id, title, soundcloud, cues } = song;
+  const { id, title, soundcloud, cues, hits, energy } = song;
   clearTimeout(timers[id]);
   timers[id] = setTimeout(async () => {
     if (!showStore.canSave) {
@@ -57,7 +57,7 @@ export function saveSong(song) {
     try {
       const r = await fetch(`/api/show/songs/${id}`, {
         method: 'PUT', headers: { 'content-type': 'application/json', 'x-sim-client': CLIENT },
-        body: JSON.stringify({ title, ...(soundcloud ? { soundcloud } : {}), cues }),
+        body: JSON.stringify({ title, ...(soundcloud ? { soundcloud } : {}), cues, ...(hits ? { hits } : {}), ...(energy ? { energy } : {}) }),
       });
       if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.statusText);
       showStore.onStatus(`Saved to sim/show/songs/${id}.json`);

@@ -3,12 +3,16 @@
 //   · serves the sim itself (http://localhost:8770/sim/), so the laptop needs nothing else, offline;
 //   · saves the show — setlist and cues — as JSON files in sim/show/, ready to commit;
 //   · relays between the sim (WebSocket) and Art-Net (UDP :6454), which browsers can't speak;
-//   · on a Mac, passes the foot pedal and the pad (any MIDI device) to every open sim, so they work in any browser.
+//   · on a Mac, passes the foot pedal and the pad (any MIDI device) to every open sim, so they work in any browser;
+//   · on a Mac, listens to the XR18's inputs over USB and passes each channel's level and hits to the sim.
 //
 //   node sim/bridge/artnet-bridge.mjs          the sim on this computer only
 //   node sim/bridge/artnet-bridge.mjs --lan    also phones and laptops on the same network
 //   node sim/bridge/artnet-bridge.mjs --rig=other.json    use another routing file instead of rig.json
 //   node sim/bridge/artnet-bridge.mjs --port=8771         another port (the sim then needs ?bridge=8771)
+//   node sim/bridge/artnet-bridge.mjs --audio='XR18|X18'  which audio interface to listen to (that's the default); --audio=off
+//   node sim/bridge/artnet-bridge.mjs --audio-file=song.mp3   a recording through the same analysis, to try it without the band
+//   node sim/bridge/artnet-bridge.mjs --audio-file=tracks/    or a folder of tracks, one per channel, as a DAW exports them
 //
 // "Drive the rig": the sim's universes go out as ArtDmx, routed by rig.json.
 // "Mirror a desk": ArtDmx arriving from a desk is passed to the sim, which just draws it.
@@ -29,6 +33,8 @@ const WS_PORT = portArg ? Number(portArg.slice(7)) : 8770, ARTNET_PORT = 6454;
 const LAN = process.argv.includes('--lan');
 const rigArg = process.argv.find(a => a.startsWith('--rig='));
 const rigFile = rigArg ? rigArg.slice(6) : new URL('./rig.json', import.meta.url);
+const argValue = name => process.argv.find(a => a.startsWith(`--${name}=`))?.slice(name.length + 3);
+const AUDIO = argValue('audio') ?? 'XR18|X18', AUDIO_FILE = argValue('audio-file');
 const { universes: routes } = JSON.parse(readFileSync(rigFile, 'utf8'));
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));   // the repo
@@ -114,24 +120,31 @@ function onArtNet(msg) {
 // Browsers that won't give a page MIDI (the Claude app's browser, Safari) get it from here instead.
 // midi-in.swift reads macOS's MIDI; it's built once with swiftc and kept in ~/Library/Caches.
 
+// A Swift helper next to this file, built once with swiftc into ~/Library/Caches (rebuilt when its source changes).
+// Resolves to the binary, or to null with the reason logged.
+async function buildHelper(name, tag, what) {
+  const src = fileURLToPath(new URL(`./${name}.swift`, import.meta.url));
+  const code = await readFile(src);
+  const bin = join(homedir(), 'Library', 'Caches', 'owashi-sim', `${name}-${createHash('sha1').update(code).digest('hex').slice(0, 10)}`);
+  if (existsSync(bin)) return bin;
+  await mkdir(join(bin, '..'), { recursive: true });
+  console.log(`  ${tag} building the ${what} (once, takes a moment)…`);
+  const built = await new Promise(res => {
+    const p = spawn('swiftc', ['-O', '-o', bin, src], { stdio: ['ignore', 'ignore', 'pipe'] });
+    let err = '';
+    p.stderr.on('data', d => { err += d; });
+    p.on('error', e => res(e.message));
+    p.on('close', c => res(c === 0 ? '' : err.trim().split('\n').pop()));
+  });
+  if (built) { console.warn(`  ${tag} can't build the ${what} (${built}). Fix: xcode-select --install`); return null; }
+  return bin;
+}
+
 let midiSources = [];
 async function startMidi() {
   if (process.platform !== 'darwin') return;
-  const src = fileURLToPath(new URL('./midi-in.swift', import.meta.url));
-  const code = await readFile(src);
-  const bin = join(homedir(), 'Library', 'Caches', 'owashi-sim', `midi-in-${createHash('sha1').update(code).digest('hex').slice(0, 10)}`);
-  if (!existsSync(bin)) {
-    await mkdir(join(bin, '..'), { recursive: true });
-    console.log('  midi   building the MIDI reader (once, takes a moment)…');
-    const built = await new Promise(res => {
-      const p = spawn('swiftc', ['-O', '-o', bin, src], { stdio: ['ignore', 'ignore', 'pipe'] });
-      let err = '';
-      p.stderr.on('data', d => { err += d; });
-      p.on('error', e => res(e.message));
-      p.on('close', c => res(c === 0 ? '' : err.trim().split('\n').pop()));
-    });
-    if (built) { console.warn(`  midi   can't build the MIDI reader (${built}). Pedal and pad then need Chrome. Fix: xcode-select --install`); return; }
-  }
+  const bin = await buildHelper('midi-in', 'midi  ', 'MIDI reader');
+  if (!bin) { console.warn('  midi   pedal and pad then need Chrome'); return; }
   const run = () => {
     const p = spawn(bin, [], { stdio: ['ignore', 'pipe', 'inherit'] });
     let rest = '';
@@ -150,6 +163,47 @@ async function startMidi() {
       }
     });
     p.on('close', () => { console.warn('  midi   the MIDI reader stopped; starting it again'); setTimeout(run, 2000); });
+  };
+  run();
+}
+
+// ── audio: the XR18's inputs over USB ───────────────────────────────────────
+// audio-in.swift listens to the interface (or plays a file through the same analysis) and prints each channel's
+// level 20 times a second, and a line the moment a channel is hit. The sim decides what the lights do with them.
+
+let audio = { device: null, channels: 0, rate: 0, note: '', names: [] }, audioNames = [];
+async function startAudio() {
+  if (process.platform !== 'darwin' || AUDIO === 'off') return;
+  const bin = await buildHelper('audio-in', 'audio ', 'audio listener');
+  if (!bin) return;
+  const args = AUDIO_FILE ? ['--file', AUDIO_FILE] : ['--device', AUDIO];
+  const run = () => {
+    const p = spawn(bin, args, { stdio: ['ignore', 'pipe', 'inherit'] });
+    let rest = '';
+    p.stdout.on('data', chunk => {
+      const lines = (rest + chunk).split('\n');
+      rest = lines.pop();
+      for (const line of lines) {
+        const [kind, a, b, c] = line.split('\t');
+        if (kind === 'lv') announce({ type: 'lv', v: a.split(',').map(Number) });
+        else if (kind === 'on') announce({ type: 'on', ch: Number(a), v: Number(b) });
+        else if (kind === 'names') audioNames = a.split('|');   // a recording's tracks, by file name
+        else if (kind === 'open') {
+          audio = { device: a, channels: Number(b), rate: Number(c), note: '', names: audioNames };
+          console.log(`  audio  listening to ${a}: ${b} channels at ${c} Hz`);
+          announce({ type: 'audio', ...audio });
+        } else if (kind === 'none') {
+          audio = { device: null, channels: 0, rate: 0, note: a, names: [] };
+          console.log(`  audio  ${a}`);
+          announce({ type: 'audio', ...audio });
+        }
+      }
+    });
+    p.on('close', () => {
+      if (AUDIO_FILE) return;   // a file plays once
+      console.warn('  audio  the audio listener stopped; starting it again');
+      setTimeout(run, 2000);
+    });
   };
   run();
 }
@@ -283,7 +337,7 @@ const writeJson = (file, data) => writeFile(file, JSON.stringify(data, null, 2) 
 const announce = msg => { for (const c of clients) sendJson(c, msg); };
 const SONG_ID = /^[a-z0-9][a-z0-9-]{0,59}$/;
 
-// PUT /api/show/songs/<id>  { title, soundcloud?, cues }  → sim/show/songs/<id>.json (and the setlist, if it's new)
+// PUT /api/show/songs/<id>  { title, soundcloud?, cues, hits?, energy? }  → sim/show/songs/<id>.json (and the setlist, if it's new)
 // PUT /api/show/setlist     { songs: [{ id, title, soundcloud? }] } → sim/show/setlist.json
 async function handleApi(req, res, path) {
   const send = (code, obj) => { res.writeHead(code, { 'content-type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(obj)); };
@@ -300,7 +354,12 @@ async function handleApi(req, res, path) {
     if (!SONG_ID.test(id) || !Array.isArray(body.cues)) return send(400, { error: 'expected { title, cues: [...] } for a lowercase-dashed song id' });
     const entry = { id, title: String(body.title || id).slice(0, 80), ...(body.soundcloud ? { soundcloud: String(body.soundcloud) } : {}) };
     await mkdir(join(SHOW, 'songs'), { recursive: true });
-    await writeJson(join(SHOW, 'songs', `${id}.json`), { ...entry, cues: body.cues });
+    // hits (accents) and energy (the recording's loudness curve) come from the analysis; keep them through edits
+    const extras = {
+      ...(Array.isArray(body.hits) ? { hits: body.hits } : {}),
+      ...(body.energy && Array.isArray(body.energy.values) ? { energy: body.energy } : {}),
+    };
+    await writeJson(join(SHOW, 'songs', `${id}.json`), { ...entry, cues: body.cues, ...extras });
     const list = await readJson(join(SHOW, 'setlist.json'), { songs: [] });
     if (!list.songs.some(s => s.id === id)) { list.songs.push(entry); await writeJson(join(SHOW, 'setlist.json'), list); }
     console.log(`  saved  sim/show/songs/${id}.json · ${body.cues.length} cues`);
@@ -334,7 +393,7 @@ server.on('upgrade', (req, socket) => {
   const c = { socket, mode: 'off', buf: Buffer.alloc(0) };
   clients.add(c);
   console.log(`  sim    connected from ${socket.remoteAddress}`);
-  sendJson(c, { type: 'hello', routes, receiving, nodes: [...nodes.values()], midiSources });
+  sendJson(c, { type: 'hello', routes, receiving, nodes: [...nodes.values()], midiSources, audio });
   socket.on('data', chunk => { c.buf = Buffer.concat([c.buf, chunk]); readFrames(c); });
   const drop = () => {
     if (driver === c) driver = null;
@@ -368,5 +427,6 @@ server.listen(WS_PORT, LAN ? '0.0.0.0' : '127.0.0.1', () => {
   poll();
   setInterval(poll, 10_000);
   startMidi().catch(err => console.warn(`  midi   ${err.message}`));
+  startAudio().catch(err => console.warn(`  audio  ${err.message}`));
 });
 server.on('error', err => { console.error(`  can't listen on :${WS_PORT} — ${err.message}`); process.exit(1); });

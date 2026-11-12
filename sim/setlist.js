@@ -5,7 +5,7 @@
 // Songs and cues live in sim/show/ (see showstore.js).
 
 import { batch, computed, effect, signal } from '@preact/signals';
-import { cue, PALETTE, SCENE_LIST, show } from './show.js';
+import { beamHit, cue, hit, PALETTE, SCENE_LIST, show, tubeHit } from './show.js';
 import { addSong, loadShow, saveSong, showStore } from './showstore.js';
 
 export const LOOKS = SCENE_LIST.map(([id, label]) => ({ id, label }));
@@ -14,6 +14,7 @@ export const LOOK_COLOUR = {
   ambient: '#4a6cff', sweep: '#9cc2ff', build: '#e0a21e', riff: '#e0301e', blast: '#ffffff',
   breakdown: '#a51c14', wall: '#f3f2ee', embers: '#ff7a1a', strobe: '#ffffff', blackout: '#555555',
   slab: '#b0382c', shimmer: '#c9b6ff', silhouette: '#c4c4c4', searchlight: '#6fd3c7', collapse: '#b86a2c',
+  orbit: '#7fb0ff',
 };
 export const COLOURS = Object.keys(PALETTE);
 
@@ -33,7 +34,12 @@ export const clean = c => ({
   b: PALETTE[c.b] ? c.b : 'Blue',
   bpm: Math.min(240, Math.max(40, Math.round(+c.bpm || 120))),
   phase: frac(+c.phase || 0),
+  fade: Math.min(16, Math.max(0, Math.round((+c.fade || 0) * 2) / 2)),   // bars to fade in over; 0 cuts
+  lead: LEADS.includes(c.lead) ? c.lead : '',
+  react: REACTS.includes(c.react) ? c.react : 'crash',   // which live accents fire during this cue (live.js)
 });
+export const LEADS = ['left', 'right', 'trade'];
+export const REACTS = ['off', 'crash', 'guitar', 'all'];
 
 // ── state ───────────────────────────────────────────────────────────────────
 
@@ -200,7 +206,7 @@ export function seek(sec) {
   playhead.value = pos;
   const i = activeIndexAt(pos);
   followed = i;
-  if (i >= 0) apply(i, pos);
+  if (i >= 0) apply(i, pos, true);
 }
 
 // ── cues ────────────────────────────────────────────────────────────────────
@@ -216,12 +222,13 @@ function align(c, p) {
   show.beat0 = t - into + (c.phase * 60) / c.bpm;
   if (show.scene === c.scene) show.cueT = t - into;
 }
-function apply(i, p = null) {
+function apply(i, p = null, cut = false) {
   const c = cues.value[i];
   if (!c) return;
   index.value = i;
   show.colorA = c.a; show.colorB = c.b; show.bpm = c.bpm;
-  cue(c.scene, now());
+  cue(c.scene, now(), cut ? 0 : (c.fade * 240) / c.bpm);
+  songT0 = now() - (p ?? c.t);
   align(c, p ?? c.t);
   onApplied();
 }
@@ -315,9 +322,9 @@ export function draft() {
 }
 
 export function exportSong() {
-  const { id, title, soundcloud } = song.value;
+  const { id, title, soundcloud, energy, hits } = song.value;
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([JSON.stringify({ id, title, soundcloud, cues: cues.value }, null, 2)], { type: 'application/json' }));
+  a.href = URL.createObjectURL(new Blob([JSON.stringify({ id, title, soundcloud, cues: cues.value, hits, energy }, null, 2)], { type: 'application/json' }));
   a.download = `${id}.json`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
@@ -333,9 +340,55 @@ export async function importFile(file) {
 
 // ── once a frame, before the show runs ──────────────────────────────────────
 
+// ── what a song adds on top of its cues: energy, lead, accents ─────────────────
+// A recording (SoundCloud) gives the song's position exactly. Played live, the cue the band is on and the time
+// since it was triggered stand in for it: close enough for energy and lead, not for accents, which only fire
+// with the recording.
+
+let songT0 = 0, lastP = -1;
+const peaks = new Map();   // the loudest moment of each cue, from the song's energy curve
+function energyAt(e, p) {
+  const x = Math.max(0, p / e.step), i = Math.floor(x), v = e.values;
+  if (i >= v.length - 1) return (v[v.length - 1] ?? 100) / 100;
+  return (v[i] + (v[i + 1] - v[i]) * (x - i)) / 100;
+}
+// Every cue lands at full strength: the shaping starts LAND seconds in and eases in over a second, and the cue's
+// loudest moment is measured from there, so the tail of a quiet section doesn't dim a loud entry.
+const LAND = 1.5;
+function peakOf(s, i) {
+  const c = s.cues[i], end = s.cues[i + 1]?.t ?? c.t + 60, key = `${s.id}:${c.t}:${end}`;
+  if (!peaks.has(key)) {
+    let hi = 0;
+    for (let p = c.t + LAND; p < end; p += s.energy.step) hi = Math.max(hi, energyAt(s.energy, p));
+    peaks.set(key, hi || 1);
+  }
+  return peaks.get(key);
+}
+function songExtras(p) {
+  const s = song.value, i = index.value, c = cues.value[i];
+  const running = c && show.scene === c.scene;   // the show is on this cue, not on a look picked by hand
+  show.lead = running ? c.lead : '';
+  show.energy = 1;
+  const recording = follow.value && playing.value;
+  if (running && !recording && show.liveEnergy !== null) show.energy = show.liveEnergy;   // the band, through the mixer
+  else if (running && s.energy?.values?.length) {
+    const drop = Math.min(1, Math.max(0, (peakOf(s, i) - energyAt(s.energy, p)) / 0.35));   // only a real drop dims it
+    show.energy = 1 - drop * Math.min(1, Math.max(0, p - c.t - LAND));
+  }
+  if (follow.value && playing.value && s.hits && lastP >= 0 && p > lastP && p - lastP < 0.5) {
+    for (const h of s.hits) {
+      if (h.t <= lastP || h.t > p) continue;
+      const v = Math.min(1, Math.max(0.1, +h.v || 1));
+      (h.on === 'beams' ? beamHit : h.on === 'tubes' ? tubeHit : hit)(now(), v);
+    }
+  }
+  lastP = p;
+}
+
 export function tick() {
   if (!song.value) return;
   const p = position();
+  songExtras(follow.value && playing.value ? p : now() - songT0);
   if (follow.value && playing.value) {
     const i = activeIndexAt(p);
     if (i !== followed) {   // the music reached a new cue

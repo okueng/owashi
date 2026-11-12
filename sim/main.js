@@ -15,7 +15,9 @@ import { effect } from '@preact/signals';
 import * as setlist from './setlist.js';
 import { mountSetlist } from './setlist-ui.js';
 import { createLabels } from './labels.js';
-import { actions as pedalActions, connect as connectPedal, connectBridge, connectIfAllowed, learnPads, PAD_COUNT, pedal, SMC_PAD_POCKET } from './pedal.js';
+import { actions as pedalActions, bridgeListeners, connect as connectPedal, connectBridge, connectIfAllowed, learnPads, PAD_COUNT, pedal, SMC_PAD_POCKET } from './pedal.js';
+import { inputs, onBridgeMessage, ROLES, setRole } from './inputs.js';
+import { configure as configureLive, live, setDarkOnStop } from './live.js';
 
 // ── layout (metres; x = stage left→right as the audience sees it, z = towards the audience) ──
 // The rig is placed for the audience's sightlines and the beams' distance from the band's eyes. The stage
@@ -361,7 +363,7 @@ const $ = s => document.querySelector(s);
 const ui = { haze: 0.8, fill: 0.45 };
 
 // One panel open at a time.
-const SHEETS = ['.more-sheet', '.dmx', '.pedal'].map($);
+const SHEETS = ['.more-sheet', '.dmx', '.pedal', '.inputs'].map($);
 const labelOf = id => SCENE_LIST.find(s => s[0] === id)[1];
 function showOnly(el) {
   SHEETS.forEach(s => { s.hidden = s !== el; });
@@ -437,6 +439,7 @@ $('.more-open').addEventListener('click', () => toggleSheet($('.more-sheet')));
 function doTap() { tap(showTime()); $('.tempo .bpm').textContent = show.bpm; setlist.onTap(); }
 $('.tap').addEventListener('click', doTap);
 
+configureLive({ now: showTime });   // the drummer's strokes, on the same clock as the show
 setlist.configure({
   now: () => showTime(),
   onApplied() {   // a cue changed the look: bring the buttons along
@@ -948,6 +951,43 @@ function syncPedal() {
 }
 pedal.onChange = syncPedal;
 syncPedal();
+// ── inputs: what the mixer hears ─────────────────────────────────────────────
+// One row per channel: its role, its level and a light for each hit. Drawn only while the sheet is open.
+
+$('.inputs-toggle').addEventListener('click', () => toggleSheet($('.inputs')));
+let inputRows = [];
+$('.dark-on-stop').checked = live.darkOnStop;
+$('.dark-on-stop').addEventListener('change', e => setDarkOnStop(e.currentTarget.checked));
+function syncInputs() {
+  $('.inputs-status').textContent = inputs.device ? `${inputs.device}: ${inputs.channels} channel${inputs.channels === 1 ? '' : 's'}`
+    : inputs.note || 'Waiting for the bridge. Start it, then plug in the XR18 over USB.';
+  if (inputRows.length === inputs.channels && inputRows.names === inputs.names.join('|')) { inputRows.forEach((r, i) => { r.role.value = inputs.roles[i] || ''; }); return; }
+  $('.inputs-list').replaceChildren();
+  inputRows = Array.from({ length: inputs.channels }, (_, i) => {
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="ch" title="${inputs.names[i] || ''}">${inputs.names[i] || i + 1}</span><select aria-label="Channel ${i + 1} is">${ROLES.map(([id, label]) => `<option value="${id}">${label}</option>`).join('')}</select><span class="meter"><i></i></span><span class="hit"></span>`;
+    const role = li.querySelector('select');
+    role.value = inputs.roles[i] || '';
+    role.addEventListener('change', () => setRole(i, role.value));
+    $('.inputs-list').append(li);
+    return { role, bar: li.querySelector('.meter i'), hit: li.querySelector('.hit') };
+  });
+  inputRows.names = inputs.names.join('|');
+}
+inputs.onChange = syncInputs;
+inputs.onLevels = () => {
+  if ($('.inputs').hidden) return;
+  const now = performance.now();
+  $('.inputs-live').textContent = show.autoChoke ? 'The band stopped: dark until the next hit'
+    : show.drums.live ? 'The drums are driving Riff, Blast, Breakdown and Wall'
+    : inputs.roles.some(r => r === 'kick' || r === 'snare') ? 'Waiting for the drums' : 'Give the kick and snare their roles to let the drums drive the looks';
+  inputRows.forEach((r, i) => {
+    r.bar.style.width = `${Math.max(0, Math.min(100, ((inputs.levels[i] ?? -90) + 60) / 60 * 100))}%`;
+    r.hit.classList.toggle('on', now - (inputs.hitAt[i] || 0) < 120);
+  });
+};
+syncInputs();
+bridgeListeners.add(onBridgeMessage);
 connectBridge(bridgeUrl());   // the bridge passes on the Mac's MIDI, in any browser
 connectIfAllowed();   // or the browser's own MIDI, if it was allowed once on this computer
 

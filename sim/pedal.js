@@ -137,6 +137,8 @@ export function handle(data, now = performance.now(), from = '') {
 // ── through the bridge ──
 // The bridge reads MIDI on the Mac and passes it to every open sim, so the pedal and pad work in any browser,
 // the Claude app's included. While it's there, the browser's own MIDI is ignored, or every press would count twice.
+// Other things the bridge sends (the XR18's levels and hits) go to whoever listens here.
+export const bridgeListeners = new Set();
 export function connectBridge(url) {
   if (location.protocol === 'https:') return;   // the website can't reach a bridge on this computer
   let ws;
@@ -149,6 +151,7 @@ export function connectBridge(url) {
       pedal.bridge = m.names || m.midiSources;
       pedal.onChange();
     }
+    for (const f of bridgeListeners) f(m);
   };
   ws.onclose = () => {
     if (pedal.bridge) { pedal.bridge = null; pedal.onChange(); }
