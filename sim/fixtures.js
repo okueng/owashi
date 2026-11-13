@@ -240,6 +240,94 @@ export class BeamHead {
   }
 }
 
+// ── LED wash PAR: a flat can on the floor, twelve six-colour LEDs behind one face ──
+
+// Its light in the haze is a wide, soft volume, not a pencil: a dozen soft discs strung along its axis, each as
+// wide as the light is there. They always face the camera, so the glow reads from the side (a cone) and from the
+// front (a halo round the can) alike. A hollow cone, as the beams use, all but vanishes when it points at you.
+const PAR_HALF = 18, PAR_LEN = 3.6, PAR_R = 0.1, PUFFS = 12, PAR_GLOW = 1.0;
+const hazeTexture = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const x = c.getContext('2d'), g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.25, 'rgba(255,255,255,.62)');
+  g.addColorStop(0.5, 'rgba(255,255,255,.25)'); g.addColorStop(0.75, 'rgba(255,255,255,.06)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+})();
+
+export class WashPar {
+  // tilt: degrees from straight up, leaning towards the audience
+  constructor(fixture, tilt = 0) {
+    this.f = fixture;
+    this.group = new THREE.Group();
+    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.02, 0.14), HOUSING);
+    foot.position.y = 0.01;
+    this.head = new THREE.Group();
+    this.head.position.y = 0.14;
+    this.head.rotation.x = THREE.MathUtils.degToRad(tilt);
+    const can = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.115, 0.09, 28), HOUSING);
+    this.lensMat = new THREE.MeshBasicMaterial({ color: 0, toneMapped: false });
+    const lens = new THREE.Mesh(new THREE.CircleGeometry(PAR_R, 28), this.lensMat);
+    lens.rotation.x = -Math.PI / 2; lens.position.y = 0.046;
+
+    // the glow in the haze: discs along the axis, thinning out as the light spreads (a column of haze through a
+    // cone shows 1/r of the light) and fading away at the end
+    this.puffs = [];
+    for (let i = 0; i < PUFFS; i++) {
+      const d = 0.12 + (PAR_LEN - 0.12) * (i / (PUFFS - 1)) ** 1.5, r = PAR_R + d * Math.tan(THREE.MathUtils.degToRad(PAR_HALF));
+      const puff = new THREE.Sprite(new THREE.SpriteMaterial({ map: hazeTexture, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+      puff.position.y = 0.05 + d;
+      puff.scale.setScalar(2.4 * r);
+      puff.userData.w = ((PAR_R + 0.05) / r) * (1 - (d / PAR_LEN) ** 2);
+      this.puffs.push(puff);
+    }
+
+    this.spot = new THREE.SpotLight(0xffffff, 0, 0, THREE.MathUtils.degToRad(24), 0.7, 2);
+    this.spot.position.y = 0.05;
+    this.spot.target.position.y = 10;
+
+    this.glare = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: glareTexture, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true,
+    }));
+    this.glare.position.y = 0.06;
+    this.head.add(can, lens, ...this.puffs, this.spot, this.spot.target, this.glare);
+    this.group.add(foot, this.head);
+
+    this.dir = new THREE.Vector3(); this.lensW = new THREE.Vector3(); this.toCam = new THREE.Vector3();
+    this.output = [0, 0, 0];
+  }
+
+  update(t, dt, camera, haze) {
+    const f = this.f, ch = n => f.get(n) / 255;
+    const k = ch('Dimmer') * f.def.gate(f.get('Strobe'), t);
+    const w = ch('White'), am = ch('Amber'), uv = ch('UV');
+    let r = ch('Red') + w + am + uv * 0.25, g = ch('Green') + w + am * 0.42, b = ch('Blue') + w * 0.92 + uv;
+    const norm = 1 / Math.max(1, r, g, b, (r + g + b) / 2);   // all six on isn't six times the light
+    r *= norm; g *= norm; b *= norm;
+    this.output[0] = r * k; this.output[1] = g * k; this.output[2] = b * k;
+
+    const glowK = k * haze * PAR_GLOW;
+    for (const puff of this.puffs) {
+      const w = glowK * puff.userData.w;
+      puff.material.color.setRGB(r * w, g * w, b * w);
+      puff.visible = glowK > 0;
+    }
+    this.lensMat.color.setRGB(r * k * 5, g * k * 5, b * k * 5);
+    this.spot.color.setRGB(r, g, b);
+    this.spot.intensity = k * 90;
+
+    this.head.updateWorldMatrix(true, false);
+    this.dir.set(0, 1, 0).transformDirection(this.head.matrixWorld);
+    this.lensW.set(0, 0.06, 0).applyMatrix4(this.head.matrixWorld);
+    const facing = Math.max(0, this.dir.dot(this.toCam.subVectors(camera.position, this.lensW).normalize()));
+    const glow = k * (0.2 + 1.2 * facing ** 4);
+    this.glare.material.color.setRGB(r * glow, g * glow, b * glow);
+    this.glare.scale.setScalar(0.4 + 0.6 * facing ** 4);
+    this.glare.visible = k > 0;
+  }
+}
+
 function approach(cur, target, maxSpeed, dt) {
   const step = (target - cur) * (1 - Math.exp(-dt * 9));
   const lim = maxSpeed * dt;

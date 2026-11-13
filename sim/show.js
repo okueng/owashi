@@ -12,12 +12,12 @@ import { byId, fixtures } from './dmx.js';
 
 export const PALETTE = {
   Red: { rgb: [255, 6, 0], wheel: 'Red' },
-  Amber: { rgb: [255, 70, 0], wheel: 'Orange' },
-  White: { rgb: [255, 246, 236], wheel: 'White' },
+  Amber: { rgb: [255, 70, 0], wheel: 'Orange', amber: 1 },   // amber and uv: how much of the PARs' own amber and UV LEDs
+  White: { rgb: [255, 246, 236], wheel: 'White', amber: 0.3 },
   Ice: { rgb: [140, 195, 255], wheel: 'Light blue' },
   Teal: { rgb: [0, 170, 190], wheel: 'Cyan' },
   Blue: { rgb: [0, 24, 255], wheel: 'Blue' },
-  UV: { rgb: [60, 0, 255], wheel: 'UV' },
+  UV: { rgb: [60, 0, 255], wheel: 'UV', uv: 1 },
   Green: { rgb: [40, 255, 16], wheel: 'Green' },
 };
 
@@ -523,6 +523,29 @@ function shape(e) {
   for (const f of B) f.level(f.getLevel() * (0.7 + 0.3 * e));
 }
 
+// The two wash PARs sit on the floor behind the kit and shine through it towards the room: colour in the haze,
+// a rim on the players, and the white of a punch. They have no parts of their own in the looks. Each look gives
+// them a level and one of the two colours, and they glide there over about a second, so a cue change never
+// snaps them. They don't strobe, except with the held Flash.
+const P = ['P1', 'P2'].map(id => byId[id]).filter(Boolean);
+const WASH_MAX = 0.6;   // they face the audience, so only a punch takes them past this
+const WASH = {
+  ambient: [0.15, 'B'], sweep: [0.3, 'B'], silhouette: [0, 'B'], searchlight: [0.06, 'B'], orbit: [0.12, 'B'], embers: [0.1, 'A'],
+  build: [0.5, 'A'], shimmer: [0.45, 'A'], collapse: [0.2, 'A'], drive: [0.55, 'A'], surge: [0.65, 'A'], glint: [0.4, 'A'],
+  slab: [0.7, 'A'], riff: [0.6, 'A'], blast: [0.7, 'A'], breakdown: [0.6, 'A'], wall: [1, 'A'], strobe: [0, 'A'], blackout: [0, 'A'],
+};
+const wash = { level: 0, rgb: [0, 0, 0], amber: 0, uv: 0, t: 0 };
+function washPars(t, a, b) {
+  const [lv, which] = WASH[show.scene] || [0, 'A'], C = PALETTE[which === 'A' ? a : b];
+  const target = lv * WASH_MAX * (SHAPED.has(show.scene) ? 0.6 + 0.4 * show.energy : 1);
+  const k = 1 - Math.exp(-Math.min(0.2, Math.max(0, t - wash.t)) / 0.35);
+  wash.t = t;
+  wash.level += (target - wash.level) * k;
+  for (let i = 0; i < 3; i++) wash.rgb[i] += (C.rgb[i] - wash.rgb[i]) * k;
+  wash.amber += ((C.amber || 0) - wash.amber) * k; wash.uv += ((C.uv || 0) - wash.uv) * k;
+  for (const f of P) { f.emit(wash.rgb[0], wash.rgb[1], wash.rgb[2], wash.amber * 255, wash.uv * 255); f.level(wash.level); f.strobe(0); }
+}
+
 // Lead: the beams on the soloist's side stay up, the others drop back. 'trade' swaps sides every 2 bars,
 // for two guitars answering each other.
 function leadBeams(side) {
@@ -549,6 +572,7 @@ export function updateShow(t) {
   lastA = a; lastB = b;
   if (show.energy < 0.999 && SHAPED.has(show.scene)) shape(show.energy);
   if (show.lead && SHAPED.has(show.scene)) leadBeams(show.lead === 'trade' ? (Math.floor(beat / 8) % 2 ? 'right' : 'left') : show.lead);
+  if (P.length) washPars(t, a, b);
 
   // soft accents: the tubes swell in their own colour for about a second, the beams lift. Nothing turns white.
   const bl = Math.exp(-(t - show.bloomT) * 2.2) * show.bloomV;
@@ -558,6 +582,7 @@ export function updateShow(t) {
       for (let i = 0; i < f.n; i++) { f.getZone(i, px); f.setZone(i, Math.min(255, px[0] * g), Math.min(255, px[1] * g), Math.min(255, px[2] * g)); }
       f.level(Math.min(1, f.getLevel() + 0.3 * bl));
     }
+    for (const f of P) f.level(Math.min(WASH_MAX, f.getLevel() + 0.15 * bl));
   }
   const sw = Math.max(0.5 * bl, Math.exp(-(t - show.swellT) * 1.6) * show.swellV);
   if (sw > 0.02) for (const f of B) if (f.get('Shutter') > 10) f.level(Math.min(1, f.getLevel() + 0.45 * sw));
@@ -569,6 +594,11 @@ export function updateShow(t) {
   if (ht > 0.02) {
     for (const f of BARS) {
       for (let i = 0; i < f.n; i++) f.setZone(i, ...mix(f.getZone(i, px), WHITE, ht));
+      f.level(Math.max(f.getLevel(), ht));
+    }
+    for (const f of P) {   // the PARs go white with the slam
+      const c = mix(wash.rgb, WHITE, ht);
+      f.emit(c[0], c[1], c[2], wash.amber * 255 * (1 - ht), wash.uv * 255 * (1 - ht));
       f.level(Math.max(f.getLevel(), ht));
     }
   }
@@ -583,10 +613,12 @@ export function updateShow(t) {
   if (show.flash) {
     BARS.forEach(f => paint(f, () => WHITE, 1, 0.88));
     B.forEach(f => { f.colour('White'); f.level(1); f.strobe(0.88); });
+    P.forEach(f => { f.emit(255, 255, 255); f.level(1); f.strobe(0.88); });
   }
   if (show.choke || show.autoChoke) {   // heads keep their position, like Blackout
     BARS.forEach(f => f.level(0));
     B.forEach(dark);
+    P.forEach(f => f.level(0));
   }
   for (const f of H) f.level(f.getLevel() * FRONT_BAR_MAX);
   for (const f of B) f.level(f.getLevel() * show.beams);

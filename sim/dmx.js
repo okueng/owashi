@@ -76,6 +76,18 @@ export const PROFILES = {
   },
 };
 
+// Power Lighting XPRO PAR 12x10W HEXA: 12 LEDs with red, green, blue, white, amber and UV in each. It has one
+// DMX mode, 10 channels, from its manual. The manual calls the amber LEDs "Yellow" and the UV ones "Purple".
+// Leave its dimming curve on Linear (menu d1-1): the levels here assume it.
+PROFILES.hexpar = {
+  name: 'Power Lighting XPRO PAR 12 × 10 W HEXA · 10 ch',
+  channels: ['Dimmer', 'Red', 'Green', 'Blue', 'White', 'Amber', 'UV', 'Strobe', 'Mode', 'Speed'],
+  strobeChannel: 'Strobe',
+  // strobe: 0–10 steady · 11–255 slow to fast, 1–20 a second. Mode: 0–39 leaves the colours to the other channels.
+  encodeStrobe: r => (r > 0 ? 11 + Math.round(r * 244) : 0),
+  gate: (v, t) => (v <= 10 ? 1 : rateGate((v - 11) / 244, t, 20)),
+};
+
 export const PATCH = [
   // universe 1 — the Art-Net box, whose two DMX ports carry the same universe: B1 then B3 on DMX1, B2 then B4 on DMX2
   // left and right as the audience sees them; tag is the short name on the 3D labels
@@ -84,6 +96,9 @@ export const PATCH = [
   // the second pair, either side of the banner (addresses 25 and 37 still to be set on the real heads)
   { id: 'B3', tag: 'Inner L', label: 'Moving head, back left, inner', profile: 'lb150', universe: 1, address: 25 },
   { id: 'B4', tag: 'Inner R', label: 'Moving head, back right, inner', profile: 'lb150', universe: 1, address: 37 },
+  // the two wash PARs on the floor behind the kit, chained after the heads (addresses still to be set on them)
+  { id: 'P1', tag: 'Wash L', label: 'Wash PAR, behind the kit, left', profile: 'hexpar', universe: 1, address: 49 },
+  { id: 'P2', tag: 'Wash R', label: 'Wash PAR, behind the kit, right', profile: 'hexpar', universe: 1, address: 59 },
   // universes 2–3 — the tubes on WLED, outputs 1–4 of the Dig-Quad: 256 channels each, two per universe
   { id: 'V1', tag: 'Side L', label: 'Tube, side left', profile: 'tube', universe: 2, address: 1 },
   { id: 'V2', tag: 'Back L', label: 'Tube, back left', profile: 'tube', universe: 2, address: 257 },
@@ -146,6 +161,12 @@ export class Fixture {
     return [p * this.def.panRange - this.def.panRange / 2 + this.def.panZero, t * this.def.tiltRange - this.def.tiltRange / 2];
   }
   colour(name) { this.set('Colour', this.def.encodeColour(name)); }
+  // six-colour PARs: red, green and blue 0–255, with what all three share going to the white LEDs; amber and UV on top
+  emit(r, g, b, amber = 0, uv = 0) {
+    const w = Math.min(r, g, b);
+    this.set('Red', r - w); this.set('Green', g - w); this.set('Blue', b - w); this.set('White', w);
+    this.set('Amber', amber); this.set('UV', uv); this.set('Mode', 0); this.set('Speed', 0);
+  }
   prism(mode) { this.set('Prism', this.def.encodePrism(mode)); }
 }
 

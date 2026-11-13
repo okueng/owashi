@@ -9,7 +9,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 import { byId, channelMaps, PATCH, PROFILES, universes } from './dmx.js';
 import { beamHit, cue, hit, lookProgress, PALETTE, SCENE_LIST, show, tap, tubeHit, updateShow } from './show.js';
-import { BeamHead, CobTube } from './fixtures.js';
+import { BeamHead, CobTube, WashPar } from './fixtures.js';
 import { artnet, bridgeUrl, pump, setMode } from './artnet.js';
 import { effect } from '@preact/signals';
 import * as setlist from './setlist.js';
@@ -41,6 +41,9 @@ const RIG = {
   // the horizontal, a beam from the floor still clears an amp half a metre in front of it and passes about 3 m
   // above the front players, so a case under them only shows a little more of the beam's foot.
   B3: { pos: [-1.3, S, -2.25], riser: 0 }, B4: { pos: [1.3, S, -2.25], riser: 0 },
+  // two wash PARs on the floor behind the kit, either side of the drummer and under the banner, leaning 60° from
+  // straight up towards the room: through the kit, onto the front players' backs, then over the audience's heads
+  P1: { pos: [-0.6, S, -2.05], tilt: 60 }, P2: { pos: [0.6, S, -2.05], tilt: 60 },
 };
 
 // Left to right as in the rehearsal room: Fab, Cyril, Romain (back), Olivier.
@@ -202,7 +205,7 @@ scene.add(fill, fill.target);
 
 // ── fixtures ────────────────────────────────────────────────────────────────
 
-const bars = [], heads = [];
+const bars = [], heads = [], pars = [];
 for (const [id, place] of Object.entries(RIG)) {
   const f = byId[id];
   const [x, y, z] = place.pos;
@@ -227,6 +230,11 @@ for (const [id, place] of Object.entries(RIG)) {
       scene.add(tube.group, foot);
     }
     bars.push(tube);
+  } else if (f.profile === 'hexpar') {
+    const par = new WashPar(f, place.tilt);
+    par.group.position.set(x, y, z);
+    scene.add(par.group);
+    pars.push(par);
   } else {
     const head = new BeamHead(f);
     head.group.position.set(x, y + place.riser, z);
@@ -745,7 +753,7 @@ function drawMonitor() {
     else if (/ R$/.test(owner.channel)) c = `rgb(${40 + 215 * k},${20 * (1 - k)},${20 * (1 - k)})`;
     else if (/ G$/.test(owner.channel)) c = `rgb(${20 * (1 - k)},${40 + 215 * k},${20 * (1 - k)})`;
     else if (/ B$/.test(owner.channel)) c = `rgb(${20 * (1 - k)},${30 * (1 - k)},${50 + 205 * k})`;
-    else if (owner.fixture.profile === 'lb150') c = `rgb(${50 + 205 * k},${35 + 150 * k},${20 + 60 * k})`;
+    else if (owner.fixture.profile === 'lb150' || owner.fixture.profile === 'hexpar') c = `rgb(${50 + 205 * k},${35 + 150 * k},${20 + 60 * k})`;
     else c = `rgb(${40 + 215 * k},${40 + 215 * k},${40 + 210 * k})`;
     mctx.fillStyle = c;
     mctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
@@ -762,9 +770,9 @@ mon.addEventListener('pointerleave', () => { hoverCh = -1; });
 // ── names on the lights ─────────────────────────────────────────────────────
 
 const LABELS_KEY = 'owashi-sim:labels-on';   // off unless turned on in Settings
-const labels = createLabels($('.tags'), [...bars, ...heads].map(({ f }) => {
+const labels = createLabels($('.tags'), [...bars, ...heads, ...pars].map(({ f }) => {
   const [x, y, z] = RIG[f.id].pos;
-  const at = f.profile === 'lb150' ? [x, y + Math.max(RIG[f.id].riser / 2, 0.12), z + 0.25]   // on the front of its flight case, or of its base
+  const at = f.profile === 'hexpar' ? [x, y + 0.4, z + 0.1] : f.profile === 'lb150' ? [x, y + Math.max(RIG[f.id].riser / 2, 0.12), z + 0.25]   // on the front of its flight case, or of its base
     : RIG[f.id].raise ? [x, y - 0.14, DECK.front]                              // on the front edge of the deck
     : [x, y + 2.2, z];                                                         // just above the tube
   return { f, at };
@@ -1062,6 +1070,7 @@ renderer.setAnimationLoop(now => {
 
   for (const bar of bars) bar.update(t);
   for (const head of heads) head.update(t, dt, camera, ui.haze);
+  for (const par of pars) par.update(t, dt, camera, ui.haze);
   fill.intensity = ui.fill * 260;
 
   // the four of you turn towards the camera (but never your backs), with a little nod on the beat
