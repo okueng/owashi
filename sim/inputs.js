@@ -3,6 +3,7 @@
 // a guitar…) so the show knows what it's listening to. The roles stay in this browser: it's the laptop at the gig.
 
 const ROLE_STORE = 'owashi-sim:input-roles';
+const NAMES_STORE = 'owashi-sim:input-names';   // the track names those roles were given to, when a recording is playing
 
 export const ROLES = [
   ['', '—'], ['kick', 'Kick'], ['snare', 'Snare'], ['toms', 'Toms'], ['overheads', 'Overheads'],
@@ -21,7 +22,7 @@ export const inputs = {
   onChange: () => {},   // the device or the roles changed
   onLevels: () => {},   // new levels arrived (the Inputs sheet)
   levelListeners: new Set(),   // and whoever else wants them (live.js)
-  hitListeners: new Set(),     // (channel, strength, role)
+  hitListeners: new Set(),     // (channel, strength, role, band): band is 'hi' for a hit in the band above 5 kHz alone
 };
 try { inputs.roles = JSON.parse(localStorage.getItem(ROLE_STORE)) || []; } catch { inputs.roles = []; }
 
@@ -33,8 +34,9 @@ export function setRole(ch, role) {
 
 // A channel without a role gets one from its name, when the name says it ("01 Kick", "OH L", "Gtr Fab"…).
 // Which guitar is left or right can't be told from a name: the first guitar is taken as left. Check them.
+// Romain names the band's own tracks after the players: Fab stands on the left, Cyril is the other guitar, Olivier plays bass.
 const GUESS = [[/kick|bd\b|bass ?drum/i, 'kick'], [/snare|sn\b/i, 'snare'], [/tom/i, 'toms'], [/\boh\b|overhead|cymbal|crash|ride/i, 'overheads'],
-  [/\bbass\b|\bbs\b|basse/i, 'bass'], [/gu?i?ta?r|gtr/i, 'gtr']];
+  [/\bbass\b|\bbs\b|basse|olivier/i, 'bass'], [/\bfab\b/i, 'gtr-left'], [/cyril/i, 'gtr-right'], [/gu?i?ta?r|gtr/i, 'gtr']];
 function guessRoles() {
   let guitars = inputs.roles.filter(r => r?.startsWith('gtr')).length, changed = false;
   inputs.names.forEach((name, i) => {
@@ -55,12 +57,22 @@ export function onBridgeMessage(m) {
     for (const f of inputs.levelListeners) f();
   } else if (m.type === 'on') {
     inputs.hitAt[m.ch] = performance.now(); inputs.hitV[m.ch] = m.v;
-    for (const f of inputs.hitListeners) f(m.ch, m.v, inputs.roles[m.ch] || '');
+    for (const f of inputs.hitListeners) f(m.ch, m.v, inputs.roles[m.ch] || '', '');
+  } else if (m.type === 'hi') {
+    for (const f of inputs.hitListeners) f(m.ch, m.v, inputs.roles[m.ch] || '', 'hi');
   } else if (m.type === 'audio' || (m.type === 'hello' && m.audio)) {
     const a = m.type === 'audio' ? m : m.audio;
     inputs.device = a.device; inputs.channels = a.channels || 0; inputs.note = a.note || '';
     inputs.names = a.names || [];
     if (!a.device) inputs.levels = [];
+    // another recording with its tracks in another order, or the mixer after a recording: the old roles would sit
+    // on the wrong channels, so they start again (the mixer has no names: its roles are kept under '')
+    if (a.device) {
+      const key = inputs.names.length ? JSON.stringify(inputs.names) : '';
+      try {
+        if ((localStorage.getItem(NAMES_STORE) ?? '') !== key) { inputs.roles = []; localStorage.setItem(NAMES_STORE, key); }
+      } catch { /* no storage: the roles are guessed afresh each visit anyway */ }
+    }
     guessRoles();
     inputs.onChange();
   }

@@ -13,31 +13,21 @@
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "off"
+      "react": "off",
+      "punch": false
     },
     {
       "t": 2.8,
       "name": "A Foundry ignites",
-      "scene": "riff",
+      "scene": "drive",
       "a": "Red",
       "b": "Amber",
       "bpm": 105,
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "crash"
-    },
-    {
-      "t": 12.0,
-      "name": "B Scream over the riff",
-      "scene": "riff",
-      "a": "Amber",
-      "b": "Red",
-      "bpm": 105,
-      "phase": 0,
-      "fade": 0,
-      "lead": "",
-      "react": "guitar"
+      "react": "guitar",
+      "punch": true
     },
     {
       "t": 21.1,
@@ -49,7 +39,8 @@
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "crash"
+      "react": "guitar",
+      "punch": false
     },
     {
       "t": 39.4,
@@ -61,19 +52,21 @@
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "crash"
+      "react": "crash",
+      "punch": true
     },
     {
       "t": 57.7,
       "name": "D Tremolo, the storm",
-      "scene": "slab",
-      "a": "White",
+      "scene": "glint",
+      "a": "Amber",
       "b": "Ice",
       "bpm": 105,
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "crash"
+      "react": "crash",
+      "punch": false
     },
     {
       "t": 71.4,
@@ -85,7 +78,8 @@
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "crash"
+      "react": "off",
+      "punch": false
     },
     {
       "t": 78.3,
@@ -97,43 +91,47 @@
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "all"
+      "react": "guitar",
+      "punch": false
     },
     {
       "t": 108.0,
       "name": "F Solo 1, lightning prism",
-      "scene": "blast",
-      "a": "Ice",
-      "b": "White",
+      "scene": "glint",
+      "a": "Amber",
+      "b": "Ice",
       "bpm": 105,
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "guitar"
+      "react": "guitar",
+      "punch": false
     },
     {
       "t": 128.6,
       "name": "G Chug march",
-      "scene": "riff",
+      "scene": "drive",
       "a": "Red",
       "b": "UV",
       "bpm": 105,
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "all"
+      "react": "crash",
+      "punch": false
     },
     {
       "t": 156.0,
       "name": "G Second pass, darker",
-      "scene": "riff",
+      "scene": "drive",
       "a": "UV",
       "b": "Red",
       "bpm": 105,
       "phase": 0,
       "fade": 1,
       "lead": "",
-      "react": "all"
+      "react": "crash",
+      "punch": false
     },
     {
       "t": 185.7,
@@ -145,31 +143,34 @@
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "crash"
+      "react": "crash",
+      "punch": true
     },
     {
       "t": 204.0,
       "name": "H Tremolo, the storm",
-      "scene": "slab",
-      "a": "White",
+      "scene": "glint",
+      "a": "Amber",
       "b": "Ice",
       "bpm": 105,
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "crash"
+      "react": "crash",
+      "punch": false
     },
     {
       "t": 222.3,
       "name": "I Opening riff, no lead-in",
-      "scene": "riff",
+      "scene": "drive",
       "a": "Amber",
       "b": "Red",
       "bpm": 105,
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "guitar"
+      "react": "guitar",
+      "punch": true
     },
     {
       "t": 240.6,
@@ -181,7 +182,8 @@
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "crash"
+      "react": "off",
+      "punch": false
     },
     {
       "t": 258.8,
@@ -193,7 +195,8 @@
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "off"
+      "react": "off",
+      "punch": false
     },
     {
       "t": 272.6,
@@ -205,7 +208,8 @@
       "phase": 0,
       "fade": 2,
       "lead": "",
-      "react": "off"
+      "react": "off",
+      "punch": false
     },
     {
       "t": 293.1,
@@ -217,7 +221,8 @@
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "off"
+      "react": "off",
+      "punch": false
     },
     {
       "t": 295.4,
@@ -229,7 +234,8 @@
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "guitar"
+      "react": "guitar",
+      "punch": true
     },
     {
       "t": 313.7,
@@ -239,21 +245,23 @@
       "b": "Amber",
       "bpm": 105,
       "phase": 0,
-      "fade": 0,
+      "fade": 1,
       "lead": "",
-      "react": "guitar"
+      "react": "guitar",
+      "punch": false
     },
     {
       "t": 329.7,
       "name": "M War machine, squeals",
-      "scene": "riff",
+      "scene": "drive",
       "a": "Red",
       "b": "UV",
       "bpm": 105,
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "guitar"
+      "react": "guitar",
+      "punch": false
     },
     {
       "t": 368.6,
@@ -265,31 +273,21 @@
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "guitar"
+      "react": "guitar",
+      "punch": false
     },
     {
       "t": 386.8,
       "name": "N Shred, crucible heats",
-      "scene": "blast",
+      "scene": "glint",
       "a": "Amber",
       "b": "White",
       "bpm": 105,
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "guitar"
-    },
-    {
-      "t": 421.1,
-      "name": "N Crucible shatters",
-      "scene": "strobe",
-      "a": "White",
-      "b": "White",
-      "bpm": 105,
-      "phase": 0,
-      "fade": 0,
-      "lead": "",
-      "react": "off"
+      "react": "guitar",
+      "punch": false
     },
     {
       "t": 425.7,
@@ -301,19 +299,21 @@
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "crash"
+      "react": "crash",
+      "punch": true
     },
     {
       "t": 432.6,
       "name": "O Feedback hold, frozen",
       "scene": "silhouette",
       "a": "Red",
-      "b": "UV",
+      "b": "Blue",
       "bpm": 105,
       "phase": 0,
       "fade": 1,
       "lead": "",
-      "react": "off"
+      "react": "off",
+      "punch": false
     },
     {
       "t": 441.7,
@@ -325,7 +325,8 @@
       "phase": 0,
       "fade": 2,
       "lead": "",
-      "react": "off"
+      "react": "off",
+      "punch": false
     },
     {
       "t": 478.2,
@@ -337,7 +338,8 @@
       "phase": 0,
       "fade": 4,
       "lead": "",
-      "react": "off"
+      "react": "off",
+      "punch": false
     },
     {
       "t": 498.0,
@@ -349,147 +351,16 @@
       "phase": 0,
       "fade": 3,
       "lead": "",
-      "react": "off"
+      "react": "off",
+      "punch": false
     }
   ],
   "hits": [
-    {
-      "t": 7.4,
-      "on": "tubes",
-      "v": 0.5,
-      "what": "riff turnaround stab"
-    },
-    {
-      "t": 12.0,
-      "on": "beams",
-      "v": 0.9,
-      "what": "scream enters"
-    },
-    {
-      "t": 16.5,
-      "on": "beams",
-      "v": 0.6,
-      "what": "pinch-harmonic cry"
-    },
-    {
-      "t": 66.8,
-      "on": "all",
-      "v": 0.6,
-      "what": "peak of the shred, rhythm stabs"
-    },
-    {
-      "t": 71.4,
-      "on": "all",
-      "v": 1,
-      "what": "massive held chord"
-    },
-    {
-      "t": 105.7,
-      "on": "beams",
-      "v": 0.7,
-      "what": "high bend into the solo"
-    },
-    {
-      "t": 112.5,
-      "on": "beams",
-      "v": 0.7,
-      "what": "harmonic scream"
-    },
-    {
-      "t": 121.7,
-      "on": "beams",
-      "v": 0.8,
-      "what": "highest bends"
-    },
-    {
-      "t": 124.0,
-      "on": "tubes",
-      "v": 0.8,
-      "what": "cymbals drop, kick/snare punches"
-    },
-    {
-      "t": 153.7,
-      "on": "tubes",
-      "v": 0.6,
-      "what": "fill, end of the first pass"
-    },
-    {
-      "t": 183.4,
-      "on": "tubes",
-      "v": 0.7,
-      "what": "drum build into chorus 2"
-    },
     {
       "t": 217.7,
       "on": "all",
       "v": 1,
       "what": "chord hit, cut short"
-    },
-    {
-      "t": 220.0,
-      "on": "tubes",
-      "v": 0.6,
-      "what": "gritty pickup"
-    },
-    {
-      "t": 231.4,
-      "on": "beams",
-      "v": 0.9,
-      "what": "scream returns"
-    },
-    {
-      "t": 238.3,
-      "on": "beams",
-      "v": 1,
-      "what": "scream at the cliff edge"
-    },
-    {
-      "t": 311.4,
-      "on": "tubes",
-      "v": 0.6,
-      "what": "drum fill"
-    },
-    {
-      "t": 327.4,
-      "on": "beams",
-      "v": 0.9,
-      "what": "fever-pitch scream"
-    },
-    {
-      "t": 329.7,
-      "on": "beams",
-      "v": 0.9,
-      "what": "whammy scream"
-    },
-    {
-      "t": 338.8,
-      "on": "beams",
-      "v": 0.8,
-      "what": "pinch-harmonic lick"
-    },
-    {
-      "t": 348.0,
-      "on": "all",
-      "v": 0.7,
-      "what": "crash, second pass"
-    },
-    {
-      "t": 357.1,
-      "on": "beams",
-      "v": 0.8,
-      "what": "harmonic cry"
-    },
-    {
-      "t": 366.3,
-      "on": "tubes",
-      "v": 0.6,
-      "what": "fill into solo 2"
-    },
-    {
-      "t": 425.7,
-      "on": "all",
-      "v": 1,
-      "what": "half-time slam"
     }
   ],
   "energy": {

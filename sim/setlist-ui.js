@@ -125,6 +125,8 @@ function CueRow({ c, i, on }) {
         onChange=${e => S.updateCue(i, { react: e.currentTarget.value })}>
         <option value="off">No accents</option><option value="crash">Crashes</option><option value="guitar">Crashes, guitars</option><option value="all">Crashes, guitars, fills</option>
       </select>
+      <button class="punch" aria-pressed=${c.punch} title="Punch: this cue lands with a white slam on everything. For the big entries."
+        onClick=${() => S.updateCue(i, { punch: !c.punch })}>Punch</button>
     </div>` : null}
   </li>`;
 }
@@ -164,9 +166,31 @@ function Footer() {
   </footer>`;
 }
 
+// Drag the panel's left edge, bottom edge or bottom-left corner to resize it (it hangs from the top right).
+// Double-click a grip to go back to the default size.
+function Grip({ dir }) {
+  const down = e => {
+    const panel = e.currentTarget.closest('.setlist'), r = panel.getBoundingClientRect();
+    const x0 = e.clientX, y0 = e.clientY, el = e.currentTarget;
+    try { el.setPointerCapture(e.pointerId); } catch { /* the move still reaches the grip while the pointer stays over it */ }
+    const move = ev => {
+      const w = dir.includes('x') ? Math.round(Math.min(innerWidth - 48, Math.max(320, r.width + x0 - ev.clientX))) : r.width;
+      const h = dir.includes('y') ? Math.round(Math.max(260, r.height + ev.clientY - y0)) : (S.panelSize.value?.h ?? null);
+      S.panelSize.value = { w, h };
+    };
+    const up = () => { el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up); };
+    el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+    e.preventDefault();
+  };
+  return html`<div class=${`grip grip-${dir}`} aria-hidden="true" title="Drag to resize · double-click for the default size"
+    onPointerDown=${down} onDblClick=${() => { S.panelSize.value = null; }}></div>`;
+}
+
 function Setlist() {
-  const s = S.song.value;
-  return html`<section class="setlist" hidden=${!S.open.value} aria-label="Setlist">
+  const s = S.song.value, size = S.panelSize.value;
+  const style = size ? `--sl-w:${size.w}px;${size.h ? `--sl-h:${size.h}px` : ''}` : '';
+  return html`<section class="setlist" hidden=${!S.open.value} aria-label="Setlist" style=${style}>
+    <${Grip} dir="x" /><${Grip} dir="y" /><${Grip} dir="xy" />
     <${Header} />
     ${s?.audio ? html`<${Recording} key=${s.id} src=${s.audio} title=${s.title} />`
       : s?.soundcloud ? html`<${SoundCloud} key=${s.id} url=${s.soundcloud} title=${s.title} />` : null}

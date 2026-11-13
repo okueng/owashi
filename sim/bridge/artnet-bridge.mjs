@@ -13,6 +13,7 @@
 //   node sim/bridge/artnet-bridge.mjs --audio='XR18|X18'  which audio interface to listen to (that's the default); --audio=off
 //   node sim/bridge/artnet-bridge.mjs --audio-file=song.mp3   a recording through the same analysis, to try it without the band
 //   node sim/bridge/artnet-bridge.mjs --audio-file=tracks/    or a folder of tracks, one per channel, as a DAW exports them
+//   node sim/bridge/artnet-bridge.mjs --audio-file=tracks/ --audio-loop    and round again when it ends
 //
 // "Drive the rig": the sim's universes go out as ArtDmx, routed by rig.json.
 // "Mirror a desk": ArtDmx arriving from a desk is passed to the sim, which just draws it.
@@ -120,6 +121,10 @@ function onArtNet(msg) {
 // Browsers that won't give a page MIDI (the Claude app's browser, Safari) get it from here instead.
 // midi-in.swift reads macOS's MIDI; it's built once with swiftc and kept in ~/Library/Caches.
 
+// The helpers that are running. They'd carry on listening after the bridge is stopped, so they go with it.
+const helpers = new Set();
+for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => { for (const p of helpers) p.kill(); process.exit(0); });
+
 // A Swift helper next to this file, built once with swiftc into ~/Library/Caches (rebuilt when its source changes).
 // Resolves to the binary, or to null with the reason logged.
 async function buildHelper(name, tag, what) {
@@ -147,6 +152,7 @@ async function startMidi() {
   if (!bin) { console.warn('  midi   pedal and pad then need Chrome'); return; }
   const run = () => {
     const p = spawn(bin, [], { stdio: ['ignore', 'pipe', 'inherit'] });
+    helpers.add(p); p.on('close', () => helpers.delete(p));
     let rest = '';
     p.stdout.on('data', chunk => {
       const lines = (rest + chunk).split('\n');
@@ -176,9 +182,10 @@ async function startAudio() {
   if (process.platform !== 'darwin' || AUDIO === 'off') return;
   const bin = await buildHelper('audio-in', 'audio ', 'audio listener');
   if (!bin) return;
-  const args = AUDIO_FILE ? ['--file', AUDIO_FILE] : ['--device', AUDIO];
+  const args = AUDIO_FILE ? ['--file', AUDIO_FILE, ...(process.argv.includes('--audio-loop') ? ['--loop'] : [])] : ['--device', AUDIO];
   const run = () => {
     const p = spawn(bin, args, { stdio: ['ignore', 'pipe', 'inherit'] });
+    helpers.add(p); p.on('close', () => helpers.delete(p));
     let rest = '';
     p.stdout.on('data', chunk => {
       const lines = (rest + chunk).split('\n');
@@ -186,7 +193,7 @@ async function startAudio() {
       for (const line of lines) {
         const [kind, a, b, c] = line.split('\t');
         if (kind === 'lv') announce({ type: 'lv', v: a.split(',').map(Number) });
-        else if (kind === 'on') announce({ type: 'on', ch: Number(a), v: Number(b) });
+        else if (kind === 'on' || kind === 'hi') announce({ type: kind, ch: Number(a), v: Number(b) });   // hi: the band above 5 kHz
         else if (kind === 'names') audioNames = a.split('|');   // a recording's tracks, by file name
         else if (kind === 'open') {
           audio = { device: a, channels: Number(b), rate: Number(c), note: '', names: audioNames };

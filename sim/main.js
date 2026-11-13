@@ -20,21 +20,27 @@ import { inputs, onBridgeMessage, ROLES, setRole } from './inputs.js';
 import { configure as configureLive, live, setDarkOnStop } from './live.js';
 
 // ── layout (metres; x = stage left→right as the audience sees it, z = towards the audience) ──
-// The rig is placed for the audience's sightlines and the beams' distance from the band's eyes. The stage
-// itself is a guess — tweak freely once we have the real stage plot.
+// The rig is placed for the audience's sightlines and the beams' distance from the band's eyes. The stage is
+// the band's estimate for the December 2026 room, about 4 m wide and 4 m deep: change DECK and the places below
+// once there's a real stage plot.
 
-const DECK = { w: 6, d: 4, h: 0.5, front: 1.5 };      // a small club stage: deck runs from z = -2.5 to z = +1.5
+const DECK = { w: 4, d: 4, h: 0.5, front: 1.5 };      // a small club stage: deck runs from z = -2.5 to z = +1.5
 const S = DECK.h;
 const KIT_Z = -1.0;                                    // drums on the deck with everyone else, no riser
 
+// On 4 m the kit and the 2 m banner fill the middle, which leaves about 95 cm each side at the back. So each
+// back corner carries two heads side by side with a tube between them, a little in front.
 const RIG = {
-  // two tubes framing the band at the sides, two at the back on either side of the kit and amps
-  V1: { pos: [-2.8, S, 0.3] }, V2: { pos: [-1.7, S, -2.3] }, V3: { pos: [1.7, S, -2.3] }, V4: { pos: [2.8, S, 0.3] },
-  // horizontal on the floor at the stage front, on low feet: the only light on the band's faces.
-  // Raising them gives more light, but the line then cuts across the players' legs.
-  H1: { pos: [-1.2, S, 1.3], raise: 0.05 }, H2: { pos: [1.2, S, 1.3], raise: 0.05 },
+  // two tubes framing the band at the stage edges, two at the back between the heads
+  V1: { pos: [-1.9, S, 0.3] }, V2: { pos: [-1.54, S, -1.95] }, V3: { pos: [1.54, S, -1.95] }, V4: { pos: [1.9, S, 0.3] },
+  // (the two horizontal floor bars at the stage front are out for now; they sat at the front edge, raise 0.05)
   // behind everyone, so nobody faces them, and on low cases to keep the beams clear of the amps and above eye level
-  B1: { pos: [-2.4, S, -2.25], riser: 0.5 }, B2: { pos: [2.4, S, -2.25], riser: 0.5 },
+  B1: { pos: [-1.78, S, -2.25], riser: 0.5 }, B2: { pos: [1.78, S, -2.25], riser: 0.5 },
+  // the second pair: on the floor just outside the banner (no stands, nothing flown). Beams read brightest coming
+  // towards the audience through the haze, so all four stay at the back. With the heads kept at least 45° above
+  // the horizontal, a beam from the floor still clears an amp half a metre in front of it and passes about 3 m
+  // above the front players, so a case under them only shows a little more of the beam's foot.
+  B3: { pos: [-1.3, S, -2.25], riser: 0 }, B4: { pos: [1.3, S, -2.25], riser: 0 },
 };
 
 // Left to right as in the rehearsal room: Fab, Cyril, Romain (back), Olivier.
@@ -42,10 +48,10 @@ const RIG = {
 // others; Romain's is seated); h and holds are for the fallback
 // cut-outs from the band photo (assets/band-2026-720.jpg + the ghost masks), with a low-poly instrument.
 const BAND = [
-  { id: 'fab', full: 1.6, h: 1.05, pos: [-2.2, S, 0.45], holds: { model: 'guitarB', at: [0.08, 0.5, 0.18], rotZ: -78 } },
-  { id: 'cyril', full: 1.8, h: 1.78, pos: [-0.95, S, 0.35], holds: { model: 'guitarA', at: [0.02, 0.98, 0.16], rotZ: -62 } },
+  { id: 'fab', full: 1.6, h: 1.05, pos: [-1.45, S, 0.45], holds: { model: 'guitarB', at: [0.08, 0.5, 0.18], rotZ: -78 } },
+  { id: 'cyril', full: 1.8, h: 1.78, pos: [-0.6, S, 0.35], holds: { model: 'guitarA', at: [0.02, 0.98, 0.16], rotZ: -62 } },
   { id: 'romain', full: 1.3, h: 1.36, pos: [0, S, KIT_Z - 0.42] },   // on the throne, behind the kit
-  { id: 'olivier', full: 1.8, h: 1.82, pos: [1.6, S, 0.35], holds: { model: 'bass', at: [0.02, 1.0, 0.16], rotZ: -62 } },
+  { id: 'olivier', full: 1.8, h: 1.82, pos: [1.1, S, 0.35], holds: { model: 'bass', at: [0.02, 1.0, 0.16], rotZ: -62 } },
 ];
 
 // models: how to stand each one up and how big it really is
@@ -59,9 +65,9 @@ const MODELS = {
 };
 const PROPS = [
   { model: 'drums', pos: [0, S, KIT_Z] },
-  { model: 'guitarAmp', pos: [-2.45, S, -1.35], rotY: 10 },
-  { model: 'guitarAmp', pos: [-1.3, S, -1.85], rotY: 5 },
-  { model: 'bassAmp', pos: [2.0, S, -1.45], rotY: -15 },
+  { model: 'guitarAmp', pos: [-1.72, S, -1.3], rotY: 10 },
+  { model: 'guitarAmp', pos: [-1.18, S, -1.55], rotY: 5 },
+  { model: 'bassAmp', pos: [1.45, S, -1.45], rotY: -15 },
 ];
 
 const VIEWS = {
@@ -139,24 +145,37 @@ const deck = new THREE.Mesh(new THREE.BoxGeometry(DECK.w, DECK.h, DECK.d), deckM
 deck.position.set(0, DECK.h / 2, DECK.front - DECK.d / 2);
 scene.add(deck);
 
-// The ŌWASHI banner on the back wall: black cloth with the logo printed in white, so it takes the
-// colour of whatever light hits it. logoY is the centre of the logo above the deck.
-const BANNER = { w: 5.8, h: 3.0, logoW: 3.6, logoY: 2.35 };
+// The ŌWASHI banner: 2 × 1 m of black cloth with the logo printed in white, so it takes the colour of whatever
+// light hits it. It hangs from a telescopic bar between two light stands (Ulanzi MT-89, 2 m at full height)
+// just behind the kit, so its top edge is level with the tops of the tubes and its lower half sits behind the drummer.
+const BANNER = { w: 2, h: 1, top: 2.0, z: -2.38, logoW: 1.8 };
 const bannerCanvas = document.createElement('canvas');
 bannerCanvas.width = 2048; bannerCanvas.height = Math.round(2048 * BANNER.h / BANNER.w);
 const bannerTex = new THREE.CanvasTexture(bannerCanvas);
 bannerTex.colorSpace = THREE.SRGBColorSpace;
 bannerTex.anisotropy = 8;
 const banner = new THREE.Mesh(new THREE.PlaneGeometry(BANNER.w, BANNER.h), new THREE.MeshStandardMaterial({ map: bannerTex, roughness: 0.95 }));
-banner.position.set(0, S + BANNER.h / 2, ROOM.back + 0.02);
+banner.position.set(0, S + BANNER.top - BANNER.h / 2, BANNER.z);
 scene.add(banner);
+{
+  const metal = new THREE.MeshStandardMaterial({ color: 0x151517, roughness: 0.6, metalness: 0.5 });
+  const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, BANNER.w + 0.12, 8), metal);
+  bar.rotation.z = Math.PI / 2;
+  bar.position.set(0, S + BANNER.top + 0.012, BANNER.z);
+  scene.add(bar);
+  for (const side of [-1, 1]) {
+    const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, BANNER.top, 8), metal);
+    stand.position.set(side * (BANNER.w / 2 + 0.05), S + BANNER.top / 2, BANNER.z);
+    scene.add(stand);
+  }
+}
 
 async function paintBanner() {
   const c = bannerCanvas, x = c.getContext('2d'), W = c.width, H = c.height;
   const rnd = n => { const v = Math.sin(n * 127.1 + 311.7) * 43758.5453; return v - Math.floor(v); };
   x.fillStyle = '#0d0d0e';
   x.fillRect(0, 0, W, H);
-  for (let i = 0; i < 40; i++) {   // soft vertical folds in the cloth
+  for (let i = 0; i < 14; i++) {   // soft vertical folds in the cloth
     const fx = rnd(i) * W, fw = (0.02 + rnd(i + 9) * 0.05) * W;
     const g = x.createLinearGradient(fx - fw, 0, fx + fw, 0);
     g.addColorStop(0, 'rgba(255,255,255,0)');
@@ -168,7 +187,7 @@ async function paintBanner() {
   const logo = await loadImage('../assets/logo.svg');   // white on transparent, viewBox 7115 × 1856
   const lw = W * BANNER.logoW / BANNER.w, lh = lw * 1856 / 7115;
   x.globalAlpha = 0.86;   // printed ink, not paper white
-  x.drawImage(logo, (W - lw) / 2, H * (1 - BANNER.logoY / BANNER.h) - lh / 2, lw, lh);
+  x.drawImage(logo, (W - lw) / 2, (H - lh) / 2, lw, lh);
   x.globalAlpha = 1;
   bannerTex.needsUpdate = true;
 }
@@ -211,9 +230,12 @@ for (const [id, place] of Object.entries(RIG)) {
   } else {
     const head = new BeamHead(f);
     head.group.position.set(x, y + place.riser, z);
-    const flightCase = new THREE.Mesh(new THREE.BoxGeometry(0.4, place.riser, 0.4), new THREE.MeshStandardMaterial({ color: 0x151517, roughness: 0.6 }));
-    flightCase.position.set(x, y + place.riser / 2, z);
-    scene.add(head.group, flightCase);
+    scene.add(head.group);
+    if (place.riser) {
+      const flightCase = new THREE.Mesh(new THREE.BoxGeometry(0.4, place.riser, 0.4), new THREE.MeshStandardMaterial({ color: 0x151517, roughness: 0.6 }));
+      flightCase.position.set(x, y + place.riser / 2, z);
+      scene.add(flightCase);
+    }
     heads.push(head);
   }
 }
@@ -334,7 +356,9 @@ const LAYOUT_KEY = 'owashi-sim:layout';
 const HOME = Object.fromEntries(BAND.map(m => [m.id, [...m.pos]]));
 try {
   const saved = JSON.parse(localStorage.getItem(LAYOUT_KEY)) || {};
-  for (const m of BAND) if (Array.isArray(saved[m.id])) m.pos = [saved[m.id][0], S, saved[m.id][1]];
+  // a place saved on a wider stage is pulled back onto this one
+  const onDeck = (x, z) => [Math.min(DECK.w / 2 - 0.3, Math.max(-DECK.w / 2 + 0.3, x)), S, Math.min(DECK.front - 0.2, Math.max(DECK.front - DECK.d + 0.35, z))];
+  for (const m of BAND) if (Array.isArray(saved[m.id])) m.pos = onDeck(saved[m.id][0], saved[m.id][1]);
 } catch { /* private window or blocked storage: start from the default layout */ }
 
 // the drums and amps straight away; the low-poly instruments only for players without a picture
@@ -740,7 +764,7 @@ mon.addEventListener('pointerleave', () => { hoverCh = -1; });
 const LABELS_KEY = 'owashi-sim:labels-on';   // off unless turned on in Settings
 const labels = createLabels($('.tags'), [...bars, ...heads].map(({ f }) => {
   const [x, y, z] = RIG[f.id].pos;
-  const at = f.profile === 'lb150' ? [x, y + RIG[f.id].riser / 2, z + 0.25]   // on the front of its flight case
+  const at = f.profile === 'lb150' ? [x, y + Math.max(RIG[f.id].riser / 2, 0.12), z + 0.25]   // on the front of its flight case, or of its base
     : RIG[f.id].raise ? [x, y - 0.14, DECK.front]                              // on the front edge of the deck
     : [x, y + 2.2, z];                                                         // just above the tube
   return { f, at };

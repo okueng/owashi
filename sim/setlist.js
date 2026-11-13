@@ -14,7 +14,7 @@ export const LOOK_COLOUR = {
   ambient: '#4a6cff', sweep: '#9cc2ff', build: '#e0a21e', riff: '#e0301e', blast: '#ffffff',
   breakdown: '#a51c14', wall: '#f3f2ee', embers: '#ff7a1a', strobe: '#ffffff', blackout: '#555555',
   slab: '#b0382c', shimmer: '#c9b6ff', silhouette: '#c4c4c4', searchlight: '#6fd3c7', collapse: '#b86a2c',
-  orbit: '#7fb0ff',
+  orbit: '#7fb0ff', drive: '#d0502a', surge: '#5cc8e8', glint: '#ffe9a8',
 };
 export const COLOURS = Object.keys(PALETTE);
 
@@ -37,6 +37,7 @@ export const clean = c => ({
   fade: Math.min(16, Math.max(0, Math.round((+c.fade || 0) * 2) / 2)),   // bars to fade in over; 0 cuts
   lead: LEADS.includes(c.lead) ? c.lead : '',
   react: REACTS.includes(c.react) ? c.react : 'crash',   // which live accents fire during this cue (live.js)
+  punch: !!c.punch,   // lands with a white slam on everything: for the big entries, pressed right on the hit
 });
 export const LEADS = ['left', 'right', 'trade'];
 export const REACTS = ['off', 'crash', 'guitar', 'all'];
@@ -58,6 +59,8 @@ export const status = signal('');         // where the last edit went
 export const scNote = signal('');
 export const open = signal(remembered('owashi-sim:setlist-open', false));
 effect(() => remember('owashi-sim:setlist-open', open.value));
+export const panelSize = signal(remembered('owashi-sim:setlist-size', null));   // { w, h } once dragged, null = default
+effect(() => remember('owashi-sim:setlist-size', panelSize.value));
 
 let pos = 0, at = 0, widget = null;       // the track's position, when we heard it, and SoundCloud's player
 let followed = -1;                        // the cue the music itself last reached; GO and ← hold until the next one
@@ -248,19 +251,20 @@ function align(c, p) {
   show.beat0 = t - into + (c.phase * 60) / c.bpm;
   if (show.scene === c.scene) show.cueT = t - into;
 }
-function apply(i, p = null, cut = false) {
+function apply(i, p = null, cut = false, forward = true) {
   const c = cues.value[i];
   if (!c) return;
   index.value = i;
   show.colorA = c.a; show.colorB = c.b; show.bpm = c.bpm;
   cue(c.scene, now(), cut ? 0 : (c.fade * 240) / c.bpm);
+  if (c.punch && !cut && forward) hit(now(), 1);   // not when jumping about or stepping back
   songT0 = now() - (p ?? c.t);
   align(c, p ?? c.t);
   onApplied();
 }
 export function jumpTo(i) { seek(cues.value[i].t); }
 export function go() { if (index.value + 1 < cues.value.length) apply(index.value + 1); }
-export function back() { if (index.value > 0) apply(index.value - 1); }
+export function back() { if (index.value > 0) apply(index.value - 1, null, false, false); }
 
 function upsertAt(p, scene) {
   const list = cues.value, near = list.find(c => Math.abs(c.t - p) < 1);
@@ -398,7 +402,7 @@ function songExtras(p) {
   const recording = follow.value && playing.value;
   if (running && !recording && show.liveEnergy !== null) show.energy = show.liveEnergy;   // the band, through the mixer
   else if (running && s.energy?.values?.length) {
-    const drop = Math.min(1, Math.max(0, (peakOf(s, i) - energyAt(s.energy, p)) / 0.35));   // only a real drop dims it
+    const drop = Math.min(1, Math.max(0, (peakOf(s, i) - energyAt(s.energy, p)) / 0.45));   // only a real drop dims it
     show.energy = 1 - drop * Math.min(1, Math.max(0, p - c.t - LAND));
   }
   if (follow.value && playing.value && s.hits && lastP >= 0 && p > lastP && p - lastP < 0.5) {

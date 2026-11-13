@@ -13,19 +13,34 @@
       "phase": 0,
       "fade": 4,
       "lead": "",
-      "react": "off"
+      "react": "off",
+      "punch": false
     },
     {
-      "t": 46.8,
-      "name": "Doom chord 1",
+      "t": 48.4,
+      "name": "Doom chord",
       "scene": "slab",
       "a": "Red",
       "b": "UV",
-      "bpm": 108,
+      "bpm": 54,
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "crash"
+      "react": "crash",
+      "punch": true
+    },
+    {
+      "t": 61.8,
+      "name": "Doom chord again",
+      "scene": "slab",
+      "a": "Red",
+      "b": "UV",
+      "bpm": 54,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "crash",
+      "punch": true
     },
     {
       "t": 75.7,
@@ -37,10 +52,11 @@
       "phase": 0,
       "fade": 2,
       "lead": "",
-      "react": "off"
+      "react": "off",
+      "punch": false
     },
     {
-      "t": 125.2,
+      "t": 123.3,
       "name": "One clean guitar alone",
       "scene": "ambient",
       "a": "Teal",
@@ -49,22 +65,24 @@
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "off"
+      "react": "off",
+      "punch": false
     },
     {
-      "t": 134.2,
+      "t": 135.3,
       "name": "Groove locks in",
-      "scene": "riff",
+      "scene": "drive",
       "a": "Blue",
       "b": "Teal",
       "bpm": 108,
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "crash"
+      "react": "crash",
+      "punch": false
     },
     {
-      "t": 149.0,
+      "t": 148.4,
       "name": "Lead theme soars",
       "scene": "sweep",
       "a": "Ice",
@@ -73,35 +91,38 @@
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "guitar"
+      "react": "guitar",
+      "punch": false
     },
     {
-      "t": 173.7,
-      "name": "Syncopated chug",
-      "scene": "riff",
+      "t": 173.9,
+      "name": "Lead ends: clean bars, then the chug",
+      "scene": "drive",
       "a": "Blue",
-      "b": "UV",
+      "b": "Teal",
       "bpm": 108,
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "crash"
+      "react": "crash",
+      "punch": false
     },
     {
-      "t": 196.4,
-      "name": "Breakdown, chinas",
-      "scene": "breakdown",
+      "t": 198.7,
+      "name": "Open chords, crashes; half-time at 3:43",
+      "scene": "slab",
       "a": "UV",
       "b": "Blue",
       "bpm": 108,
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "crash"
+      "react": "crash",
+      "punch": true
     },
     {
-      "t": 229.2,
-      "name": "Interlude, the theme returns",
+      "t": 229.7,
+      "name": "Clean again; the lead returns, climbing",
       "scene": "sweep",
       "a": "Teal",
       "b": "Ice",
@@ -109,59 +130,64 @@
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "guitar"
-    },
-    {
-      "t": 240.9,
-      "name": "Solo climbs (16 bars)",
-      "scene": "build",
-      "a": "Ice",
-      "b": "White",
-      "bpm": 108,
-      "phase": 0,
-      "fade": 0,
-      "lead": "",
-      "react": "guitar"
+      "react": "guitar",
+      "punch": false
     },
     {
       "t": 277.5,
       "name": "Shred solo",
-      "scene": "blast",
+      "scene": "glint",
       "a": "Ice",
-      "b": "White",
+      "b": "Blue",
       "bpm": 108,
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "guitar"
+      "react": "guitar",
+      "punch": false
     },
     {
-      "t": 300.1,
-      "name": "Thrash and double kick",
-      "scene": "riff",
+      "t": 292.8,
+      "name": "After the stop: shrieks, double kick",
+      "scene": "surge",
       "a": "White",
       "b": "UV",
       "bpm": 108,
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "all"
+      "react": "guitar",
+      "punch": true
     },
     {
-      "t": 335.5,
-      "name": "Lead in the stratosphere",
-      "scene": "blast",
+      "t": 316.5,
+      "name": "Palm-muted thrash riff",
+      "scene": "surge",
       "a": "UV",
       "b": "White",
       "bpm": 108,
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "guitar"
+      "react": "crash",
+      "punch": false
     },
     {
-      "t": 364.8,
-      "name": "The floor gives way",
+      "t": 340.0,
+      "name": "Lead in the stratosphere",
+      "scene": "glint",
+      "a": "Ice",
+      "b": "UV",
+      "bpm": 108,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "guitar",
+      "punch": false
+    },
+    {
+      "t": 364.1,
+      "name": "Floor gives way: ringing chords, rim",
       "scene": "collapse",
       "a": "Blue",
       "b": "UV",
@@ -169,11 +195,12 @@
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "off"
+      "react": "off",
+      "punch": false
     },
     {
       "t": 400.1,
-      "name": "Blues solo, crying bends",
+      "name": "Slow solo, crying bends",
       "scene": "sweep",
       "a": "Amber",
       "b": "Blue",
@@ -181,34 +208,63 @@
       "phase": 0,
       "fade": 2,
       "lead": "",
-      "react": "guitar"
+      "react": "guitar",
+      "punch": false
     },
     {
-      "t": 442.5,
-      "name": "Solo climbs again",
-      "scene": "riff",
-      "a": "White",
+      "t": 437.0,
+      "name": "The theme restated, heavier",
+      "scene": "slab",
+      "a": "Ice",
       "b": "Blue",
       "bpm": 108,
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "guitar"
+      "react": "guitar",
+      "punch": false
     },
     {
-      "t": 466.5,
-      "name": "Chugs under the solo",
-      "scene": "breakdown",
+      "t": 448.8,
+      "name": "Climbing solo, urgent",
+      "scene": "surge",
       "a": "UV",
-      "b": "White",
+      "b": "Ice",
       "bpm": 108,
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "crash"
+      "react": "guitar",
+      "punch": false
     },
     {
-      "t": 497.1,
+      "t": 473.1,
+      "name": "Solo climax, high register",
+      "scene": "surge",
+      "a": "White",
+      "b": "Ice",
+      "bpm": 108,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "guitar",
+      "punch": false
+    },
+    {
+      "t": 491.6,
+      "name": "The band stops; lone lead",
+      "scene": "searchlight",
+      "a": "Ice",
+      "b": "Blue",
+      "bpm": 108,
+      "phase": 0,
+      "fade": 1,
+      "lead": "",
+      "react": "off",
+      "punch": false
+    },
+    {
+      "t": 497.8,
       "name": "Hush: clean chords hang",
       "scene": "ambient",
       "a": "Blue",
@@ -217,47 +273,64 @@
       "phase": 0,
       "fade": 1,
       "lead": "",
-      "react": "off"
+      "react": "off",
+      "punch": false
     },
     {
-      "t": 519.1,
-      "name": "Stick clicks in the dark",
+      "t": 518.8,
+      "name": "Chord fades; stick clicks at 8:41.6",
       "scene": "blackout",
       "a": "Red",
       "b": "Blue",
       "bpm": 108,
       "phase": 0,
-      "fade": 0,
+      "fade": 2,
       "lead": "",
-      "react": "off"
+      "react": "off",
+      "punch": false
     },
     {
-      "t": 521.3,
-      "name": "Rebuild, clean to gritty",
-      "scene": "riff",
+      "t": 523.0,
+      "name": "Rebuild: arpeggiated riff",
+      "scene": "drive",
       "a": "Teal",
       "b": "Blue",
       "bpm": 108,
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "crash"
+      "react": "crash",
+      "punch": false
     },
     {
-      "t": 547.7,
-      "name": "Wailing lead surge",
-      "scene": "blast",
+      "t": 538.4,
+      "name": "Heavier pass, distorted",
+      "scene": "drive",
+      "a": "Blue",
+      "b": "Ice",
+      "bpm": 108,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "crash",
+      "punch": false
+    },
+    {
+      "t": 552.8,
+      "name": "Tremolo lead soars",
+      "scene": "surge",
       "a": "Ice",
       "b": "White",
       "bpm": 108,
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "guitar"
+      "react": "guitar",
+      "punch": false
     },
     {
-      "t": 576.8,
-      "name": "Blast beats: the apex",
+      "t": 566.8,
+      "name": "Second pass with double kick: the apex",
       "scene": "wall",
       "a": "White",
       "b": "Ice",
@@ -265,11 +338,12 @@
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "all"
+      "react": "all",
+      "punch": true
     },
     {
-      "t": 598.6,
-      "name": "Sludge: the doom returns",
+      "t": 597.6,
+      "name": "Sludge: half-time chords",
       "scene": "slab",
       "a": "Red",
       "b": "UV",
@@ -277,58 +351,89 @@
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "crash"
+      "react": "crash",
+      "punch": true
     },
     {
-      "t": 631.3,
-      "name": "Breakdown reprise, heavier",
-      "scene": "breakdown",
-      "a": "UV",
-      "b": "Red",
-      "bpm": 108,
-      "phase": 0,
-      "fade": 0,
-      "lead": "",
-      "react": "crash"
-    },
-    {
-      "t": 659.5,
-      "name": "Thrash, last shrieks",
-      "scene": "riff",
-      "a": "White",
-      "b": "UV",
-      "bpm": 108,
-      "phase": 0,
-      "fade": 0,
-      "lead": "",
-      "react": "all"
-    },
-    {
-      "t": 681.7,
-      "name": "Final shred",
-      "scene": "blast",
-      "a": "White",
-      "b": "White",
-      "bpm": 108,
-      "phase": 0,
-      "fade": 0,
-      "lead": "",
-      "react": "guitar"
-    },
-    {
-      "t": 708.1,
-      "name": "Last chord, slow hits",
-      "scene": "breakdown",
+      "t": 620.2,
+      "name": "Double kick drives",
+      "scene": "drive",
       "a": "Red",
       "b": "UV",
       "bpm": 108,
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "crash"
+      "react": "crash",
+      "punch": false
     },
     {
-      "t": 719.2,
+      "t": 637.9,
+      "name": "Fast palm-muted riff, climbing",
+      "scene": "surge",
+      "a": "UV",
+      "b": "Red",
+      "bpm": 108,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "crash",
+      "punch": false
+    },
+    {
+      "t": 654.4,
+      "name": "Half-time breakdown, lead over it",
+      "scene": "slab",
+      "a": "Red",
+      "b": "UV",
+      "bpm": 108,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "guitar",
+      "punch": true
+    },
+    {
+      "t": 671.7,
+      "name": "The fast riff again",
+      "scene": "surge",
+      "a": "White",
+      "b": "UV",
+      "bpm": 108,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "crash",
+      "punch": false
+    },
+    {
+      "t": 683.3,
+      "name": "Outro: wailing lead over half-time",
+      "scene": "surge",
+      "a": "Ice",
+      "b": "UV",
+      "bpm": 108,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "guitar",
+      "punch": true
+    },
+    {
+      "t": 706.8,
+      "name": "Last chord rings into feedback",
+      "scene": "slab",
+      "a": "Red",
+      "b": "UV",
+      "bpm": 108,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "off",
+      "punch": true
+    },
+    {
+      "t": 718.1,
       "name": "Cut to silence",
       "scene": "blackout",
       "a": "Red",
@@ -337,83 +442,11 @@
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "off"
+      "react": "off",
+      "punch": false
     }
   ],
-  "hits": [
-    {
-      "t": 46.8,
-      "on": "all",
-      "v": 1.0,
-      "what": "first doom chord"
-    },
-    {
-      "t": 60.3,
-      "on": "all",
-      "v": 1.0,
-      "what": "second doom chord"
-    },
-    {
-      "t": 98.0,
-      "on": "tubes",
-      "v": 0.5,
-      "what": "snare and crash firm the pulse"
-    },
-    {
-      "t": 159.9,
-      "on": "beams",
-      "v": 0.8,
-      "what": "lead leaps an octave"
-    },
-    {
-      "t": 254.5,
-      "on": "beams",
-      "v": 0.7,
-      "what": "weeping high leap"
-    },
-    {
-      "t": 293.0,
-      "on": "all",
-      "v": 0.8,
-      "what": "band slams back under the bend"
-    },
-    {
-      "t": 386.6,
-      "on": "tubes",
-      "v": 0.7,
-      "what": "sudden drum hit in the quiet"
-    },
-    {
-      "t": 576.8,
-      "on": "all",
-      "v": 1.0,
-      "what": "blast beats begin"
-    },
-    {
-      "t": 594.2,
-      "on": "all",
-      "v": 0.8,
-      "what": "braking crashes"
-    },
-    {
-      "t": 626.9,
-      "on": "all",
-      "v": 1.0,
-      "what": "loudest bar of the song"
-    },
-    {
-      "t": 659.5,
-      "on": "beams",
-      "v": 0.9,
-      "what": "shrieks"
-    },
-    {
-      "t": 717.0,
-      "on": "all",
-      "v": 0.9,
-      "what": "final splash"
-    }
-  ],
+  "hits": [],
   "energy": {
     "step": 0.5,
     "values": [0,0,0,1,2,3,3,3,3,2,2,1,1,0,0,10,32,44,45,35,25,17,15,21,32,37,38,39,37,34,28,21,14,10,16,30,44,47,45,41,36,30,25,18,16,25,41,51,52,52,50,46,38,32,28,25,27,36,45,45,45,44,42,38,31,26,28,32,29,21,13,8,5,3,2,1,1,0,0,0,0,0,0,0,0,2,10,22,34,40,42,43,42,41,40,43,55,70,80,82,80,77,74,71,69,66,64,62,61,59,58,56,55,54,52,51,50,48,44,41,39,42,43,63,74,86,85,82,77,73,69,66,64,61,58,55,52,50,47,43,39,34,28,23,19,17,13,10,8,7,10,16,21,22,21,20,21,23,27,29,26,22,19,20,32,49,57,53,43,32,25,31,41,42,36,31,28,30,37,43,43,37,32,27,25,25,24,23,22,20,19,24,27,26,21,17,15,23,43,52,48,40,33,28,31,47,54,49,40,31,26,28,32,31,28,26,28,34,45,54,54,49,40,31,27,34,41,41,37,32,30,27,39,49,54,51,52,60,59,57,60,67,66,70,78,82,81,74,63,52,47,43,40,37,34,32,31,31,30,28,27,27,28,32,36,36,33,31,34,44,55,62,62,59,56,57,57,62,59,57,53,52,59,65,66,61,56,52,55,58,61,58,57,58,64,70,72,73,77,81,82,81,79,76,75,74,73,76,80,83,82,80,80,83,83,83,81,79,75,77,80,84,84,85,84,82,82,86,89,87,83,79,77,79,82,84,83,82,81,81,84,88,89,89,88,88,87,86,84,83,80,77,74,72,70,70,69,68,68,74,79,82,83,81,80,79,80,83,84,84,85,85,85,85,85,83,81,80,81,82,82,81,80,79,80,80,81,80,82,84,90,90,90,89,89,90,90,90,89,88,86,84,84,86,88,88,88,88,89,89,90,89,88,87,87,86,86,86,86,86,86,86,88,87,87,85,85,86,88,89,87,86,86,88,88,89,88,87,86,86,87,87,88,89,90,90,90,89,87,85,84,83,83,84,84,84,83,81,78,76,75,71,66,64,69,75,75,74,75,79,82,84,83,81,78,77,79,82,81,82,85,85,84,82,83,86,87,87,86,85,84,83,81,80,81,84,85,85,86,86,85,84,82,81,81,81,81,83,86,88,87,86,86,88,87,86,86,88,88,89,88,88,88,87,88,89,90,90,90,89,88,88,88,87,85,84,83,84,86,86,86,85,87,88,88,87,87,87,87,86,86,87,87,88,87,88,88,88,88,88,88,88,89,89,90,91,91,91,90,89,88,87,89,91,92,92,92,93,93,93,91,87,85,84,87,88,90,93,92,92,92,94,93,93,93,93,93,93,92,92,93,93,93,93,93,94,94,93,93,93,94,93,93,92,91,91,91,91,91,91,90,90,89,89,89,88,88,89,90,91,91,90,90,89,91,91,91,91,91,90,90,90,90,90,90,91,91,91,90,90,90,90,90,90,91,91,91,89,88,87,87,87,89,90,90,90,89,90,90,89,89,88,87,87,87,87,88,91,93,92,91,91,91,91,90,90,90,90,90,91,91,92,92,92,92,93,94,93,92,90,89,89,89,89,89,88,88,91,91,91,91,90,88,87,88,90,90,90,91,91,92,92,92,91,90,88,87,87,87,88,87,85,83,82,82,82,79,75,72,70,69,68,67,66,65,68,74,81,80,79,77,74,71,70,74,76,78,79,79,77,75,73,72,76,81,83,82,79,77,75,72,67,62,60,59,60,67,77,76,72,67,64,61,58,54,51,48,48,53,58,57,56,62,69,73,72,73,75,79,77,77,80,85,87,86,83,80,77,74,71,70,71,71,72,73,75,74,73,72,71,70,68,66,65,64,68,74,81,80,79,76,75,74,73,73,78,83,83,81,79,77,76,74,73,73,73,72,70,69,72,81,85,83,82,80,79,82,82,81,80,83,86,87,85,82,80,79,78,77,77,79,80,83,83,83,82,82,81,79,78,79,80,80,82,86,88,88,87,86,86,87,89,89,89,90,89,88,86,87,88,88,87,86,86,87,87,86,85,85,88,87,86,85,85,85,85,85,86,87,89,89,88,88,87,86,86,87,88,88,87,87,88,90,91,91,90,90,89,88,87,88,90,91,91,90,89,91,91,90,88,86,85,85,84,84,85,85,87,88,90,89,88,87,87,89,90,90,89,88,87,86,85,85,85,86,85,87,89,90,91,90,90,89,89,87,82,76,74,74,84,86,86,86,86,83,75,63,53,47,45,45,51,57,61,58,54,51,50,51,51,51,50,49,48,47,45,41,36,30,26,32,46,58,57,56,55,61,60,58,54,51,50,49,50,51,51,48,40,33,27,21,17,12,10,18,38,57,68,71,70,69,66,63,62,66,72,74,72,70,69,69,68,68,70,71,71,70,69,69,73,73,76,77,79,79,78,77,77,77,78,77,77,76,76,76,76,75,75,76,80,82,83,84,85,86,86,88,88,88,89,91,91,91,91,91,91,91,90,90,90,90,92,91,92,93,93,92,91,92,93,94,94,94,94,93,92,93,93,93,92,91,90,91,92,92,91,91,90,90,90,90,90,92,92,91,91,90,90,92,93,93,92,91,90,90,91,92,92,92,91,91,91,92,93,93,93,92,92,91,91,90,91,92,91,90,90,90,89,90,92,92,91,90,89,89,89,90,90,90,91,91,91,91,90,88,86,85,84,83,84,85,86,86,87,88,88,88,88,87,87,87,87,87,88,88,87,86,86,89,90,89,89,89,91,91,92,91,90,89,89,90,91,90,90,90,90,89,89,89,90,91,91,90,89,89,90,90,90,89,88,87,87,86,86,86,87,87,86,86,87,87,86,87,89,89,88,87,86,86,87,87,86,85,87,88,88,88,88,88,87,87,87,86,86,87,88,88,87,85,84,84,88,88,88,86,86,87,89,88,88,87,87,87,87,89,90,91,91,90,90,89,89,88,87,87,87,88,87,87,86,86,90,92,92,91,92,92,93,92,92,92,92,91,91,91,91,91,91,91,90,93,94,94,93,92,90,89,88,88,89,89,90,90,90,90,91,91,91,91,90,89,89,89,89,90,89,89,89,91,92,92,91,91,90,89,89,88,88,90,90,91,91,92,92,94,93,92,91,91,90,90,90,90,90,90,89,90,91,91,91,90,90,90,90,90,90,91,93,94,94,92,92,90,89,88,88,87,85,84,84,84,83,81,81,80,80,79,79,79,81,83,83,83,85,87,87,85,78,60,38,23,14,9],

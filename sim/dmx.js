@@ -2,7 +2,7 @@
 // Everything that drives the lights (the built-in show, later Art-Net or a real desk) writes here;
 // everything that draws them reads from here.
 
-export const universes = [1, 2, 3, 4].map(() => new Uint8Array(512));
+export const universes = [1, 2, 3].map(() => new Uint8Array(512));   // a fourth comes back with the front floor bars
 
 const zones = n => Array.from({ length: n }, (_, i) => ['R', 'G', 'B', 'W'].map(c => `Z${i + 1} ${c}`)).flat();
 const frac = x => x - Math.floor(x);
@@ -77,18 +77,20 @@ export const PROFILES = {
 };
 
 export const PATCH = [
-  // universe 1 — the Art-Net box, whose two DMX ports carry the same universe: B1 on DMX1, B2 on DMX2
+  // universe 1 — the Art-Net box, whose two DMX ports carry the same universe: B1 then B3 on DMX1, B2 then B4 on DMX2
   // left and right as the audience sees them; tag is the short name on the 3D labels
-  { id: 'B1', tag: 'Beam L', label: 'Moving head, back left', profile: 'lb150', universe: 1, address: 1 },
-  { id: 'B2', tag: 'Beam R', label: 'Moving head, back right', profile: 'lb150', universe: 1, address: 13 },
+  { id: 'B1', tag: 'Beam L', label: 'Moving head, back left, outer', profile: 'lb150', universe: 1, address: 1 },
+  { id: 'B2', tag: 'Beam R', label: 'Moving head, back right, outer', profile: 'lb150', universe: 1, address: 13 },
+  // the second pair, either side of the banner (addresses 25 and 37 still to be set on the real heads)
+  { id: 'B3', tag: 'Inner L', label: 'Moving head, back left, inner', profile: 'lb150', universe: 1, address: 25 },
+  { id: 'B4', tag: 'Inner R', label: 'Moving head, back right, inner', profile: 'lb150', universe: 1, address: 37 },
   // universes 2–3 — the tubes on WLED, outputs 1–4 of the Dig-Quad: 256 channels each, two per universe
   { id: 'V1', tag: 'Side L', label: 'Tube, side left', profile: 'tube', universe: 2, address: 1 },
   { id: 'V2', tag: 'Back L', label: 'Tube, back left', profile: 'tube', universe: 2, address: 257 },
   { id: 'V3', tag: 'Back R', label: 'Tube, back right', profile: 'tube', universe: 3, address: 1 },
   { id: 'V4', tag: 'Side R', label: 'Tube, side right', profile: 'tube', universe: 3, address: 257 },
-  // universe 4 — the two horizontal bars at the stage front. Not built yet, so rig.json has no route for it.
-  { id: 'H1', tag: 'Front L', label: 'Floor bar, front left', planned: true, profile: 'tube', universe: 4, address: 1 },
-  { id: 'H2', tag: 'Front R', label: 'Floor bar, front right', planned: true, profile: 'tube', universe: 4, address: 257 },
+  // The two horizontal floor bars at the stage front (H1, H2) were taken out for the December 2026 show: they
+  // won't be built in time. To bring them back: universe 4, addresses 1 and 257, and their places in RIG (main.js).
 ];
 
 export class Fixture {

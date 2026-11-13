@@ -4,7 +4,7 @@
       "sim": 1,
       "artnet": 1,
       "to": "192.168.1.100",
-      "note": "ICERAY box, DMX1 and DMX2: LB150 1 (1–12), LB150 2 (13–24)"
+      "note": "ICERAY box, DMX1 and DMX2: LB150 1 (1–12), LB150 2 (13–24), LB150 3 (25–36), LB150 4 (37–48)"
     },
     {
       "sim": 2,
