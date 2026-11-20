@@ -5,7 +5,7 @@
 // Songs and cues live in sim/show/ (see showstore.js).
 
 import { batch, computed, effect, signal } from '@preact/signals';
-import { beamHit, cue, hit, PALETTE, SCENE_LIST, show, tubeHit } from './show.js';
+import { beamHit, cue, DRUM_LOOKS, hit, PALETTE, SCENE_LIST, show, tubeHit, VARIANTS } from './show.js';
 import { addSong, loadShow, saveSong, showStore } from './showstore.js';
 
 export const LOOKS = SCENE_LIST.map(([id, label]) => ({ id, label }));
@@ -13,7 +13,7 @@ export const LOOK_LABEL = Object.fromEntries(LOOKS.map(l => [l.id, l.label]));
 export const LOOK_COLOUR = {
   ambient: '#4a6cff', sweep: '#9cc2ff', build: '#e0a21e', riff: '#e0301e', blast: '#ffffff',
   breakdown: '#a51c14', wall: '#f3f2ee', embers: '#ff7a1a', strobe: '#ffffff', blackout: '#555555',
-  slab: '#b0382c', shimmer: '#c9b6ff', silhouette: '#c4c4c4', searchlight: '#6fd3c7', collapse: '#b86a2c',
+  slab: '#b0382c', backlight: '#e0508c', fan: '#b4e86a', shimmer: '#c9b6ff', silhouette: '#c4c4c4', searchlight: '#6fd3c7', collapse: '#b86a2c',
   orbit: '#7fb0ff', drive: '#d0502a', surge: '#5cc8e8', glint: '#ffe9a8',
 };
 export const COLOURS = Object.keys(PALETTE);
@@ -27,9 +27,11 @@ export const parseTime = txt => {
 const frac = x => x - Math.floor(x);
 const byTime = (a, b) => a.t - b.t;
 export const clean = c => ({
+  id: Number.isInteger(c.id) && c.id > 0 ? c.id : 0,   // the cue's own number; 0 until number() gives it one
   t: Math.max(0, +c.t || 0),
   name: String(c.name ?? '').slice(0, 40),
   scene: LOOK_LABEL[c.scene] ? c.scene : 'ambient',
+  variant: VARIANTS[c.scene]?.[c.variant] ? c.variant : 0,   // which version of the look, for the looks that have several
   a: PALETTE[c.a] ? c.a : 'Red',
   b: PALETTE[c.b] ? c.b : 'Blue',
   bpm: Math.min(240, Math.max(40, Math.round(+c.bpm || 120))),
@@ -39,8 +41,30 @@ export const clean = c => ({
   react: REACTS.includes(c.react) ? c.react : 'crash',   // which live accents fire during this cue (live.js)
   punch: !!c.punch,   // lands with a white slam on everything: for the big entries, pressed right on the hit
 });
+// Every cue keeps a number of its own within its song, so it can be named ("New Land 17") whatever gets added,
+// moved or removed around it. A cue without one, or with one that's taken, gets the next free number.
+function number(list) {
+  const taken = new Set();
+  let top = Math.max(0, ...list.map(c => c.id));
+  for (const c of list) {
+    if (!c.id || taken.has(c.id)) c.id = ++top;
+    taken.add(c.id);
+  }
+  return list;
+}
 export const LEADS = ['left', 'right', 'trade'];
 export const REACTS = ['off', 'crash', 'guitar', 'all'];
+
+// What a cue answers to live, through the mixer: its look's own drum steps, then the accents chosen for it
+// (live.js). Empty when it answers to nothing.
+export function hears(c) {
+  if (c.scene === 'blackout' || c.scene === 'strobe') return '';
+  return [
+    DRUM_LOOKS.has(c.scene) ? 'drums' : c.react !== 'off' ? 'crashes' : '',
+    c.react === 'guitar' || c.react === 'all' ? 'guitars' : '',
+    c.react === 'all' ? 'fills' : '',
+  ].filter(Boolean).join(', ');
+}
 
 // ── state ───────────────────────────────────────────────────────────────────
 
@@ -73,7 +97,7 @@ function remember(key, value) { try { localStorage.setItem(key, JSON.stringify(v
 // ── songs ───────────────────────────────────────────────────────────────────
 
 export async function loadSongs(keep = songId.value) {
-  const list = (await loadShow()).map(s => ({ ...s, cues: s.cues.map(clean).sort(byTime) }));
+  const list = (await loadShow()).map(s => ({ ...s, cues: number(s.cues.map(clean).sort(byTime)) }));
   songs.value = list;
   const pick = list.find(s => s.id === keep) || list[0];
   if (pick && pick.id !== songId.value) selectSong(pick.id);
@@ -83,7 +107,7 @@ showStore.onStatus = text => { status.value = text; };
 showStore.onChange = (id, data) => {   // someone else edited the show
   if (id === '*' || !songs.value.some(s => s.id === id)) { loadSongs(); return; }
   batch(() => {
-    songs.value = songs.value.map(s => (s.id === id ? { ...s, cues: data.cues.map(clean).sort(byTime) } : s));
+    songs.value = songs.value.map(s => (s.id === id ? { ...s, cues: number(data.cues.map(clean).sort(byTime)) } : s));
     if (id === songId.value) index.value = Math.min(index.value, cues.value.length - 1);
     status.value = `Updated from another device · ${data.title}`;
   });
@@ -105,7 +129,7 @@ export function newSong(title) {
   const id = title.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `song-${Date.now()}`;
   if (!songs.value.some(s => s.id === id)) {
-    const s = { id, title, cues: [clean({ t: 0, name: 'Intro', scene: 'ambient' })] };
+    const s = { id, title, cues: number([clean({ t: 0, name: 'Intro', scene: 'ambient' })]) };
     songs.value = [...songs.value, s];
     addSong(s);
   }
@@ -114,7 +138,7 @@ export function newSong(title) {
 
 // Replace the current song's cues (kept in time order), keep `on` lit, and save.
 function setCues(next, on = cues.value[index.value]) {
-  const sorted = [...next].sort(byTime);
+  const sorted = number([...next].sort(byTime));
   batch(() => {
     songs.value = songs.value.map(s => (s.id === songId.value ? { ...s, cues: sorted } : s));
     index.value = on ? sorted.indexOf(on) : -1;
@@ -247,16 +271,16 @@ function activeIndexAt(p) {
 }
 // lock the tempo grid (and a build's countdown) to where we are in the song
 function align(c, p) {
-  const t = now(), into = p - c.t;
+  const t = now(), into = Math.max(0, p - c.t);   // a cue fires up to 20 ms early: its time starts at 0, not before
   show.beat0 = t - into + (c.phase * 60) / c.bpm;
-  if (show.scene === c.scene) show.cueT = t - into;
+  if (show.scene === c.scene && show.variant === c.variant) show.cueT = t - into;
 }
 function apply(i, p = null, cut = false, forward = true) {
   const c = cues.value[i];
   if (!c) return;
   index.value = i;
   show.colorA = c.a; show.colorB = c.b; show.bpm = c.bpm;
-  cue(c.scene, now(), cut ? 0 : (c.fade * 240) / c.bpm);
+  cue(c.scene, now(), cut ? 0 : (c.fade * 240) / c.bpm, c.variant);
   if (c.punch && !cut && forward) hit(now(), 1);   // not when jumping about or stepping back
   songT0 = now() - (p ?? c.t);
   align(c, p ?? c.t);
@@ -396,7 +420,7 @@ function peakOf(s, i) {
 }
 function songExtras(p) {
   const s = song.value, i = index.value, c = cues.value[i];
-  const running = c && show.scene === c.scene;   // the show is on this cue, not on a look picked by hand
+  const running = c && show.scene === c.scene && show.variant === c.variant;   // the show is on this cue, not on a look picked by hand
   show.lead = running ? c.lead : '';
   show.energy = 1;
   const recording = follow.value && playing.value;

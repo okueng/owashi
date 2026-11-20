@@ -17,7 +17,7 @@ import { mountSetlist } from './setlist-ui.js';
 import { createLabels } from './labels.js';
 import { actions as pedalActions, bridgeListeners, connect as connectPedal, connectBridge, connectIfAllowed, learnPads, PAD_COUNT, pedal, SMC_PAD_POCKET } from './pedal.js';
 import { inputs, onBridgeMessage, ROLES, setRole } from './inputs.js';
-import { configure as configureLive, live, setDarkOnStop } from './live.js';
+import { configure as configureLive, live, setDarkOnStop, tick as liveTick } from './live.js';
 
 // ── layout (metres; x = stage left→right as the audience sees it, z = towards the audience) ──
 // The rig is placed for the audience's sightlines and the beams' distance from the band's eyes. The stage is
@@ -46,13 +46,12 @@ const RIG = {
   P1: { pos: [-0.6, S, -2.05], tilt: 60 }, P2: { pos: [0.6, S, -2.05], tilt: 60 },
 };
 
-// Left to right as in the rehearsal room: Fab, Cyril, Romain (back), Olivier.
-// full = height in metres of the full-body picture in players/<id>.png (Fab's about 20 cm shorter than the
-// others; Romain's is seated); h and holds are for the fallback
-// cut-outs from the band photo (assets/band-2026-720.jpg + the ghost masks), with a low-poly instrument.
+// The trio, left to right as the audience sees it: Cyril, Romain (back), Olivier. Where Cyril stands now that he
+// is the only guitar is a guess (opposite Olivier); drag him.
+// full = height in metres of the full-body picture in players/<id>.webp (Romain's is seated); h and holds are for
+// the fallback cut-outs from the band photo (assets/band-2026-720.jpg + the ghost masks), with a low-poly instrument.
 const BAND = [
-  { id: 'fab', full: 1.6, h: 1.05, pos: [-1.45, S, 0.45], holds: { model: 'guitarB', at: [0.08, 0.5, 0.18], rotZ: -78 } },
-  { id: 'cyril', full: 1.8, h: 1.78, pos: [-0.6, S, 0.35], holds: { model: 'guitarA', at: [0.02, 0.98, 0.16], rotZ: -62 } },
+  { id: 'cyril', full: 1.8, h: 1.78, pos: [-1.1, S, 0.35], holds: { model: 'guitarA', at: [0.02, 0.98, 0.16], rotZ: -62 } },
   { id: 'romain', full: 1.3, h: 1.36, pos: [0, S, KIT_Z - 0.42] },   // on the throne, behind the kit
   { id: 'olivier', full: 1.8, h: 1.82, pos: [1.1, S, 0.35], holds: { model: 'bass', at: [0.02, 1.0, 0.16], rotZ: -62 } },
 ];
@@ -68,8 +67,7 @@ const MODELS = {
 };
 const PROPS = [
   { model: 'drums', pos: [0, S, KIT_Z] },
-  { model: 'guitarAmp', pos: [-1.72, S, -1.3], rotY: 10 },
-  { model: 'guitarAmp', pos: [-1.18, S, -1.55], rotY: 5 },
+  { model: 'guitarAmp', pos: [-1.45, S, -1.45], rotY: 15 },
   { model: 'bassAmp', pos: [1.45, S, -1.45], rotY: -15 },
 ];
 
@@ -496,7 +494,7 @@ const nextSong = () => { const l = setlist.songs.value, i = l.findIndex(x => x.i
 // Show mode's readout: the song, where we are in it, and what comes next
 function syncHud() {
   const s = setlist.song.value, cues = setlist.cues.value, i = setlist.index.value, cur = cues[i], next = cues[i + 1];
-  $('.hud-song').textContent = s?.title || 'No song';
+  $('.hud-song').textContent = s ? (cur ? `${s.title} · cue ${cur.id}` : s.title) : 'No song';
   $('.song-name').textContent = s?.title || 'No song';
   $('.hud-cue').textContent = show.scene === 'blackout' ? 'Blackout' : cur ? `${cur.name} · ${labelOf(show.scene)}` : labelOf(show.scene);
   $('.hud-next').textContent = !cues.length ? 'No cues yet: Next steps through the looks'
@@ -588,7 +586,7 @@ addEventListener('keyup', e => { if (e.code === 'Space') { e.preventDefault(); s
 // ── placing the players ─────────────────────────────────────────────────────
 // Drag a guitar player (or the ring at their feet) to move them around the deck.
 
-const movers = band.filter(m => ['fab', 'cyril', 'olivier'].includes(m.id));
+const movers = band.filter(m => ['cyril', 'olivier'].includes(m.id));
 for (const m of movers) {
   m.ring = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.34, 48).rotateX(-Math.PI / 2),
     new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3, depthWrite: false }));
@@ -1011,7 +1009,7 @@ inputs.onLevels = () => {
   if ($('.inputs').hidden) return;
   const now = performance.now();
   $('.inputs-live').textContent = show.autoChoke ? 'The band stopped: dark until the next hit'
-    : show.drums.live ? 'The drums are driving Riff, Blast, Breakdown and Wall'
+    : show.drums.live ? 'The drums are driving Riff, Blast, Breakdown, Wall, Drive and Backlight'
     : inputs.roles.some(r => r === 'kick' || r === 'snare') ? 'Waiting for the drums' : 'Give the kick and snare their roles to let the drums drive the looks';
   inputRows.forEach((r, i) => {
     r.bar.style.width = `${Math.max(0, Math.min(100, ((inputs.levels[i] ?? -90) + 60) / 60 * 100))}%`;
@@ -1046,12 +1044,19 @@ const beatDots = [...document.querySelectorAll('.beats i')];
 let frames = 0, fpsT = 0;
 
 // One step of what the lights do: nothing here depends on drawing, so it can run without a frame.
+// A look that fails must not stop the picture or the DMX: say so once, keep the last frame, and carry on.
+let lastBeat = 0, failed = '';
 function stepShow(t) {
-  setlist.tick();   // a song that's playing moves the cues (and the tempo grid) along
-  // mirroring a desk: the show stays out of the universes, the desk fills them
-  const beat = artnet.mode === 'mirror' ? (t - show.beat0) * show.bpm / 60 : updateShow(t);
+  try {
+    setlist.tick();   // a song that's playing moves the cues (and the tempo grid) along
+    liveTick();       // and its recording's drums drive the looks
+    // mirroring a desk: the show stays out of the universes, the desk fills them
+    lastBeat = artnet.mode === 'mirror' ? (t - show.beat0) * show.bpm / 60 : updateShow(t);
+  } catch (err) {
+    if (failed !== err.message) { failed = err.message; console.error(err); toast(`A look failed: ${err.message}`); }
+  }
   pump(performance.now());
-  return beat;
+  return lastBeat;
 }
 artnet.onTick = () => stepShow(showTime());   // while driving the rig, whatever the tab is doing
 

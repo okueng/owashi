@@ -1,6 +1,6 @@
 // Live: the band, heard through the mixer, drives what a clock can't. There's no click and the drums aren't
 // four-on-the-floor, so nothing here guesses a tempo. Romain's actual strokes are the clock instead:
-//   · the drum looks (Riff, Blast, Breakdown, Wall) step on his kicks, snares and crashes (show.drums);
+//   · the drum looks (show.js DRUM_LOOKS) step on his kicks, snares and crashes (show.drums);
 //   · each cue chooses which accents fire on top (its `react`): crashes, guitar jumps, fills. They're soft:
 //     the tubes swell in their own colour, the beams lift. The white slams belong to the cues that punch;
 //   · the band's level shapes the looks, like the recording's energy curve does in rehearsal;
@@ -10,7 +10,7 @@
 
 import { beamSwell, bloom, show } from './show.js';
 import { inputs } from './inputs.js';
-import { cues, index } from './setlist.js';
+import { cues, follow, index, playing, position, song } from './setlist.js';
 
 const STOP_STORE = 'owashi-sim:dark-on-stop';
 export const live = {
@@ -34,11 +34,15 @@ const BLOOM_GAP = 0.8;     // and the tubes swell for a crash or a fill at most 
 const D = show.drums;
 let lastGuitar = -10, lastBloom = -10;
 
+// While a recording plays the cues, the recording is the band: whatever the mixer hears then (nothing, another
+// song, the room) doesn't steer the lights. The drums in the recording do, replayed in step with it (tick).
+const onRecording = () => follow.value && playing.value;
 const react = () => cues.value[index.value]?.react ?? 'crash';
 // looks that already answer crashes themselves
 const OWN_CRASH = new Set(['riff', 'breakdown', 'wall']);
 
-inputs.hitListeners.add((ch, v, role, band) => {
+inputs.hitListeners.add((ch, v, role, band) => { if (!onRecording()) stroke(v, role, band); });
+function stroke(v, role, band) {
   const t = now(), r = react(), dark = show.scene === 'blackout' || show.scene === 'strobe';
   if (band === 'hi') {   // the cymbal band counts in the overheads only; their full-band hits are mostly the snare
     if (role !== 'overheads' || t - D.crash < SAME_CRASH) return;
@@ -54,7 +58,30 @@ inputs.hitListeners.add((ch, v, role, band) => {
     lastGuitar = t;
     beamSwell(t, 0.5 + 0.5 * v);
   }
-});
+}
+
+// ── a recording: its own drums, replayed ─────────────────────────────────────
+// The kicks, snares and crashes of a song's recording are found ahead of time (bridge/drums-from-mix.mjs, kept in
+// show/drums/). While the recording plays the cues, each is passed on as it goes by, as if the mixer had heard it,
+// so the drum looks and the crash accents move as they will with the band. Guitars and fills can't be told apart
+// in a mix: those accents only happen live.
+let lastP = -1, wasOnRecording = false;
+export function tick() {
+  if (!onRecording()) {
+    if (wasOnRecording) { wasOnRecording = false; D.live = false; }   // the mixer, if there is one, says so again
+    lastP = -1;
+    return;
+  }
+  wasOnRecording = true;
+  const d = song.value?.drums, p = position();
+  if (d && lastP >= 0 && p > lastP && p - lastP < 0.5) {   // not across a jump in the song
+    for (const s of d.kick) if (s > lastP && s <= p) stroke(1, 'kick', '');
+    for (const s of d.snare) if (s > lastP && s <= p) stroke(1, 'snare', '');
+    for (const [s, v] of d.crash) if (s > lastP && s <= p) stroke(v, 'overheads', 'hi');
+  }
+  lastP = p;
+  D.live = !!d && now() - D.lastKickOrSnare < LIVE_FOR;
+}
 
 // ── level: energy and stops ─────────────────────────────────────────────────
 
@@ -67,6 +94,7 @@ inputs.levelListeners.add(() => {
   const raw = any ? 10 * Math.log10(sum + 1e-12) : -90;
   live.level = raw > live.level ? raw : live.level + (raw - live.level) * 0.1;   // up at once, down over about half a second
   history.push(raw); if (history.length > 20) history.shift();
+  if (onRecording()) { show.autoChoke = false; show.liveEnergy = null; return; }   // the drums then come from tick()
   D.live = any && t - D.lastKickOrSnare < LIVE_FOR;
 
   // energy: how far the band has dropped below its loudest since this cue started (after the cue has landed)

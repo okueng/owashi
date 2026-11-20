@@ -6,7 +6,7 @@ import { useEffect, useRef } from 'preact/hooks';
 import { computed, useSignalEffect } from '@preact/signals';
 import htm from 'htm';
 import * as S from './setlist.js';
-import { PALETTE } from './show.js';
+import { PALETTE, VARIANTS } from './show.js';
 
 const html = htm.bind(h);
 
@@ -99,16 +99,23 @@ function CueRow({ c, i, on }) {
     const s = S.parseTime(e.currentTarget.value);
     if (s === null) e.currentTarget.value = S.fmt(c.t); else S.updateCue(i, { t: s });
   };
+  const hears = S.hears(c);
   return html`<li class=${on ? 'cue on' : 'cue'} style=${`--look:${S.LOOK_COLOUR[c.scene]}`} onClick=${jump}>
     <div class="l1">
+      <span class="id" title="This cue's number: it stays with the cue">${c.id}</span>
       <input class="t" value=${S.fmt(c.t)} aria-label="Cue time" size="6" onChange=${setTime} />
       <input class="n" value=${c.name} aria-label="Cue name" onChange=${e => S.updateCue(i, { name: e.currentTarget.value.trim() })} />
+      ${hears ? html`<span class="hears" title="What this cue follows live, through the mixer. With a recording, its drums and crashes are replayed; guitars and fills are not.">${hears}</span>` : null}
       <button class="x" aria-label="Delete cue" onClick=${() => S.deleteCue(i)}>×</button>
     </div>
     <div class="l2">
       <select class="look" aria-label="Look" value=${c.scene} onChange=${e => S.updateCue(i, { scene: e.currentTarget.value })}>
         ${S.LOOKS.map(l => html`<option key=${l.id} value=${l.id}>${l.label}</option>`)}
       </select>
+      ${on && VARIANTS[c.scene] ? html`<select class="look" aria-label="Version of the look" value=${c.variant} title="Which version of this look"
+        onChange=${e => S.updateCue(i, { variant: +e.currentTarget.value })}>
+        ${VARIANTS[c.scene].map((name, k) => html`<option key=${k} value=${k}>${name}</option>`)}
+      </select>` : null}
       ${['a', 'b'].map(slot => html`<button key=${slot} class="sw" style=${`--c:rgb(${PALETTE[c[slot]].rgb})`}
         title=${`Colour ${slot.toUpperCase()}: ${c[slot]} (click to change, shift-click to go back)`}
         onClick=${e => S.cycleColour(i, slot, e.shiftKey ? -1 : 1)}></button>`)}

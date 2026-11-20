@@ -34,7 +34,8 @@ export function setRole(ch, role) {
 
 // A channel without a role gets one from its name, when the name says it ("01 Kick", "OH L", "Gtr Fab"…).
 // Which guitar is left or right can't be told from a name: the first guitar is taken as left. Check them.
-// Romain names the band's own tracks after the players: Fab stands on the left, Cyril is the other guitar, Olivier plays bass.
+// Romain names the band's own tracks after the players: Cyril is the guitar, Olivier plays bass. ("Fab" is the second
+// guitar on the stems of 8 Nov 2026, from before the band became a trio.)
 const GUESS = [[/kick|bd\b|bass ?drum/i, 'kick'], [/snare|sn\b/i, 'snare'], [/tom/i, 'toms'], [/\boh\b|overhead|cymbal|crash|ride/i, 'overheads'],
   [/\bbass\b|\bbs\b|basse|olivier/i, 'bass'], [/\bfab\b/i, 'gtr-left'], [/cyril/i, 'gtr-right'], [/gu?i?ta?r|gtr/i, 'gtr']];
 function guessRoles() {

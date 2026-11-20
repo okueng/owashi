@@ -1,4 +1,5 @@
-// Where the show lives: JSON files in sim/show/ — setlist.json, and songs/<id>.json with each song's cues.
+// Where the show lives: JSON files in sim/show/ — setlist.json, songs/<id>.json with each song's cues, and
+// drums/<id>.json with the drum strokes found in its recording (read only: a tool writes those).
 // Opened from the bridge (http://localhost:8770/sim/), edits are written straight into those files, ready
 // to commit, and every other device on the network picks them up. Opened anywhere else — the website —
 // the files are read-only and edits stay in this browser.
@@ -34,9 +35,10 @@ export async function loadShow() {
     for (const s of local.get(LOCAL_SONGS) || []) if (!list.some(x => x.id === s.id)) list.push(s);
   }
   const songs = await Promise.all(list.map(async entry => {
-    const file = await fetchJson(`./show/songs/${entry.id}.json`, null);
+    // the song, and the drum strokes found in its recording (bridge/drums-from-mix.mjs), if that was run
+    const [file, drums] = await Promise.all([fetchJson(`./show/songs/${entry.id}.json`, null), fetchJson(`./show/drums/${entry.id}.json`, null)]);
     const mine = showStore.canSave ? null : local.get(LOCAL_CUES(entry.id));
-    return { ...entry, ...(file || {}), cues: mine || file?.cues || [{ t: 0, name: 'Intro', scene: 'ambient' }] };
+    return { ...entry, ...(file || {}), ...(drums ? { drums } : {}), cues: mine || file?.cues || [{ t: 0, name: 'Intro', scene: 'ambient' }] };
   }));
   showStore.onStatus(showStore.canSave
     ? 'Edits save to sim/show/ on this computer'

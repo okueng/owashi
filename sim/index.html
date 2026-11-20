@@ -190,6 +190,8 @@
   .setlist .cue{border-left:3px solid var(--look);padding:6px 6px 6px 8px;border-radius:4px;background:rgba(243,242,238,.03);cursor:pointer;display:grid;gap:4px}
   .setlist .cue.on{background:rgba(243,242,238,.12)}
   .setlist .cue .l1,.setlist .cue .l2{display:flex;gap:4px;align-items:center}
+  .setlist .cue .id{min-width:18px;text-align:right;color:var(--fg-3);font-size:11px;font-variant-numeric:tabular-nums}
+  .setlist .cue .hears{color:var(--fg-3);font-size:10px;white-space:nowrap}
   .setlist .cue .t{width:64px;font-variant-numeric:tabular-nums}
   .setlist .cue .n{flex:1;min-width:0}
   .setlist .cue .look{flex:1;min-width:0}
@@ -390,7 +392,7 @@
     <kbd>M / D / N</kbd><span>Foot pedal / DMX / labels</span>
     <kbd>V / H / Esc</kbd><span>Next view / hide everything / close a panel</span>
   </div>
-  <p style="color:var(--fg-2)">Drag Fab, Cyril or Olivier to move them around the stage. Drag anywhere else to look around.</p>
+  <p style="color:var(--fg-2)">Drag Cyril or Olivier to move them around the stage. Drag anywhere else to look around.</p>
   <form method="dialog"><button>Close</button></form>
 </dialog>
 

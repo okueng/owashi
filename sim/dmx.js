@@ -11,12 +11,13 @@ const hash = n => frac(Math.sin(n * 127.1 + 311.7) * 43758.5453);
 // a strobe made in software, for fixtures that can't strobe themselves: rate 0 = steady, 1 = fastest
 export const rateGate = (rate, t, maxHz = 20) => (rate <= 0 ? 1 : (t * (1 + rate * (maxHz - 1))) % 1 < 0.2 ? 1 : 0);
 
-// LB150 colour wheel. The fixture files only say "Colour 1–11". Slot 1 (value 13) is a red-orange on the
-// real heads; the rest of this order is a guess until someone steps through channel 8 (18, 23 … 63).
+// LB150 colour wheel, in the order of the manual's wheel drawing, read round from white towards red. The manual's
+// table only says "Color 1–11", so the direction comes from the real heads: colour 1 (value 13) is red and
+// colour 5 (value 33) is orange. The others haven't been looked at one by one. There is no violet on it.
 export const LB150_WHEEL = [
-  ['White', [1, 1, 1]], ['Red', [1, 0.14, 0.02]], ['Orange', [1, 0.32, 0]], ['Yellow', [1, 0.78, 0]],
-  ['Green', [0.08, 1, 0.12]], ['Cyan', [0, 0.8, 1]], ['Light blue', [0.5, 0.75, 1]], ['Blue', [0.04, 0.12, 1]],
-  ['UV', [0.32, 0, 1]], ['Magenta', [1, 0, 0.7]], ['Pink', [1, 0.35, 0.6]], ['CTO', [1, 0.66, 0.38]],
+  ['White', [1, 1, 1]], ['Red', [1, 0.14, 0.02]], ['Green', [0.08, 1, 0.12]], ['Blue', [0.04, 0.12, 1]],
+  ['Yellow', [1, 0.78, 0]], ['Orange', [1, 0.32, 0]], ['Rose red', [1, 0.1, 0.45]], ['Light blue', [0.5, 0.75, 1]],
+  ['Grass green', [0.45, 1, 0.2]], ['Cyan', [0, 0.8, 1]], ['3200K', [1, 0.72, 0.42]], ['5600K', [0.9, 0.95, 1]],
 ];
 
 export const PROFILES = {

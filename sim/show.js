@@ -17,7 +17,7 @@ export const PALETTE = {
   Ice: { rgb: [140, 195, 255], wheel: 'Light blue' },
   Teal: { rgb: [0, 170, 190], wheel: 'Cyan' },
   Blue: { rgb: [0, 24, 255], wheel: 'Blue' },
-  UV: { rgb: [60, 0, 255], wheel: 'UV', uv: 1 },
+  UV: { rgb: [60, 0, 255], wheel: 'Blue', uv: 1 },   // the heads' wheel has no violet: blue is the nearest
   Green: { rgb: [40, 255, 16], wheel: 'Green' },
 };
 
@@ -44,7 +44,8 @@ export const show = {
   // Set by the setlist while a song's cues are running; neutral otherwise.
   energy: 1,         // 0–1: how loud the music is now against the loudest moment of this cue (1 = no shaping)
   lead: '',          // '', 'left', 'right' or 'trade': whose beam carries the lead guitar (as the audience sees it)
-  from: null,        // the look we're fading out of: { scene, cueT, a, b }
+  variant: 0,        // which version of the look (VARIANTS); 0 for the looks that have only one
+  from: null,        // the look we're fading out of: { scene, cueT, a, b, variant }
   fromT: 0, fromLen: 0,
   // Set by live.js from the mixer: the drummer's strokes (show time), the band's level, and dead stops.
   drums: { live: false, kick: -10, snare: -10, crash: -10, hit: -10, kickN: 0, snareN: 0, crashN: 0, hitN: 0, lastKickOrSnare: -10 },
@@ -70,6 +71,8 @@ const WHITE = [255, 255, 255];
 const BLACK = [0, 0, 0];
 
 const frac = x => x - Math.floor(x);
+// n-th of `len`, going round; n may be negative (a cue can land a moment before its first beat)
+const wrap = (n, len) => ((n % len) + len) % len;
 const clamp01 = x => Math.min(1, Math.max(0, x));
 const mix = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
 const mul = (c, k) => [c[0] * k, c[1] * k, c[2] * k];
@@ -237,7 +240,7 @@ const SCENES = {
     }
     V.forEach((f, k) => paint(f, () => c, isBack(k) ? ring : e));
     line(() => c, e);
-    const pos = POSITIONS[(ph < 0.4 ? h : h + 1) % POSITIONS.length];
+    const pos = POSITIONS[wrap(ph < 0.4 ? h : h + 1, POSITIONS.length)];
     B.forEach((f, k) => beam(f, { ...pos(k), color: h % 4 === 0 ? 'White' : A.wheel, level: e }));
   },
 
@@ -286,17 +289,22 @@ const SCENES = {
 
   // Slow, heavy chords: solid colour that swells every two bars and never flickers. The weight sits low on the
   // back pair, the sides stay darker and lean towards B, and the beams hang out over the crowd, breathing with it.
-  slab({ t, beat, A, B: Bc }) {
+  // Crown turns it over: the weight hangs from the top, the sides lead, the beams stand straight up.
+  // Gate: the side pair stands full height, the back pair only glows at its feet, the beams open out to the walls.
+  slab({ t, beat, A, B: Bc, v }) {
     const ph = frac(beat / 8);
     const swell = smooth(0, 0.08, ph) * Math.exp(-ph * 2.5);
     const level = 0.55 + 0.45 * swell;
     V.forEach((f, k) => {
-      const back = isBack(k), c = back ? A.rgb : mix(A.rgb, Bc.rgb, 0.35);
-      paint(f, u => mul(c, 1 - 0.65 * u), back ? level : level * 0.6);
+      const back = isBack(k), main = v ? !back : back, c = main ? A.rgb : mix(A.rgb, Bc.rgb, 0.35);
+      const body = v === 2 ? (back ? u => 1 - smooth(0.1, 0.3, u) : u => 1 - 0.25 * u)
+        : v === 1 ? u => 1 - 0.65 * (1 - u) : u => 1 - 0.65 * u;
+      paint(f, u => mul(c, body(u)), main ? level : level * 0.6);
     });
     line(() => A.rgb, 0.3 * level);
+    const aim = v === 2 ? [55, 42] : v === 1 ? [12, 8] : [24, 26];
     B.forEach((f, k) => beam(f, {
-      pan: SIDE[k] * 24 + 6 * Math.sin(t * 0.08 + k), tilt: 26,
+      pan: SIDE[k] * aim[0] + (v ? 3 : 6) * Math.sin(t * 0.08 + k), tilt: aim[1],
       color: A.wheel, level: 0.2 + 0.5 * swell, speed: SLOW,
     }));
   },
@@ -304,19 +312,26 @@ const SCENES = {
   // Mid-tempo riffs and grooves, without the flashing: solid colour that sits low and heavy on the back pair and
   // rolls slowly up the tubes like heat. The beams hold a position in colour and glide to a new one every 8 bars.
   // Each kick is a soft thump at the foot of the back pair, each snare at the sides (live, the drummer's own).
-  drive({ t, beat, A, B: Bc }) {
+  // Split: each tube is lit over half its length only, the back pair from the floor, the sides from the top.
+  // Bands: the colour breaks into broad blocks that climb the tubes, a block every 2 bars, like a machine.
+  drive({ t, beat, A, B: Bc, v }) {
     const D = show.drums;
     const kick = D.live ? Math.exp(-(t - D.kick) * 5) : 0.6 * Math.exp(-frac(beat / 2) * 6);
     const snare = D.live ? Math.exp(-(t - D.snare) * 5) : 0.6 * Math.exp(-frac(beat / 2 + 0.5) * 6);
     V.forEach((f, k) => {
       const back = isBack(k), c = back ? A.rgb : mix(A.rgb, Bc.rgb, 0.45), th = back ? kick : snare;
       const lit = mix(c, WHITE, 0.3);
-      paint(f, u => {
+      const flip = v === 1 && !back;
+      paint(f, x => {
+        const u = flip ? 1 - x : x;   // measured from the end the weight sits at
         const roll = 0.85 + 0.15 * Math.sin((u * 0.9 - beat / 8) * Math.PI * 2 + k * 0.8);
-        return mix(mul(c, (1 - 0.45 * u) * roll), lit, 0.45 * th * (1 - smooth(0.15, 0.5, u)));
-      }, back ? 1 : 0.75);
+        const body = v === 1 ? 1 - 0.95 * smooth(0.35, 0.65, u)
+          : v === 2 ? 0.08 + 0.92 * smooth(-0.2, 0.2, Math.sin((u * 2.5 - beat / 8 - (back ? 0 : 0.5)) * Math.PI * 2))
+          : 1 - 0.45 * u;
+        return mix(mul(c, body * roll), lit, 0.45 * th * (1 - smooth(0.15, 0.5, u)));
+      }, back || v === 1 ? 1 : 0.75);
     });
-    const pos = DRIVE_POSITIONS[Math.floor(beat / 32) % DRIVE_POSITIONS.length];
+    const pos = DRIVE_POSITIONS[wrap(Math.floor(beat / 32) + v, DRIVE_POSITIONS.length)];
     B.forEach((f, k) => {
       const at = pos(k);
       beam(f, { pan: at.pan + 3 * Math.sin(t * 0.1 + k), tilt: at.tilt + 2 * Math.sin(t * 0.13 + k * 2), color: A.wheel, level: 0.55, speed: SLOW });
@@ -326,16 +341,44 @@ const SCENES = {
   // Fast thrash and double kick, as speed rather than flashing: crests of light rise up the tubes one after
   // another, about one a bar, the back pair half a step ahead of the sides. Nothing switches off between them.
   // The beams fan wide and tilt slowly against each other. It runs free, so it needs no beat to lock to.
-  surge({ t, beat, A, B: Bc }) {
+  // Falling: the crests come down the tubes instead, and the beams cross over the middle.
+  // From the middle: the crests leave the middle of each tube for both ends, and the beams stand up in a tight fan.
+  surge({ t, beat, A, B: Bc, v }) {
     const low = mix(mul(Bc.rgb, 0.45), mul(A.rgb, 0.45), 0.5), high = mix(A.rgb, WHITE, 0.4);
+    const along = v === 2 ? u => Math.abs(u - 0.5) * 1.8 : v === 1 ? u => -u * 1.4 : u => u * 1.4;
     V.forEach((f, k) => {
       const off = (isBack(k) ? 0 : 0.5) + (k < 2 ? 0 : 0.13);
-      paint(f, u => mix(low, high, (0.5 + 0.5 * Math.sin((u * 1.4 - beat / 4 - off) * Math.PI * 2)) ** 1.6), isBack(k) ? 1 : 0.85);
+      paint(f, u => mix(low, high, (0.5 + 0.5 * Math.sin((along(u) - beat / 4 - off) * Math.PI * 2)) ** 1.6), isBack(k) ? 1 : 0.85);
     });
     B.forEach((f, k) => beam(f, {
-      pan: SIDE[k] * (36 + 10 * Math.sin(t * 0.21 + k)), tilt: 26 + 14 * Math.sin(t * 0.33 + k * Math.PI),
+      ...(v === 2 ? { pan: SIDE[k] * (14 + 8 * Math.sin(t * 0.21 + k)), tilt: 12 + 6 * Math.sin(t * 0.33 + k * Math.PI) }
+        : v === 1 ? { pan: -SIDE[k] * (30 + 8 * Math.sin(t * 0.21 + k)), tilt: 34 + 8 * Math.sin(t * 0.33 + k * Math.PI) }
+        : { pan: SIDE[k] * (36 + 10 * Math.sin(t * 0.21 + k)), tilt: 26 + 14 * Math.sin(t * 0.33 + k * Math.PI) }),
       color: A.wheel, level: 0.7, speed: SLOW,
     }));
+  },
+
+  // The tubes go dark and the band stands in black against the two PARs behind the kit, which fill the haze with A.
+  // The four beams hold a still, low fan in B above them. All that moves is a soft thump at the foot of the back
+  // pair on each kick. For the darkest heavy parts: sludge, half-time, breakdowns.
+  backlight({ t, beat, A, B: Bc }) {
+    const D = show.drums;
+    const kick = D.live ? Math.exp(-(t - D.kick) * 5) : 0.6 * Math.exp(-frac(beat / 2) * 6);
+    V.forEach((f, k) => paint(f, u => mul(A.rgb, 1 - smooth(0.02, 0.14, u)), isBack(k) ? 0.2 + 0.6 * kick : 0));
+    line(() => BLACK, 0);
+    B.forEach((f, k) => beam(f, {
+      pan: SIDE[k] * (34 + 3 * Math.sin(t * 0.1 + k)), tilt: 34 + 2 * Math.sin(t * 0.13 + k * 2),
+      color: Bc.wheel, level: 0.4, speed: SLOW,
+    }));
+  },
+
+  // The four beams are the look: they open from straight up into a wide fan and close again, once every 4 bars,
+  // in A. The tubes keep a glow of B at their feet and the PARs stay low, so nothing competes with the beams.
+  fan({ beat, A, B: Bc }) {
+    V.forEach((f, k) => paint(f, u => mul(Bc.rgb, 1 - smooth(0, 0.3, u)), isBack(k) ? 0.25 : 0.12));
+    line(() => BLACK, 0);
+    const open = 0.5 - 0.5 * Math.cos(beat * Math.PI / 8);
+    B.forEach((f, k) => beam(f, { pan: SIDE[k] * (6 + 44 * open), tilt: 6 + 36 * open, color: A.wheel, speed: SLOW }));
   },
 
   // Shred solos: the tubes glitter, every chunk on its own, so the brightness holds steady, while the beams
@@ -451,6 +494,8 @@ export const SCENE_LIST = [
   ['surge', 'Surge', 'c', 'Heavy', 'Fast thrash: crests of light rising up the tubes, beams fanned wide, no flashing'],
   ['glint', 'Glint', 'f', 'Heavy', 'Shred solos: tubes glitter in the song colour, beams crossed high'],
   ['slab', 'Slab', 'q', 'Heavy', 'Big slow chords: solid colour swelling every 2 bars, no flicker'],
+  ['backlight', 'Backlight', 'k', 'Heavy', 'The band in black against the PARs behind the kit: tubes dark, beams in a still fan'],
+  ['fan', 'Fan', 'l', 'Heavy', 'The four beams open into a wide fan and close again every 4 bars; tubes almost off'],
   ['riff', 'Riff', '4', 'Heavy', 'Back and side tubes trade beats, white on every downbeat'],
   ['blast', 'Blast', '5', 'Heavy', 'Blast beats: white sparks on sixteenths, beams whipping every beat'],
   ['breakdown', 'Breakdown', '6', 'Heavy', 'Half-time slams: everything hits, the back tubes ring on'],
@@ -459,11 +504,23 @@ export const SCENE_LIST = [
   ['blackout', 'Blackout', '0', 'Cut', 'Everything dark; the heads hold their position'],
 ];
 
+// The looks that come in more than one version, and what each is called. A cue picks one; picked by hand, a look
+// is always its first.
+export const VARIANTS = {
+  drive: ['Low on the back', 'Split', 'Bands'],
+  surge: ['Rising', 'Falling', 'From the middle'],
+  slab: ['Low', 'Crown', 'Gate'],
+};
+
+// The looks that step on the drummer's own kicks and snares when the mixer hears them (and on a clock when not).
+export const DRUM_LOOKS = new Set(['riff', 'blast', 'breakdown', 'wall', 'drive', 'backlight']);
+
 // Switch to a look, cutting, or fading in from the one that's on over `fade` seconds.
-export function cue(id, t, fade = 0) {
-  show.from = fade > 0 ? { scene: show.scene, cueT: show.cueT, a: lastA, b: lastB } : null;
+export function cue(id, t, fade = 0, variant = 0) {
+  show.from = fade > 0 ? { scene: show.scene, cueT: show.cueT, a: lastA, b: lastB, variant: show.variant } : null;
   show.fromT = t; show.fromLen = fade;
   show.scene = id;
+  show.variant = VARIANTS[id]?.[variant] ? variant : 0;
   show.cueT = t;
 }
 
@@ -510,7 +567,7 @@ function blend(k) {
 // Energy shaping: the looks that hold steady for a whole section breathe with the recording instead, dimming and
 // lighting less of the tubes when the music drops below the loudest moment of the cue. Looks with an arc of their
 // own (Build, Shimmer, Collapse) and the cuts and holds are left alone.
-const SHAPED = new Set(['ambient', 'sweep', 'searchlight', 'orbit', 'embers', 'riff', 'slab', 'blast', 'breakdown', 'wall', 'drive', 'surge', 'glint']);
+const SHAPED = new Set(['ambient', 'sweep', 'searchlight', 'orbit', 'embers', 'riff', 'slab', 'blast', 'breakdown', 'wall', 'drive', 'surge', 'glint', 'backlight', 'fan']);
 function shape(e) {
   const top = 0.55 + 0.45 * e;   // how far up the tubes stay lit
   for (const f of V) {
@@ -528,8 +585,9 @@ function shape(e) {
 // them a level and one of the two colours, and they glide there over about a second, so a cue change never
 // snaps them. They don't strobe, except with the held Flash.
 const P = ['P1', 'P2'].map(id => byId[id]).filter(Boolean);
-const WASH_MAX = 0.6;   // they face the audience, so only a punch takes them past this
+const WASH_MAX = 0.6;   // they face the audience, so only a punch and Backlight, where they are the look, go past this
 const WASH = {
+  backlight: [1.4, 'A'], fan: [0.15, 'B'],
   ambient: [0.15, 'B'], sweep: [0.3, 'B'], silhouette: [0, 'B'], searchlight: [0.06, 'B'], orbit: [0.12, 'B'], embers: [0.1, 'A'],
   build: [0.5, 'A'], shimmer: [0.45, 'A'], collapse: [0.2, 'A'], drive: [0.55, 'A'], surge: [0.65, 'A'], glint: [0.4, 'A'],
   slab: [0.7, 'A'], riff: [0.6, 'A'], blast: [0.7, 'A'], breakdown: [0.6, 'A'], wall: [1, 'A'], strobe: [0, 'A'], blackout: [0, 'A'],
@@ -537,7 +595,7 @@ const WASH = {
 const wash = { level: 0, rgb: [0, 0, 0], amber: 0, uv: 0, t: 0 };
 function washPars(t, a, b) {
   const [lv, which] = WASH[show.scene] || [0, 'A'], C = PALETTE[which === 'A' ? a : b];
-  const target = lv * WASH_MAX * (SHAPED.has(show.scene) ? 0.6 + 0.4 * show.energy : 1);
+  const target = Math.min(1, lv * WASH_MAX) * (SHAPED.has(show.scene) ? 0.6 + 0.4 * show.energy : 1);
   const k = 1 - Math.exp(-Math.min(0.2, Math.max(0, t - wash.t)) / 0.35);
   wash.t = t;
   wash.level += (target - wash.level) * k;
@@ -564,10 +622,10 @@ export function updateShow(t) {
   const fading = show.from && t - show.fromT < show.fromLen;
   if (fading) {
     const o = show.from;
-    SCENES[o.scene]({ t, beat, since: (t - o.cueT) * show.bpm / 60, A: PALETTE[o.a], B: PALETTE[o.b] });
+    SCENES[o.scene]({ t, beat, since: (t - o.cueT) * show.bpm / 60, A: PALETTE[o.a], B: PALETTE[o.b], v: o.variant });
     keep();
   } else show.from = null;
-  SCENES[show.scene]({ t, beat, since, A: PALETTE[a], B: PALETTE[b] });
+  SCENES[show.scene]({ t, beat, since, A: PALETTE[a], B: PALETTE[b], v: show.variant });
   if (fading) blend(smooth(0, 1, (t - show.fromT) / show.fromLen));
   lastA = a; lastB = b;
   if (show.energy < 0.999 && SHAPED.has(show.scene)) shape(show.energy);
@@ -582,7 +640,7 @@ export function updateShow(t) {
       for (let i = 0; i < f.n; i++) { f.getZone(i, px); f.setZone(i, Math.min(255, px[0] * g), Math.min(255, px[1] * g), Math.min(255, px[2] * g)); }
       f.level(Math.min(1, f.getLevel() + 0.3 * bl));
     }
-    for (const f of P) f.level(Math.min(WASH_MAX, f.getLevel() + 0.15 * bl));
+    for (const f of P) f.level(Math.max(f.getLevel(), Math.min(WASH_MAX, f.getLevel() + 0.15 * bl)));
   }
   const sw = Math.max(0.5 * bl, Math.exp(-(t - show.swellT) * 1.6) * show.swellV);
   if (sw > 0.02) for (const f of B) if (f.get('Shutter') > 10) f.level(Math.min(1, f.getLevel() + 0.45 * sw));
