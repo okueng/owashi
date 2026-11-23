@@ -418,14 +418,24 @@ function peakOf(s, i) {
   }
   return peaks.get(key);
 }
+function nextMarkCue(s, i) {
+  const after = s.cues.slice(i + 1).find(c => c.scene !== 'blackout');
+  if (after) return after;
+  const list = songs.value, si = list.findIndex(x => x.id === s.id);
+  const nextSong = si >= 0 ? list[si + 1] : null;
+  return nextSong?.cues?.find(c => c.scene !== 'blackout') || null;
+}
 function songExtras(p) {
   const s = song.value, i = index.value, c = cues.value[i];
   const running = c && show.scene === c.scene && show.variant === c.variant;   // the show is on this cue, not on a look picked by hand
   show.lead = running ? c.lead : '';
+  // Move in Black: while sitting on a blackout cue, silently pre-aim the heads for the next lit cue
+  const next = running && c.scene === 'blackout' ? nextMarkCue(s, i) : null;
+  show.mark = next ? { scene: next.scene, variant: next.variant, a: next.a, b: next.b, bpm: next.bpm } : null;
   show.energy = 1;
   const recording = follow.value && playing.value;
-  if (running && !recording && show.liveEnergy !== null) show.energy = show.liveEnergy;   // the band, through the mixer
-  else if (running && s.energy?.values?.length) {
+  if (running && !recording) show.energy = show.liveEnergy ?? 1;   // live: only the mixer shapes energy, never a drifted recording
+  else if (running && recording && s.energy?.values?.length) {
     const drop = Math.min(1, Math.max(0, (peakOf(s, i) - energyAt(s.energy, p)) / 0.45));   // only a real drop dims it
     show.energy = 1 - drop * Math.min(1, Math.max(0, p - c.t - LAND));
   }

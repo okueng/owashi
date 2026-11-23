@@ -4,6 +4,8 @@
 
 const STORE = 'owashi-sim:pedal';
 const SAME_PRESS_MS = 40;    // one press can arrive twice, over USB and Bluetooth at once; quick drumming can't
+const PEDAL_DEBOUNCE_MS = 350;   // guard foot switches (next / back / blackout) against accidental boot double-bounces
+const TAP_DEBOUNCE_MS = 120;     // tap tempo stays responsive up to ~240+ BPM
 const PAD_STORE = 'owashi-sim:pad';
 export const PAD_COUNT = 16;
 // The M-Vave SMC-PAD Pocket as it comes, read from Midi Suite on 2026-11-08: channel 10, PAD 1 (bottom left) is
@@ -85,6 +87,7 @@ const COPY_WINDOW_MS = 1000;
 const heardOn = new Map();     // key → { from, at }
 
 let lastKey = '', lastAt = -1e9;
+const lastActionAt = new Map();
 export function handle(data, now = performance.now(), from = '') {
   const m = parse(data);
   if (!m) return;
@@ -131,7 +134,12 @@ export function handle(data, now = performance.now(), from = '') {
   if (pad >= 0) return pedal.onPad(pad, m.down, m.v || 1);
   if (!m.down) return;
   const action = actions.find(a => pedal.map[a.id] === m.key);
-  if (action) pedal.onAction(action.id);
+  if (action) {
+    const minGap = action.id === 'tap' ? TAP_DEBOUNCE_MS : PEDAL_DEBOUNCE_MS;
+    if (now - (lastActionAt.get(action.id) ?? -1e9) < minGap) return;
+    lastActionAt.set(action.id, now);
+    pedal.onAction(action.id);
+  }
   pedal.onChange();
 }
 

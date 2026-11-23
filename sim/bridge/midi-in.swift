@@ -12,12 +12,20 @@ import Foundation
 setvbuf(stdout, nil, _IOLBF, 0)
 var client = MIDIClientRef()
 var port = MIDIPortRef()
-var connected = Set<MIDIUniqueID>()
+// Connected sources keyed by endpoint handle, keeping the retained display-name pointer so we can
+// cleanly disconnect & reconnect when a Bluetooth pedal (Chocolate / SMC-PAD) sleeps and wakes up.
+var connected = [MIDIEndpointRef: UnsafeMutableRawPointer]()
 
 func name(_ e: MIDIEndpointRef) -> String {
     var n: Unmanaged<CFString>?
     MIDIObjectGetStringProperty(e, kMIDIPropertyDisplayName, &n)
     return (n?.takeRetainedValue() as String?) ?? "MIDI device"
+}
+
+func isOffline(_ e: MIDIEndpointRef) -> Bool {
+    var offline: Int32 = 0
+    MIDIObjectGetIntegerProperty(e, kMIDIPropertyOffline, &offline)
+    return offline != 0
 }
 
 // Split a packet into messages: one packet can carry several, with running status.
@@ -41,16 +49,27 @@ func messages(_ bytes: [UInt8]) -> [[UInt8]] {
 }
 
 func connectAll() {
+    var active = Set<MIDIEndpointRef>()
     var names: [String] = []
     for i in 0..<MIDIGetNumberOfSources() {
         let s = MIDIGetSource(i)
-        var id: MIDIUniqueID = 0
-        MIDIObjectGetIntegerProperty(s, kMIDIPropertyUniqueID, &id)
+        if isOffline(s) { continue }
+        active.insert(s)
         let label = name(s)
         names.append(label)
-        if connected.contains(id) { continue }
-        connected.insert(id)
-        MIDIPortConnectSource(port, s, Unmanaged.passRetained(label as NSString).toOpaque())
+        if connected[s] != nil { continue }
+        let ctx = Unmanaged.passRetained(label as NSString).toOpaque()
+        if MIDIPortConnectSource(port, s, ctx) == noErr {
+            connected[s] = ctx
+        } else {
+            Unmanaged<NSString>.fromOpaque(ctx).release()
+        }
+    }
+    // Prune sources that vanished or went offline so a Bluetooth reconnect always re-attaches cleanly.
+    for (s, ctx) in connected where !active.contains(s) {
+        MIDIPortDisconnectSource(port, s)
+        Unmanaged<NSString>.fromOpaque(ctx).release()
+        connected.removeValue(forKey: s)
     }
     print("sources\t" + names.joined(separator: "|"))
 }

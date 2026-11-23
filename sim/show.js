@@ -55,6 +55,7 @@ export const show = {
   bloomT: -10, bloomV: 0,   // a live crash: the tubes swell in their own colour (no white flash)
   swellT: -10, swellV: 0,   // a live guitar jump: the beams lift
   guitarBoost: 0,           // 0–1: sustained lead guitar above its rolling baseline (live.js)
+  mark: null,               // next lit cue to pre-position heads for during blackout (Move in Black)
   wheelTest: null,          // null, or { name, dmx } while testing LB150 colour wheel slots at soundcheck
 };
 
@@ -246,15 +247,21 @@ const SCENES = {
     B.forEach((f, k) => beam(f, { ...pos(k), color: h % 4 === 0 ? 'White' : A.wheel, level: e }));
   },
 
-  // Wall of sound / climax, and the one place the band is fully revealed: tubes full, white crowns reaching
-  // lower on the back pair, all swelling every bar with the white front line. The beams fan up through
-  // the haze with the 6-facet prism turning slowly, which no other look uses.
+  // Wall of sound / climax, and the one place the band is fully revealed: tubes full with a molten upward
+  // shimmer and white crowns that surge down on live crashes. The beams fan up through the haze with the
+  // 6-facet prism turning slowly, which no other look uses.
   wall({ t, beat, A }) {
-    const D = show.drums;   // live, it swells on the crashes rather than every bar
-    const swell = 0.78 + 0.22 * (D.live ? Math.exp(-(t - D.crash) * 1.1) : Math.exp(-frac(beat / 4) * 2.5));
+    const D = show.drums;   // live, it swells and surges on the crashes rather than every bar
+    const crash = D.live ? Math.exp(-(t - D.crash) * 1.4) : Math.exp(-frac(beat / 4) * 2.5);
+    const swell = 0.78 + 0.22 * crash;
     V.forEach((f, k) => {
-      const crown = isBack(k) ? 0.68 : 0.78;
-      paint(f, u => mix(A.rgb, WHITE, smooth(crown, crown + 0.08, u)), swell);
+      const crown = (isBack(k) ? 0.68 : 0.78) - 0.14 * crash;
+      paint(f, u => {
+        const wave = 0.84 + 0.16 * Math.sin((u * 2.2 - t * 0.9) * Math.PI * 2 + k * 1.1);
+        const edge = 0.08 * twinkle(t * 0.5, Math.floor(u * 24) + k * 80);
+        const body = mul(A.rgb, wave);
+        return mix(body, WHITE, smooth(crown - edge, crown + 0.1, u));
+      }, swell);
     });
     line(() => WHITE, swell);
     B.forEach((f, k) => beam(f, {
@@ -710,6 +717,17 @@ export function updateShow(t) {
   SCENES[show.scene]({ t, beat, since, A: PALETTE[a], B: PALETTE[b], v: show.variant });
   if (fading) blend(fadeK);
   lastA = a; lastB = b;
+  // Move in Black ("Mark"): while dark on a blackout cue (and after any blackout punch has died), silently
+  // pre-position the closed heads' pan/tilt, colour wheel and prism for the upcoming cue at quiet SLOW speed.
+  const slam = (at, v) => Math.exp(-(t - at) * 6) * v;
+  const h = slam(show.hitT, show.hitV);
+  const ht = Math.max(h, slam(show.tubeHitT, show.tubeHitV)), hb = Math.max(h, slam(show.beamHitT, show.beamHitV));
+  if (show.scene === 'blackout' && !fading && !show.flash && hb <= 0.02 && show.mark && SCENES[show.mark.scene]) {
+    const m = show.mark;
+    SCENES[m.scene]({ t, beat: 0, since: 0, A: PALETTE[m.a] || PALETTE.Red, B: PALETTE[m.b] || PALETTE.Blue, v: m.variant || 0 });
+    BARS.forEach(f => paint(f, () => BLACK, 0));
+    B.forEach(f => { f.set('P/T speed', SLOW); dark(f); });
+  }
   if (show.energy < 0.999 && SHAPED.has(show.scene)) shape(show.energy);
   if (show.lead && SHAPED.has(show.scene)) leadBeams(show.lead === 'trade' ? (Math.floor(beat / 8) % 2 ? 'right' : 'left') : show.lead);
   if (P.length) washPars(t, a, b, fadeK);
@@ -739,9 +757,6 @@ export function updateShow(t) {
   // one-shot accents on top of any look: a white slam on LEDs (tubes + PARs) that dies in half a second.
   // Moving heads punch to full dimmer in the cue's own wheel colour so the mechanical wheel doesn't flash rainbows;
   // only blackout/strobe punches switch the wheel to White.
-  const slam = (at, v) => Math.exp(-(t - at) * 6) * v;
-  const h = slam(show.hitT, show.hitV);
-  const ht = Math.max(h, slam(show.tubeHitT, show.tubeHitV)), hb = Math.max(h, slam(show.beamHitT, show.beamHitV));
   if (ht > 0.02) {
     for (const f of BARS) {
       for (let i = 0; i < f.n; i++) f.setZone(i, ...mix(f.getZone(i, px), WHITE, ht));

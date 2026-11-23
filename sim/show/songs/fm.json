@@ -4,8 +4,23 @@
   "audio": "recordings/fm-2026-11-15.mp3",
   "cues": [
     {
-      "id": 1,
+      "id": 14,
       "t": 0,
+      "name": "Before the first swell",
+      "scene": "blackout",
+      "variant": 0,
+      "a": "Red",
+      "b": "Blue",
+      "bpm": 108,
+      "phase": 0,
+      "fade": 0,
+      "lead": "",
+      "react": "off",
+      "punch": false
+    },
+    {
+      "id": 1,
+      "t": 0.3,
       "name": "Signal in the dark: swells",
       "scene": "searchlight",
       "variant": 0,
