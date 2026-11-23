@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Ōwashi — Instrumental progressive rock</title>
-<meta name="description" content="Ōwashi — quatuor de rock progressif instrumental basé en Suisse romande. Riffs mélodiques, textures planantes et poussées métal.">
+<meta name="description" content="Ōwashi — trio de rock progressif instrumental basé en Suisse romande. Riffs mélodiques, textures planantes et poussées métal.">
 <meta property="og:title" content="Ōwashi — Instrumental progressive rock">
-<meta property="og:description" content="Quatuor de rock progressif instrumental basé en Suisse romande.">
+<meta property="og:description" content="Trio de rock progressif instrumental basé en Suisse romande.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://owashi.band">
 <meta property="og:locale" content="fr_CH">
@@ -17,7 +17,7 @@
 <meta property="og:image:alt" content="Ōwashi">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Ōwashi — Instrumental progressive rock">
-<meta name="twitter:description" content="Quatuor de rock progressif instrumental basé en Suisse romande.">
+<meta name="twitter:description" content="Trio de rock progressif instrumental basé en Suisse romande.">
 <meta name="twitter:image" content="https://owashi.band/assets/og-image.jpg">
 <meta name="theme-color" content="#0b0b0c">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
@@ -203,19 +203,27 @@
   /* ---- Live ---- */
   .gigs{list-style:none;border-top:1px solid var(--line-2)}
   .gigs li{
-    display:grid;grid-template-columns:minmax(0,3fr) minmax(0,6fr) minmax(0,3fr);
+    display:grid;grid-template-columns:minmax(0,3fr) minmax(0,5fr) minmax(0,2.5fr) auto;
     gap:10px 24px;align-items:baseline;
     padding:22px 0;border-bottom:1px solid var(--line);
   }
   .gigs time{font-size:clamp(20px,2.2vw,30px);font-weight:400;letter-spacing:-.01em;font-variant-numeric:tabular-nums;white-space:nowrap}
   .gigs .venue{font-size:clamp(18px,1.8vw,24px);color:var(--fg)}
   .gigs .city{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--fg-2);text-align:right;font-weight:400}
+  .gigs .cal{
+    font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;font-weight:400;
+    color:var(--fg-3);border:1px solid var(--line-2);border-radius:999px;
+    padding:4px 11px;white-space:nowrap;transition:color .2s,border-color .2s,background .2s;
+  }
+  .gigs .cal:hover,.gigs .cal:focus-visible{color:var(--bg);background:var(--fg);border-color:var(--fg);outline:none}
   .gigs li.past{opacity:.38}
-  @media(max-width:560px){
+  .gigs li.past .cal{display:none}
+  @media(max-width:640px){
     .gigs li{grid-template-columns:1fr auto}
     .gigs time{grid-row:1;grid-column:1}
     .gigs .city{grid-row:1;grid-column:2}
-    .gigs .venue{grid-row:2;grid-column:1/-1;margin-top:-4px}
+    .gigs .venue{grid-row:2;grid-column:1;margin-top:-4px}
+    .gigs .cal{grid-row:2;grid-column:2;justify-self:end;align-self:center;margin-top:-4px}
   }
 
   /* ---- Listen ---- */
@@ -244,7 +252,7 @@
   .band .aside strong{font-weight:400;color:var(--fg)}
   .band .grid{grid-template-columns:minmax(0,6fr) minmax(0,5fr);align-items:center}
   /* band photo: edges dissolve into the section, the ground falls away like the page's bottom fade */
-  .band .photo{position:relative;justify-self:end;width:min(100%,460px);aspect-ratio:1200/2133}
+  .band .photo{position:relative;justify-self:end;width:min(100%,460px);aspect-ratio:1040/1950}
   .band .photo img{
     width:100%;height:100%;object-fit:cover;
     -webkit-mask-image:linear-gradient(90deg,transparent,#000 11%,#000 89%,transparent),linear-gradient(180deg,transparent,#000 9%,#000 74%,transparent);
@@ -253,8 +261,10 @@
     mask-composite:intersect;
   }
   /* easter egg: a name lets that member's spirit drift up out of the photo */
-  .band .member{cursor:default;transition:text-shadow .8s}
-  .band .member.haunt{text-shadow:0 0 16px rgba(226,229,236,.6)}
+  .band .member{cursor:pointer;border-bottom:1px dotted var(--line-2);transition:text-shadow .8s,border-color .25s}
+  .band .member:hover,.band .member:focus-visible{border-color:var(--fg-2)}
+  .band .member:focus-visible{outline:1px solid var(--fg-2);outline-offset:3px;border-radius:2px}
+  .band .member.haunt{text-shadow:0 0 16px rgba(226,229,236,.6);border-color:var(--fg)}
   .spirit,.husk{
     position:absolute;inset:0;pointer-events:none;opacity:0;
     /* the member's silhouette, cut by the same side fade as the photo (not the top: spirits leave through it) */
@@ -344,7 +354,7 @@
   </section>
   </div>
 
-  <section id="about">
+  <section id="about" aria-label="About">
     <div class="wrap block">
       <div class="grid">
         <p class="lede" data-i18n="about.lede">Un <strong>rock progressif instrumental</strong> immersif, entre riffs mélodiques, textures planantes et poussées métal.</p>
@@ -355,7 +365,7 @@
     </div>
   </section>
 
-  <section id="live">
+  <section id="live" aria-label="Live dates">
     <div class="wrap block">
       <ul class="gigs">
         <li><time datetime="2026-11-28">28 nov. 2026</time><span class="venue">Pression et Distortions</span><span class="city">Renens</span></li>
@@ -364,7 +374,7 @@
     </div>
   </section>
 
-  <section id="listen">
+  <section id="listen" aria-label="Listen">
     <div class="wrap block">
       <div class="player">
         <iframe
@@ -377,20 +387,20 @@
     </div>
   </section>
 
-  <section id="band" class="band">
+  <section id="band" class="band" aria-label="The band">
     <div class="wrap block">
       <div class="grid">
-        <p class="aside" data-i18n="band.text">Le groupe s'est construit autour des compositions originales de <strong>Cyril</strong>, aujourd'hui rejointes par celles de <strong>Fab</strong>. Tous deux se partagent guitares lead et rythmique ; <strong>Olivier</strong> (basse) et <strong>Romain</strong> (batterie) enrichissent chaque morceau de leurs influences et sensibilités.</p>
+        <p class="aside" data-i18n="band.text">Le groupe s'est construit autour des compositions originales de <strong>Cyril</strong> (guitare) ; <strong>Olivier</strong> (basse) et <strong>Romain</strong> (batterie) enrichissent chaque morceau de leurs influences et sensibilités.</p>
         <figure class="photo">
-          <img src="assets/band-2026.jpg" srcset="assets/band-2026-720.jpg 720w, assets/band-2026.jpg 1200w" sizes="(max-width: 760px) 100vw, 460px"
-            width="1200" height="2133" loading="lazy" decoding="async"
-            alt="Ōwashi : Cyril, Fab, Olivier et Romain devant une façade vitrée" data-i18n-alt="band.alt">
+          <img src="assets/band-2026.jpg" srcset="assets/band-2026-720.jpg 720w, assets/band-2026.jpg 1040w" sizes="(max-width: 760px) 100vw, 460px"
+            width="1040" height="1950" loading="lazy" decoding="async"
+            alt="Ōwashi : Cyril, Olivier et Romain devant une façade vitrée" data-i18n-alt="band.alt">
         </figure>
       </div>
     </div>
   </section>
 
-  <section id="contact" class="contact">
+  <section id="contact" class="contact" aria-label="Contact">
     <div class="wrap block">
       <div class="links">
         <a href="https://soundcloud.com/owashi-band-official" target="_blank" rel="noopener">
@@ -424,8 +434,9 @@
       'scroll': 'Défiler',
       'about.lede': 'Un <strong>rock progressif instrumental</strong> immersif, entre riffs mélodiques, textures planantes et poussées métal.',
       'about.text': 'Basé en Suisse romande, <span class="om">Ōwashi</span> construit sur scène un voyage sonore intense, clair et dynamique. Des compositions originales qui prennent leur temps, montent, respirent et frappent.',
-      'band.alt': 'Ōwashi : Cyril, Fab, Olivier et Romain devant une façade vitrée',
-      'band.text': "Le groupe s'est construit autour des compositions originales de <strong>Cyril</strong>, aujourd'hui rejointes par celles de <strong>Fab</strong>. Tous deux se partagent guitares lead et rythmique ; <strong>Olivier</strong> (basse) et <strong>Romain</strong> (batterie) enrichissent chaque morceau de leurs influences et sensibilités.",
+      'band.alt': 'Ōwashi : Cyril, Olivier et Romain devant une façade vitrée',
+      'band.text': "Le groupe s'est construit autour des compositions originales de <strong>Cyril</strong> (guitare) ; <strong>Olivier</strong> (basse) et <strong>Romain</strong> (batterie) enrichissent chaque morceau de leurs influences et sensibilités.",
+      'live.cal': '+ Agenda',
       'contact.text': 'Concerts, presse, projets :',
       'footer.loc': 'Suisse romande'
     },
@@ -434,8 +445,9 @@
       'scroll': 'Scroll',
       'about.lede': 'Immersive <strong>instrumental progressive rock</strong> — melodic riffs, sweeping textures and metallic surges.',
       'about.text': 'Based in French-speaking Switzerland, <span class="om">Ōwashi</span> builds an intense, clear and dynamic sonic journey on stage. Original compositions that take their time, climb, breathe and hit.',
-      'band.alt': 'Ōwashi: Cyril, Fab, Olivier and Romain in front of a glass façade',
-      'band.text': 'The band came together around <strong>Cyril</strong>\'s original compositions, now joined by <strong>Fab</strong>\'s. The two share lead and rhythm guitar, while <strong>Olivier</strong> (bass) and <strong>Romain</strong> (drums) bring their own influences and sensibilities to every track.',
+      'band.alt': 'Ōwashi: Cyril, Olivier and Romain in front of a glass façade',
+      'band.text': 'The band came together around the original compositions of <strong>Cyril</strong> (guitar); <strong>Olivier</strong> (bass) and <strong>Romain</strong> (drums) bring their own influences and sensibilities to every track.',
+      'live.cal': '+ Calendar',
       'contact.text': 'Shows, press, projects:',
       'footer.loc': 'Switzerland'
     },
@@ -444,13 +456,32 @@
       'scroll': 'スクロール',
       'about.lede': 'メロディアスなリフ、広がりのあるテクスチャ、メタル的な勢いが交差する、没入型の<strong>インストゥルメンタル・プログレッシブ・ロック</strong>。',
       'about.text': 'スイス・ロマンド地方を拠点とする<span class="om">Ōwashi</span>は、ライブで強烈かつ透明感のあるダイナミックな音の旅を紡ぎ出す。時間をかけて高まり、呼吸し、そして打ちつけるオリジナル曲。',
-      'band.alt': 'Ōwashi：Cyril、Fab、Olivier、Romain',
-      'band.text': 'バンドは<strong>Cyril</strong>のオリジナル曲を軸に結成され、現在は<strong>Fab</strong>の楽曲も加わっている。二人はリードとリズムの両ギターを分け合い、<strong>Olivier</strong>（ベース）と<strong>Romain</strong>（ドラム）がそれぞれの感性と影響を各曲に注ぎ込んでいる。',
+      'band.alt': 'Ōwashi：Cyril、Olivier、Romain',
+      'band.text': 'バンドは<strong>Cyril</strong>（ギター）のオリジナル曲を軸に結成され、<strong>Olivier</strong>（ベース）と<strong>Romain</strong>（ドラム）がそれぞれの感性と影響を各曲に注ぎ込んでいる。',
+      'live.cal': '+ カレンダー',
       'contact.text': 'ライブ、取材、プロジェクトのご相談：',
       'footer.loc': 'スイス'
     }
   };
   const SUPPORTED = ['fr', 'en', 'ja'];
+
+  function gigIcs(iso, venue, city){
+    const d = new Date(iso + 'T12:00:00Z');
+    const next = new Date(d.getTime() + 86400000);
+    const ymd = dt => dt.toISOString().slice(0, 10).replace(/-/g, '');
+    const esc = s => s.replace(/([\\;,])/g, '\\$1');
+    return 'data:text/calendar;charset=utf-8,' + encodeURIComponent([
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Owashi//owashi.band//EN',
+      'BEGIN:VEVENT',
+      `UID:${iso}-${venue.toLowerCase().replace(/[^a-z0-9]+/g, '-')}@owashi.band`,
+      `DTSTART;VALUE=DATE:${ymd(d)}`,
+      `DTEND;VALUE=DATE:${ymd(next)}`,
+      `SUMMARY:${esc(`Ōwashi — ${venue}`)}`,
+      `LOCATION:${esc(`${venue}, ${city}`)}`,
+      'URL:https://owashi.band',
+      'END:VEVENT', 'END:VCALENDAR'
+    ].join('\r\n'));
+  }
 
   function applyLang(lang){
     document.documentElement.lang = lang;
@@ -468,7 +499,21 @@
     document.querySelectorAll('.gigs time[datetime]').forEach(el => {
       const d = new Date(el.dateTime + 'T12:00:00');
       el.textContent = fmt.format(d);
-      el.closest('li').classList.toggle('past', d < today);
+      const li = el.closest('li');
+      const isPast = d < today;
+      li.classList.toggle('past', isPast);
+      let cal = li.querySelector('.cal');
+      if (!cal) {
+        const venue = li.querySelector('.venue')?.textContent.trim() || '';
+        const city = li.querySelector('.city')?.textContent.trim() || '';
+        cal = document.createElement('a');
+        cal.className = 'cal';
+        cal.href = gigIcs(el.dateTime, venue, city);
+        cal.download = `owashi-${el.dateTime}.ics`;
+        li.append(cal);
+      }
+      cal.textContent = I18N[lang]['live.cal'];
+      cal.setAttribute('aria-label', `${I18N[lang]['live.cal']} (${el.textContent})`);
     });
     document.querySelectorAll('.lang button').forEach(b => {
       const on = b.dataset.lang === lang;
@@ -497,14 +542,14 @@
   const img = photo && photo.querySelector('img');
   if (!text || !img) return;
   // each member's centre in the frame (from the masks in assets/ghost-*.png)
-  const MEMBERS = { fab: '13.5% 33.4%', romain: '43.1% 46.8%', olivier: '65.3% 24.1%', cyril: '70.3% 56.6%' };
+  const MEMBERS = { romain: '34.5% 51.4%', olivier: '60.0% 26.4%', cyril: '65.8% 62.0%' };
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const layers = {}, running = new Set();
 
   function tag(){
     text.querySelectorAll('strong').forEach(s => {
       const id = s.textContent.trim().toLowerCase();
-      if (MEMBERS[id]) { s.classList.add('member'); s.dataset.member = id; s.tabIndex = 0; }
+      if (MEMBERS[id]) { s.classList.add('member'); s.dataset.member = id; s.setAttribute('role', 'button'); s.tabIndex = 0; }
     });
   }
   new MutationObserver(tag).observe(text, { childList: true });   // the language switch rewrites the paragraph
@@ -520,7 +565,7 @@
     return el;
   }
   // hit map: which member is under each point of the photo, read from the same masks
-  const ids = Object.keys(MEMBERS), MW = 288, MH = 512, hit = new Uint8Array(MW * MH);
+  const ids = Object.keys(MEMBERS), MW = 288, MH = 540, hit = new Uint8Array(MW * MH);
   function buildHitMap(){
     const c = document.createElement('canvas'); c.width = MW; c.height = MH;
     const ctx = c.getContext('2d', { willReadFrequently: true });
@@ -566,6 +611,11 @@
   text.addEventListener('pointerover', e => { const m = pick(e); if (m && !m.contains(e.relatedTarget)) haunt(m.dataset.member); });
   text.addEventListener('focusin', e => { const m = pick(e); if (m) haunt(m.dataset.member); });
   text.addEventListener('click', e => { const m = pick(e); if (m) haunt(m.dataset.member); });
+  text.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const m = pick(e);
+    if (m) { e.preventDefault(); haunt(m.dataset.member); }
+  });
 
   // in the photo: the mouse entering someone, or a tap on them
   function memberAt(e){
@@ -579,9 +629,10 @@
   photo.addEventListener('pointermove', e => {
     if (e.pointerType === 'touch') return;   // touch scrolls past the photo; a tap is handled by click
     const id = memberAt(e);
+    photo.style.cursor = id ? 'pointer' : '';
     if (id !== over) { over = id; if (id) haunt(id); }
   });
-  photo.addEventListener('pointerleave', () => { over = null; });
+  photo.addEventListener('pointerleave', () => { over = null; photo.style.cursor = ''; });
   photo.addEventListener('click', e => { const id = memberAt(e); if (id) haunt(id); });
 })();
 </script>
