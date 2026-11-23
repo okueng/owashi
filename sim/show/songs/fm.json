@@ -60,7 +60,7 @@
       "phase": 0,
       "fade": 2,
       "lead": "",
-      "react": "off",
+      "react": "guitar",
       "punch": false
     },
     {
@@ -105,7 +105,7 @@
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "off",
+      "react": "all",
       "punch": false
     },
     {

@@ -44,8 +44,8 @@
       "bpm": 131,
       "phase": 0,
       "fade": 1,
-      "lead": "",
-      "react": "off",
+      "lead": "left",
+      "react": "guitar",
       "punch": false
     },
     {
@@ -75,7 +75,7 @@
       "phase": 0,
       "fade": 0,
       "lead": "",
-      "react": "off",
+      "react": "all",
       "punch": false
     },
     {

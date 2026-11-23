@@ -22,7 +22,7 @@ export const PALETTE = {
 };
 
 export const BUILD_BARS = 16;
-const SHIMMER_BARS = 32;
+const SHIMMER_BARS = 28;
 const COLLAPSE_BARS = 8;
 
 export const show = {
@@ -122,11 +122,14 @@ const DRIVE_POSITIONS = [POSITIONS[2], POSITIONS[3], POSITIONS[1], POSITIONS[0]]
 const SCENES = {
   // Clean intro or interlude: a low glow rising behind the band, fainter at the sides, the band in near-darkness.
   // The beams stand almost still, just visible.
-  ambient({ t, B: Bc }) {
+  ambient({ t, A, B: Bc }) {
     V.forEach((f, k) => {
       const back = isBack(k);
       const h = (back ? 0.45 : 0.25) + (back ? 0.18 : 0.1) * Math.sin(t * 0.21 + k * 1.7);
-      paint(f, u => mul(Bc.rgb, smooth(h, h - 0.45, u) * (0.8 + 0.2 * Math.sin(t * 0.8 + u * 10 + k))), back ? 0.7 : 0.45);
+      paint(f, u => {
+        const col = back ? mix(A.rgb, Bc.rgb, smooth(0.05, 0.42, u) * 0.72 + 0.28) : Bc.rgb;
+        return mul(col, smooth(h, h - 0.45, u) * (0.8 + 0.2 * Math.sin(t * 0.8 + u * 10 + k)));
+      }, back ? 0.7 : 0.45);
     });
     line(x => mul(Bc.rgb, 0.25 + 0.15 * Math.sin(t * 0.3 + x * 6)), 0.2);
     OUTER.forEach((f, k) => beam(f, {
@@ -137,19 +140,19 @@ const SCENES = {
     INNER.forEach(dark);
   },
 
-  // Melodic lead: soft blobs of colour climb the back pair, then the side pair half a cycle later, so the
-  // eye travels front to back. A pool of colour follows the beams along the front line as they sweep together.
+  // Melodic lead & groove: rich waves of colour climb the back pair, then the side pair half a cycle later, so the
+  // eye travels front to back. The beams carry A softly through the haze instead of plain white.
   sweep({ beat, A, B: Bc }) {
     V.forEach((f, k) => {
       const pos = frac(beat / 8 + (isBack(k) ? 0 : 0.5) + (k < 2 ? 0 : 0.06)) * 1.3 - 0.15;
-      paint(f, u => mix(mul(Bc.rgb, 0.25), A.rgb, Math.exp(-(((u - pos) / 0.06) ** 2) / 2)), 0.7);
+      paint(f, u => mix(mul(Bc.rgb, 0.3), A.rgb, Math.exp(-(((u - pos) / 0.13) ** 2) / 2)), 0.78);
     });
     const swing = Math.sin(beat * Math.PI / 8), pool = 0.5 + 0.5 * swing;
-    line(x => mix(mul(Bc.rgb, 0.12), A.rgb, Math.exp(-(((x - pool) / 0.14) ** 2) / 2)), 0.6);
+    line(x => mix(mul(Bc.rgb, 0.15), A.rgb, Math.exp(-(((x - pool) / 0.16) ** 2) / 2)), 0.6);
     B.forEach((f, k) => beam(f, {
       pan: SIDE[k] * 10 + 38 * swing,
       tilt: 34 + 10 * Math.sin(beat * Math.PI / 16),
-      color: 'White', level: 0.75, speed: SLOW,
+      color: A.wheel, level: 0.55, speed: SLOW,
     }));
   },
 
@@ -410,7 +413,7 @@ const SCENES = {
     }));
   },
 
-  // Tremolo: a fine, fast texture that grows over 32 bars and then holds. Every chunk of tube twinkles on its own,
+  // Tremolo: a fine, fast texture that grows over 28 bars and then holds. Every chunk of tube twinkles on its own,
   // so the overall brightness stays steady and it reads as shimmer, not strobe. It climbs from the back pair
   // to the sides, turns from B to A, and the beams rise and open with it.
   shimmer({ t, since, A, B: Bc }) {
@@ -439,17 +442,28 @@ const SCENES = {
   },
 
   // The beams lead: the outer pair as two white shafts crossing slowly through the haze, out of step so they never
-  // look mirrored. The inner pair stays dark.
+  // look mirrored. The inner pair stays dark — except when a sustained guitar lead enters, warming stage-left in A.
   // The tubes are down to a faint glow at their feet, the front line is off. Runs on seconds, like Ambient.
-  searchlight({ t, B: Bc }) {
-    V.forEach((f, k) => paint(f, u => mul(Bc.rgb, 1 - smooth(0, 0.25, u)), isBack(k) ? 0.12 : 0.06));
+  searchlight({ t, A, B: Bc }) {
+    const gb = show.guitarBoost;
+    V.forEach((f, k) => {
+      const soloSide = k === 0 && gb > 0.02;
+      paint(f, u => {
+        const base = mul(Bc.rgb, 1 - smooth(0, 0.25, u));
+        return soloSide ? mix(base, A.rgb, gb * 0.7 * (1 - smooth(0.15, 0.62, u))) : base;
+      }, isBack(k) ? 0.12 : soloSide ? 0.06 + 0.42 * gb : 0.06);
+    });
     line(() => BLACK, 0);
     OUTER.forEach((f, k) => beam(f, {
       pan: SIDE[k] * (8 - 38 * (0.5 + 0.5 * Math.sin(t * 0.13 + k * 0.7))),
       tilt: 28 + 10 * Math.sin(t * 0.07 + k * 2),
       color: 'White', speed: SLOW,
     }));
-    INNER.forEach(dark);
+    INNER.forEach((f, idx) => {
+      if (idx === 0 && gb > 0.05) {   // B3 (stage left, Cyril): warms up in A during a wailing lead
+        beam(f, { pan: -18 + 4 * Math.sin(t * 0.11), tilt: 22 + 4 * Math.sin(t * 0.09), color: A.wheel, level: 0.55 * gb, speed: SLOW });
+      } else dark(f);
+    });
   },
 
   // Hypnotic loops: one light circles the rig, a lap every 4 bars, like a planet round its star. It goes side-left →
@@ -478,14 +492,22 @@ const SCENES = {
   },
 
   // Build in reverse, over 8 bars: the tubes drain from top to bottom, the sides first, the front line closes to
-  // the centre, and the beams sink towards the crowd as they fade. It ends on a low glow at the foot of the back pair.
-  collapse({ since, A, B: Bc }) {
+  // the centre, and the beams sink towards the crowd as they fade. Once drained, the floor glow breathes gently
+  // and flickers softly on live snare/rimshots instead of freezing static.
+  collapse({ t, since, A, B: Bc }) {
     const p = clamp01(since / (COLLAPSE_BARS * 4));
     const col = mix(A.rgb, Bc.rgb, p);
+    const D = show.drums;
+    const rim = D.live ? Math.exp(-(t - D.snare) * 7) : 0;
     V.forEach((f, k) => {
       const back = isBack(k), q = back ? clamp01((p - 0.15) / 0.85) : clamp01(p / 0.85);
-      const top = 1 - 0.96 * q;
-      paint(f, u => mul(col, 1 - smooth(top, top + 0.04, u)), back ? 1 - 0.7 * q : 1 - q);
+      const breathe = back ? 0.06 + 0.05 * Math.sin(t * 0.7 + k * 1.4) + 0.18 * rim : 0;
+      const top = Math.max(breathe, 1 - 0.96 * q);
+      const lv = back ? Math.max(0.22 + 0.09 * Math.sin(t * 0.65 + k) + 0.45 * rim, 1 - 0.7 * q) : 1 - q;
+      paint(f, u => {
+        const base = mul(col, 1 - smooth(top, top + 0.06, u));
+        return back && rim > 0.05 && q > 0.6 ? mix(base, mix(Bc.rgb, WHITE, 0.35), rim * 0.55 * (1 - smooth(0, 0.28, u))) : base;
+      }, lv);
     });
     const open = 1 - p;
     line(x => mul(col, 1 - smooth(open, open + 0.06, Math.abs(x - 0.5) * 2)), 0.6 * open);
@@ -504,7 +526,7 @@ export const SCENE_LIST = [
   ['searchlight', 'Searchlight', 'a', 'Calm', 'The beams lead, crossing slowly; tubes almost off'],
   ['orbit', 'Orbit', 'z', 'Calm', 'Hypnotic loops: one light circles the rig, a lap every 4 bars'],
   ['build', 'Build', '3', 'Rise & fall', 'Rises over 16 bars and peaks in a strobe: start it 16 bars before the hit'],
-  ['shimmer', 'Shimmer', 'w', 'Rise & fall', 'Tremolo: a fine, fast texture growing over 32 bars, then holding'],
+  ['shimmer', 'Shimmer', 'w', 'Rise & fall', 'Tremolo: a fine, fast texture growing over 28 bars, then holding'],
   ['collapse', 'Collapse', 's', 'Rise & fall', 'Drains from top to bottom over 8 bars, down to a low glow'],
   ['embers', 'Embers', '8', 'Rise & fall', 'Outro: embers drifting at the foot of the tubes, beams out'],
   ['drive', 'Drive', 'x', 'Heavy', 'Riffs and grooves: heavy colour rolling up the tubes, soft thumps on kick and snare'],

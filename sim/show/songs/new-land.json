@@ -30,7 +30,7 @@
       "phase": 0,
       "fade": 4,
       "lead": "",
-      "react": "off",
+      "react": "all",
       "punch": false
     },
     {
@@ -52,7 +52,7 @@
       "id": 4,
       "t": 191.6,
       "name": "Clean oasis",
-      "scene": "sweep",
+      "scene": "ambient",
       "variant": 0,
       "a": "Green",
       "b": "Teal",
@@ -90,7 +90,7 @@
       "phase": 0,
       "fade": 2,
       "lead": "",
-      "react": "off",
+      "react": "guitar",
       "punch": false
     },
     {
@@ -136,7 +136,7 @@
       "fade": 0,
       "lead": "",
       "react": "crash",
-      "punch": false
+      "punch": true
     },
     {
       "id": 10,
