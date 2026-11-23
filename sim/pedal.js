@@ -30,6 +30,7 @@ export const pedal = {
   onPad: () => {},  // (pad number, down, velocity 0–1)
   tapPads: new Set(),   // pads where every press counts, even right after a release (Hit, Tap tempo…)
   bridge: null,     // the MIDI devices the bridge sees, while the sim gets its MIDI from there
+  bridgeConnected: false,   // true while the bridge WebSocket is open
   onAction: () => {},
   onChange: () => {},
   describe,
@@ -143,6 +144,10 @@ export function connectBridge(url) {
   if (location.protocol === 'https:') return;   // the website can't reach a bridge on this computer
   let ws;
   try { ws = new WebSocket(url); } catch { return; }
+  ws.onopen = () => {
+    pedal.bridgeConnected = true;
+    pedal.onChange();
+  };
   ws.onmessage = e => {
     let m;
     try { m = JSON.parse(e.data); } catch { return; }
@@ -154,7 +159,10 @@ export function connectBridge(url) {
     for (const f of bridgeListeners) f(m);
   };
   ws.onclose = () => {
-    if (pedal.bridge) { pedal.bridge = null; pedal.onChange(); }
+    const changed = pedal.bridgeConnected || !!pedal.bridge;
+    pedal.bridgeConnected = false;
+    pedal.bridge = null;
+    if (changed) pedal.onChange();
     setTimeout(() => connectBridge(url), 5000);   // the bridge may start later, or restart
   };
 }

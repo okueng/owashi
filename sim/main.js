@@ -7,7 +7,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { byId, channelMaps, PATCH, PROFILES, universes } from './dmx.js';
+import { byId, channelMaps, LB150_WHEEL, PATCH, PROFILES, universes } from './dmx.js';
 import { beamHit, cue, hit, lookProgress, PALETTE, SCENE_LIST, show, tap, tubeHit, updateShow } from './show.js';
 import { BeamHead, CobTube, WashPar } from './fixtures.js';
 import { artnet, bridgeUrl, pump, setMode } from './artnet.js';
@@ -17,7 +17,7 @@ import { mountSetlist } from './setlist-ui.js';
 import { createLabels } from './labels.js';
 import { actions as pedalActions, bridgeListeners, connect as connectPedal, connectBridge, connectIfAllowed, learnPads, PAD_COUNT, pedal, SMC_PAD_POCKET } from './pedal.js';
 import { inputs, onBridgeMessage, ROLES, setRole } from './inputs.js';
-import { configure as configureLive, live, setDarkOnStop, tick as liveTick } from './live.js';
+import { configure as configureLive, live, setDarkOnStop, setStopFloor, tick as liveTick } from './live.js';
 
 // ── layout (metres; x = stage left→right as the audience sees it, z = towards the audience) ──
 // The rig is placed for the audience's sightlines and the beams' distance from the band's eyes. The stage is
@@ -393,12 +393,13 @@ const $ = s => document.querySelector(s);
 const ui = { haze: 0.8, fill: 0.45 };
 
 // One panel open at a time.
-const SHEETS = ['.more-sheet', '.dmx', '.pedal', '.inputs'].map($);
+const SHEETS = ['.more-sheet', '.dmx', '.wheel', '.pedal', '.inputs'].map($);
 const labelOf = id => SCENE_LIST.find(s => s[0] === id)[1];
 function showOnly(el) {
   SHEETS.forEach(s => { s.hidden = s !== el; });
   $('.more-open').setAttribute('aria-pressed', !$('.more-sheet').hidden);
   if ($('.pedal').hidden && pedal.learning) { pedal.learning = null; pedal.onChange(); }
+  if ($('.wheel').hidden && show.wheelTest) { show.wheelTest = null; syncWheel(); }
 }
 const toggleSheet = el => showOnly(el.hidden ? el : null);
 canvas.addEventListener('pointerdown', () => showOnly(null));   // clicking the stage puts it all away
@@ -500,6 +501,7 @@ function syncHud() {
   $('.hud-next').textContent = !cues.length ? 'No cues yet: Next steps through the looks'
     : next ? `Next: ${next.name} · ${labelOf(next.scene)}`
     : nextSong() ? `Next song: ${nextSong().title}` : 'End of the set';
+  $('.hud-choke').hidden = !show.autoChoke;
 }
 effect(syncHud);
 window.sim.setlist = setlist;
@@ -540,6 +542,33 @@ controls.addEventListener('start', () => { flight = null; viewButtons.forEach(b 
 const dmxPanel = $('.dmx');
 const toggleDmx = () => toggleSheet(dmxPanel);
 $('.dmx-toggle').addEventListener('click', toggleDmx);
+
+// Soundcheck helper: step through the 12 LB150 colour-wheel slots on the real heads.
+const wheelPanel = $('.wheel');
+const wheelButtons = LB150_WHEEL.map(([name, rgb]) => {
+  const dmx = PROFILES.lb150.encodeColour(name);
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.innerHTML = `<i style="--c:rgb(${rgb.map(v => Math.round(v * 255)).join(',')})"></i><span>${name}</span><small>${dmx}</small>`;
+  b.dataset.wheel = name;
+  b.addEventListener('click', () => {
+    show.wheelTest = show.wheelTest?.name === name ? null : { name, dmx };
+    syncWheel();
+  });
+  $('.wheel-grid').append(b);
+  return b;
+});
+function syncWheel() {
+  wheelButtons.forEach(b => b.setAttribute('aria-pressed', show.wheelTest?.name === b.dataset.wheel));
+  $('.wheel-toggle').setAttribute('aria-pressed', !wheelPanel.hidden);
+}
+$('.wheel-toggle').addEventListener('click', () => {
+  const opening = wheelPanel.hidden;
+  toggleSheet(wheelPanel);
+  if (opening) { show.wheelTest = { name: LB150_WHEEL[0][0], dmx: 0 }; syncWheel(); }
+});
+$('.wheel-stop').addEventListener('click', () => showOnly(null));
+syncWheel();
 $('.hide').addEventListener('click', () => { showOnly(null); toggleUi(); });
 $('.unhide').addEventListener('click', toggleUi);   // the way back on a phone, where there's no H key
 $('.credits-open').addEventListener('click', () => $('dialog.credits').showModal());
@@ -716,8 +745,58 @@ function syncArtnet() {
   const problem = (off && artnet.notice) || (!off && artnet.state === 'offline' && artnetText()) || (artnet.mode === 'mirror' && !artnet.receiving && artnetText()) || '';
   if (problem && problem !== shownProblem) toast(problem);
   shownProblem = problem;
+  syncRigStatus();
+  syncWakeLock();
 }
 artnet.onChange = syncArtnet;
+
+// Keep the screen awake on laptops/tablets while in Show mode or driving the real rig.
+let wakeLock = null, wakeWanted = false;
+async function acquireWakeLock() {
+  if (!wakeWanted || document.hidden || wakeLock || !navigator.wakeLock) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; if (wakeWanted && !document.hidden) acquireWakeLock(); });
+  } catch { /* browser denied or battery saver */ }
+}
+function syncWakeLock() {
+  wakeWanted = artnet.mode === 'send' || document.body.dataset.mode === 'show';
+  if (wakeWanted) acquireWakeLock();
+  else if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden && wakeWanted) acquireWakeLock(); });
+
+// Show-mode pre-flight status dots: Bridge · Rig · Pedal · XR18
+function setDot(sel, state, title) {
+  const el = $(sel);
+  if (!el) return;
+  el.dataset.state = state;
+  el.title = title;
+}
+function syncRigStatus() {
+  const bridgeUp = pedal.bridgeConnected || artnet.state === 'connected';
+  setDot('.st-bridge', bridgeUp ? 'ok' : 'err', bridgeUp ? 'Bridge connected' : 'Bridge offline — run: node sim/bridge/artnet-bridge.mjs');
+
+  const driving = artnet.mode === 'send' && artnet.state === 'connected';
+  const rigState = artnet.mode === 'off' ? 'off'
+    : artnet.state === 'offline' ? 'err'
+    : driving ? (artnet.nodes.length ? 'ok' : 'warn') : 'warn';
+  setDot('.st-rig', rigState, artnetText());
+
+  const midiNames = pedal.bridge ? pedal.bridge : pedal.inputs;
+  const pedalState = midiNames.length ? 'ok' : (pedal.bridgeConnected || pedal.state === 'ready') ? 'warn' : 'off';
+  setDot('.st-pedal', pedalState, midiNames.length ? `MIDI: ${midiNames.join(', ')}` : 'No MIDI pedal or pad connected');
+
+  const audioState = !inputs.device ? 'off' : show.autoChoke ? 'warn' : 'ok';
+  const audioTitle = !inputs.device ? (inputs.note || 'No audio interface connected')
+    : show.autoChoke ? `${inputs.device} · dead stop active (lights dark)` : `${inputs.device}: ${inputs.channels} ch`;
+  setDot('.st-audio', audioState, audioTitle);
+}
+$('.st-bridge').addEventListener('click', () => toast(pedal.bridgeConnected || artnet.state === 'connected' ? 'Bridge connected' : 'Bridge offline · node sim/bridge/artnet-bridge.mjs'));
+$('.st-rig').addEventListener('click', () => $('.rig').click());
+$('.st-pedal').addEventListener('click', () => toggleSheet($('.pedal')));
+$('.st-audio').addEventListener('click', () => toggleSheet($('.inputs')));
+
 syncArtnet();
 
 // ── DMX monitor ─────────────────────────────────────────────────────────────
@@ -937,6 +1016,7 @@ function setUiMode(next) {
   setlist.open.value = next === 'setup';
   showOnly(null);
   syncHud();
+  syncWakeLock();
   setTimeout(resize);
   try { localStorage.setItem(MODE_KEY, next); } catch { /* starts in Manual next time */ }
 }
@@ -978,6 +1058,7 @@ function syncPedal() {
     r.set.textContent = key ? pedal.describe(key) : '';
     r.learn.setAttribute('aria-pressed', pedal.learning === r.id);
   }
+  syncRigStatus();
 }
 pedal.onChange = syncPedal;
 syncPedal();
@@ -987,10 +1068,22 @@ syncPedal();
 $('.inputs-toggle').addEventListener('click', () => toggleSheet($('.inputs')));
 let inputRows = [];
 $('.dark-on-stop').checked = live.darkOnStop;
-$('.dark-on-stop').addEventListener('change', e => setDarkOnStop(e.currentTarget.checked));
+const stopFloorEl = $('.stop-floor');
+function syncStopFloor() {
+  stopFloorEl.value = live.stopFloor;
+  stopFloorEl.disabled = !live.darkOnStop;
+  const min = +stopFloorEl.min, max = +stopFloorEl.max;
+  stopFloorEl.style.setProperty('--v', `${((live.stopFloor - min) / (max - min)) * 100}%`);
+  $('.stop-floor-out').textContent = `${live.stopFloor} dB`;
+}
+$('.dark-on-stop').addEventListener('change', e => { setDarkOnStop(e.currentTarget.checked); syncStopFloor(); });
+stopFloorEl.addEventListener('input', e => { setStopFloor(e.currentTarget.value); syncStopFloor(); });
+syncStopFloor();
+live.onStopChange = () => { syncHud(); syncRigStatus(); };
 function syncInputs() {
   $('.inputs-status').textContent = inputs.device ? `${inputs.device}: ${inputs.channels} channel${inputs.channels === 1 ? '' : 's'}`
     : inputs.note || 'Waiting for the bridge. Start it, then plug in the XR18 over USB.';
+  syncRigStatus();
   if (inputRows.length === inputs.channels && inputRows.names === inputs.names.join('|')) { inputRows.forEach((r, i) => { r.role.value = inputs.roles[i] || ''; }); return; }
   $('.inputs-list').replaceChildren();
   inputRows = Array.from({ length: inputs.channels }, (_, i) => {
@@ -1011,6 +1104,10 @@ inputs.onLevels = () => {
   $('.inputs-live').textContent = show.autoChoke ? 'The band stopped: dark until the next hit'
     : show.drums.live ? 'The drums are driving Riff, Blast, Breakdown, Wall, Drive and Backlight'
     : inputs.roles.some(r => r === 'kick' || r === 'snare') ? 'Waiting for the drums' : 'Give the kick and snare their roles to let the drums drive the looks';
+  const lvl = live.level <= -89 ? '—' : `${Math.round(live.level)} dB`;
+  $('.stop-level').textContent = inputs.roles.some(Boolean)
+    ? `Band level: ${lvl} · dark below ${live.stopFloor} dB`
+    : 'Assign at least one channel role to measure band level';
   inputRows.forEach((r, i) => {
     r.bar.style.width = `${Math.max(0, Math.min(100, ((inputs.levels[i] ?? -90) + 60) / 60 * 100))}%`;
     r.hit.classList.toggle('on', now - (inputs.hitAt[i] || 0) < 120);

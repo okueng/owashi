@@ -54,6 +54,8 @@ export const show = {
   autoChoke: false,  // the band stopped dead: dark like Choke until the next hit
   bloomT: -10, bloomV: 0,   // a live crash: the tubes swell in their own colour (no white flash)
   swellT: -10, swellV: 0,   // a live guitar jump: the beams lift
+  guitarBoost: 0,           // 0–1: sustained lead guitar above its rolling baseline (live.js)
+  wheelTest: null,          // null, or { name, dmx } while testing LB150 colour wheel slots at soundcheck
 };
 
 const V = ['V1', 'V2', 'V3', 'V4'].map(id => byId[id]);   // the tubes
@@ -187,7 +189,7 @@ const SCENES = {
       line(() => mul(A.rgb, 0.15 + 0.85 * any));
       B.forEach((f, k) => beam(f, {
         pan: SIDE[k] * 30, tilt: 38, color: crash ? 'White' : A.wheel,
-        level: Math.max(ec, D.snareN % 2 === k ? es * 0.8 : 0),   // one beam per snare, changing side each time
+        level: Math.max(ec, D.snareN % 2 === (k % 2) ? es * 0.8 : 0),   // one side's pair per snare, alternating each time
       }));
       return;
     }
@@ -201,7 +203,7 @@ const SCENES = {
     B.forEach((f, k) => beam(f, {
       pan: SIDE[k] * 30, tilt: 38,
       color: down ? 'White' : A.wheel,
-      level: down || (three && bar % 2 === k) ? e : 0,
+      level: down || (three && bar % 2 === (k % 2)) ? e : 0,
     }));
   },
 
@@ -314,10 +316,12 @@ const SCENES = {
   // Each kick is a soft thump at the foot of the back pair, each snare at the sides (live, the drummer's own).
   // Split: each tube is lit over half its length only, the back pair from the floor, the sides from the top.
   // Bands: the colour breaks into broad blocks that climb the tubes, a block every 2 bars, like a machine.
-  drive({ t, beat, A, B: Bc, v }) {
+  drive({ t, beat, since, A, B: Bc, v }) {
     const D = show.drums;
     const kick = D.live ? Math.exp(-(t - D.kick) * 5) : 0.6 * Math.exp(-frac(beat / 2) * 6);
     const snare = D.live ? Math.exp(-(t - D.snare) * 5) : 0.6 * Math.exp(-frac(beat / 2 + 0.5) * 6);
+    // Long chapters (2-3 min on one pedal press) evolve every 16 bars: intimate outer pair → full 4 → static prism → focused 4
+    const phrase = wrap(Math.floor(Math.max(0, since) / 64), 4);
     V.forEach((f, k) => {
       const back = isBack(k), c = back ? A.rgb : mix(A.rgb, Bc.rgb, 0.45), th = back ? kick : snare;
       const lit = mix(c, WHITE, 0.3);
@@ -329,12 +333,16 @@ const SCENES = {
           : v === 2 ? 0.08 + 0.92 * smooth(-0.2, 0.2, Math.sin((u * 2.5 - beat / 8 - (back ? 0 : 0.5)) * Math.PI * 2))
           : 1 - 0.45 * u;
         return mix(mul(c, body * roll), lit, 0.45 * th * (1 - smooth(0.15, 0.5, u)));
-      }, back || v === 1 ? 1 : 0.75);
+      }, back || v === 1 || phrase === 3 ? 1 : 0.75);
     });
     const pos = DRIVE_POSITIONS[wrap(Math.floor(beat / 32) + v, DRIVE_POSITIONS.length)];
     B.forEach((f, k) => {
       const at = pos(k);
-      beam(f, { pan: at.pan + 3 * Math.sin(t * 0.1 + k), tilt: at.tilt + 2 * Math.sin(t * 0.13 + k * 2), color: A.wheel, level: 0.55, speed: SLOW });
+      const innerDim = phrase === 0 && isInner.has(f) ? 0.22 : 0.55;
+      beam(f, {
+        pan: at.pan + 3 * Math.sin(t * 0.1 + k), tilt: at.tilt + 2 * Math.sin(t * 0.13 + k * 2),
+        color: A.wheel, level: innerDim, prism: phrase === 2, speed: SLOW,
+      });
     });
   },
 
@@ -343,18 +351,20 @@ const SCENES = {
   // The beams fan wide and tilt slowly against each other. It runs free, so it needs no beat to lock to.
   // Falling: the crests come down the tubes instead, and the beams cross over the middle.
   // From the middle: the crests leave the middle of each tube for both ends, and the beams stand up in a tight fan.
-  surge({ t, beat, A, B: Bc, v }) {
+  surge({ t, beat, since, A, B: Bc, v }) {
     const low = mix(mul(Bc.rgb, 0.45), mul(A.rgb, 0.45), 0.5), high = mix(A.rgb, WHITE, 0.4);
     const along = v === 2 ? u => Math.abs(u - 0.5) * 1.8 : v === 1 ? u => -u * 1.4 : u => u * 1.4;
+    const phrase = wrap(Math.floor(Math.max(0, since) / 64), 3);   // every 16 bars: wide → static prism → tighter cross
     V.forEach((f, k) => {
       const off = (isBack(k) ? 0 : 0.5) + (k < 2 ? 0 : 0.13);
       paint(f, u => mix(low, high, (0.5 + 0.5 * Math.sin((along(u) - beat / 4 - off) * Math.PI * 2)) ** 1.6), isBack(k) ? 1 : 0.85);
     });
+    const aimMode = (v + (phrase === 2 ? 1 : 0)) % 3;
     B.forEach((f, k) => beam(f, {
-      ...(v === 2 ? { pan: SIDE[k] * (14 + 8 * Math.sin(t * 0.21 + k)), tilt: 12 + 6 * Math.sin(t * 0.33 + k * Math.PI) }
-        : v === 1 ? { pan: -SIDE[k] * (30 + 8 * Math.sin(t * 0.21 + k)), tilt: 34 + 8 * Math.sin(t * 0.33 + k * Math.PI) }
+      ...(aimMode === 2 ? { pan: SIDE[k] * (14 + 8 * Math.sin(t * 0.21 + k)), tilt: 12 + 6 * Math.sin(t * 0.33 + k * Math.PI) }
+        : aimMode === 1 ? { pan: -SIDE[k] * (30 + 8 * Math.sin(t * 0.21 + k)), tilt: 34 + 8 * Math.sin(t * 0.33 + k * Math.PI) }
         : { pan: SIDE[k] * (36 + 10 * Math.sin(t * 0.21 + k)), tilt: 26 + 14 * Math.sin(t * 0.33 + k * Math.PI) }),
-      color: A.wheel, level: 0.7, speed: SLOW,
+      color: A.wheel, level: 0.7, prism: phrase === 1, speed: SLOW,
     }));
   },
 
@@ -519,6 +529,7 @@ export const DRUM_LOOKS = new Set(['riff', 'blast', 'breakdown', 'wall', 'drive'
 export function cue(id, t, fade = 0, variant = 0) {
   show.from = fade > 0 ? { scene: show.scene, cueT: show.cueT, a: lastA, b: lastB, variant: show.variant } : null;
   show.fromT = t; show.fromLen = fade;
+  washFrom = fade > 0 ? { level: wash.level, rgb: [...wash.rgb], amber: wash.amber, uv: wash.uv } : null;
   show.scene = id;
   show.variant = VARIANTS[id]?.[variant] ? variant : 0;
   show.cueT = t;
@@ -539,18 +550,27 @@ const px = [0, 0, 0];
 let lastA = 'Red', lastB = 'Blue';   // the colours on screen, for a fade to start from
 
 // A fade runs the old look first and keeps what it painted, then the new look, then mixes the two: tube
-// colour (with its dimmer folded in) and head brightness. The heads already aim and colour for the new look.
-const before = new Map([...BARS, ...B].map(f => [f, new Float32Array(BARS.includes(f) ? f.n * 3 : 1)]));
+// colour (with its dimmer folded in) and head brightness, pan/tilt, colour wheel and prism.
+// Mechanical heads hold their old colour/position while dimming to dark, pre-position while still dark,
+// and swap colour at the fade midpoint instead of spinning the wheel at full brightness at k = 0.
+const beforeBars = new Map(BARS.map(f => [f, new Float32Array(f.n * 3)]));
+const beforeHeads = new Map(B.map(f => [f, { lv: 0, pan: 0, tilt: 0, col: 0, prism: 0 }]));
 function keep() {
   for (const f of BARS) {
-    const m = before.get(f), lv = f.getLevel();
+    const m = beforeBars.get(f), lv = f.getLevel();
     for (let i = 0; i < f.n; i++) { f.getZone(i, px); m[i * 3] = px[0] * lv; m[i * 3 + 1] = px[1] * lv; m[i * 3 + 2] = px[2] * lv; }
   }
-  for (const f of B) before.get(f)[0] = f.get('Shutter') <= 10 ? 0 : f.getLevel();
+  for (const f of B) {
+    const h = beforeHeads.get(f);
+    const [pan, tilt] = f.angles();
+    h.lv = f.get('Shutter') <= 10 ? 0 : f.getLevel();
+    h.pan = pan; h.tilt = tilt;
+    h.col = f.get('Colour'); h.prism = f.get('Prism');
+  }
 }
 function blend(k) {
   for (const f of BARS) {
-    const m = before.get(f), lv = f.getLevel();
+    const m = beforeBars.get(f), lv = f.getLevel();
     for (let i = 0; i < f.n; i++) {
       f.getZone(i, px);
       f.setZone(i, m[i * 3] + (px[0] * lv - m[i * 3]) * k, m[i * 3 + 1] + (px[1] * lv - m[i * 3 + 1]) * k, m[i * 3 + 2] + (px[2] * lv - m[i * 3 + 2]) * k);
@@ -558,8 +578,19 @@ function blend(k) {
     f.level(1);
   }
   for (const f of B) {
-    const now = f.get('Shutter') <= 10 ? 0 : f.getLevel(), v = before.get(f)[0] + (now - before.get(f)[0]) * k;
-    if (v > 0.02 && now === 0) f.strobe(0);   // a head the new look darkened stays open while it fades
+    const h = beforeHeads.get(f);
+    const now = f.get('Shutter') <= 10 ? 0 : f.getLevel(), v = h.lv + (now - h.lv) * k;
+    if (v > 0.02 && now === 0) {   // dimming out: hold old aim, colour and prism all the way down
+      f.aim(h.pan, h.tilt);
+      f.set('Colour', h.col);
+      f.set('Prism', h.prism);
+      f.strobe(0);
+    } else if (h.lv > 0.02 && now > 0) {   // lit on both sides: glide pan/tilt and swap mechanical wheel at midpoint
+      const [np, nt] = f.angles();
+      f.aim(h.pan + (np - h.pan) * k, h.tilt + (nt - h.tilt) * k);
+      f.set('P/T speed', SLOW);
+      if (k < 0.5) { f.set('Colour', h.col); f.set('Prism', h.prism); }
+    }
     f.level(v);
   }
 }
@@ -581,27 +612,62 @@ function shape(e) {
 }
 
 // The two wash PARs sit on the floor behind the kit and shine through it towards the room: colour in the haze,
-// a rim on the players, and the white of a punch. They have no parts of their own in the looks. Each look gives
-// them a level and one of the two colours, and they glide there over about a second, so a cue change never
-// snaps them. They don't strobe, except with the held Flash.
+// a rim on the players, and the white of a punch. Heavy looks wash in an A/B blend (with real Amber/UV LEDs)
+// for two-tone depth against the colour-A tubes, plus a subtle kick-drum rim pulse behind the kit.
 const P = ['P1', 'P2'].map(id => byId[id]).filter(Boolean);
 const WASH_MAX = 0.6;   // they face the audience, so only a punch and Backlight, where they are the look, go past this
 const WASH = {
-  backlight: [1.4, 'A'], fan: [0.15, 'B'],
-  ambient: [0.15, 'B'], sweep: [0.3, 'B'], silhouette: [0, 'B'], searchlight: [0.06, 'B'], orbit: [0.12, 'B'], embers: [0.1, 'A'],
-  build: [0.5, 'A'], shimmer: [0.45, 'A'], collapse: [0.2, 'A'], drive: [0.55, 'A'], surge: [0.65, 'A'], glint: [0.4, 'A'],
-  slab: [0.7, 'A'], riff: [0.6, 'A'], blast: [0.7, 'A'], breakdown: [0.6, 'A'], wall: [1, 'A'], strobe: [0, 'A'], blackout: [0, 'A'],
+  backlight: [1.4, 'A'], fan: [0.18, 'B'],
+  ambient: [0.15, 'B'], sweep: [0.3, 'B'], silhouette: [0, 'B'], searchlight: [0.06, 'B'], orbit: [0.12, 'B'], embers: [0.22, 'A'],
+  build: [0.5, 'AB'], shimmer: [0.45, 'AB'], collapse: [0.2, 'AB'], drive: [0.55, 'AB'], surge: [0.65, 'AB'], glint: [0.4, 'B'],
+  slab: [0.7, 'AB'], riff: [0.6, 'A'], blast: [0.7, 'A'], breakdown: [0.6, 'A'], wall: [1, 'A'], strobe: [0, 'A'], blackout: [0, 'A'],
 };
+const KICK_WASH = new Set(['drive', 'backlight', 'slab', 'riff', 'breakdown']);
 const wash = { level: 0, rgb: [0, 0, 0], amber: 0, uv: 0, t: 0 };
-function washPars(t, a, b) {
-  const [lv, which] = WASH[show.scene] || [0, 'A'], C = PALETTE[which === 'A' ? a : b];
+let washFrom = null;
+function washTargetColor(which, a, b) {
+  const Ca = PALETTE[a], Cb = PALETTE[b];
+  if (which === 'A') return { rgb: Ca.rgb, amber: Ca.amber || 0, uv: Ca.uv || 0 };
+  if (which === 'B') return { rgb: Cb.rgb, amber: Cb.amber || 0, uv: Cb.uv || 0 };
+  // 'AB': mostly B for depth against colour-A tubes, pulling in real Amber/UV LEDs from both colours
+  return {
+    rgb: mix(Cb.rgb, Ca.rgb, 0.35),
+    amber: Math.max((Cb.amber || 0) * 0.75, (Ca.amber || 0) * 0.55),
+    uv: Math.max((Cb.uv || 0) * 0.85, (Ca.uv || 0) * 0.5),
+  };
+}
+function washPars(t, a, b, fadeK) {
+  const [lv, which] = WASH[show.scene] || [0, 'A'];
+  const C = washTargetColor(which, a, b);
   const target = Math.min(1, lv * WASH_MAX) * (SHAPED.has(show.scene) ? 0.6 + 0.4 * show.energy : 1);
-  const k = 1 - Math.exp(-Math.min(0.2, Math.max(0, t - wash.t)) / 0.35);
+  if (fadeK !== null && washFrom) {
+    // Follow the cue's real fade curve (so 5-bar fadeouts don't die in 1 second)
+    wash.level = washFrom.level + (target - washFrom.level) * fadeK;
+    for (let i = 0; i < 3; i++) wash.rgb[i] = washFrom.rgb[i] + (C.rgb[i] - washFrom.rgb[i]) * fadeK;
+    wash.amber = washFrom.amber + (C.amber - washFrom.amber) * fadeK;
+    wash.uv = washFrom.uv + (C.uv - washFrom.uv) * fadeK;
+  } else if (show.scene === 'blackout') {
+    // Hard blackout cut: go dark immediately with the tubes and beams
+    washFrom = null;
+    wash.level = 0;
+  } else {
+    washFrom = null;
+    const k = 1 - Math.exp(-Math.min(0.2, Math.max(0, t - wash.t)) / 0.35);
+    wash.level += (target - wash.level) * k;
+    for (let i = 0; i < 3; i++) wash.rgb[i] += (C.rgb[i] - wash.rgb[i]) * k;
+    wash.amber += (C.amber - wash.amber) * k;
+    wash.uv += (C.uv - wash.uv) * k;
+  }
   wash.t = t;
-  wash.level += (target - wash.level) * k;
-  for (let i = 0; i < 3; i++) wash.rgb[i] += (C.rgb[i] - wash.rgb[i]) * k;
-  wash.amber += ((C.amber || 0) - wash.amber) * k; wash.uv += ((C.uv || 0) - wash.uv) * k;
-  for (const f of P) { f.emit(wash.rgb[0], wash.rgb[1], wash.rgb[2], wash.amber * 255, wash.uv * 255); f.level(wash.level); f.strobe(0); }
+  const D = show.drums;
+  const kickPulse = D.live && KICK_WASH.has(show.scene) && wash.level > 0.02
+    ? 0.22 * Math.exp(-(t - D.kick) * 6) : 0;
+  P.forEach((f, idx) => {
+    const breathe = wash.level > 0.05 ? 1 + 0.06 * Math.sin(t * 0.55 + idx * Math.PI) : 1;
+    f.emit(wash.rgb[0], wash.rgb[1], wash.rgb[2], wash.amber * 255, wash.uv * 255);
+    f.level(Math.min(show.scene === 'backlight' ? 1 : WASH_MAX + 0.18, wash.level * breathe + kickPulse));
+    f.strobe(0);
+  });
 }
 
 // Lead: the beams on the soloist's side stay up, the others drop back. 'trade' swaps sides every 2 bars,
@@ -618,19 +684,44 @@ function leadBeams(side) {
 export function updateShow(t) {
   const beat = (t - show.beat0) * show.bpm / 60;
   const since = (t - show.cueT) * show.bpm / 60;
+  // Soundcheck helper: hold all 4 heads upright on one colour wheel slot, everything else dark.
+  if (show.wheelTest) {
+    BARS.forEach(f => paint(f, () => BLACK, 0));
+    P.forEach(f => { f.level(0); f.strobe(0); });
+    B.forEach((f, k) => {
+      f.aim(SIDE[k] * 14, 18);
+      f.set('Colour', show.wheelTest.dmx);
+      f.level(0.65); f.strobe(0); f.prism(false);
+      f.set('P/T speed', SLOW); f.set('Gobo', 0); f.set('Function', 0);
+    });
+    for (const f of B) f.level(f.getLevel() * show.beams);
+    if (show.master < 1) for (const f of fixtures) f.level(f.getLevel() * show.master);
+    for (const f of fixtures) f.commit(t);
+    return beat;
+  }
   const [a, b] = show.swap ? [show.colorB, show.colorA] : [show.colorA, show.colorB];
   const fading = show.from && t - show.fromT < show.fromLen;
+  const fadeK = fading ? smooth(0, 1, (t - show.fromT) / show.fromLen) : null;
   if (fading) {
     const o = show.from;
     SCENES[o.scene]({ t, beat, since: (t - o.cueT) * show.bpm / 60, A: PALETTE[o.a], B: PALETTE[o.b], v: o.variant });
     keep();
   } else show.from = null;
   SCENES[show.scene]({ t, beat, since, A: PALETTE[a], B: PALETTE[b], v: show.variant });
-  if (fading) blend(smooth(0, 1, (t - show.fromT) / show.fromLen));
+  if (fading) blend(fadeK);
   lastA = a; lastB = b;
   if (show.energy < 0.999 && SHAPED.has(show.scene)) shape(show.energy);
   if (show.lead && SHAPED.has(show.scene)) leadBeams(show.lead === 'trade' ? (Math.floor(beat / 8) % 2 ? 'right' : 'left') : show.lead);
-  if (P.length) washPars(t, a, b);
+  if (P.length) washPars(t, a, b, fadeK);
+
+  // Sustained lead guitar boost (Cyril, stage left): lifts his side's beams & tube organically during distorted solos
+  const gb = show.guitarBoost;
+  if (gb > 0.02 && show.scene !== 'blackout' && show.scene !== 'strobe') {
+    B.forEach((f, k) => {
+      if (SIDE[k] < 0 && f.get('Shutter') > 10) f.level(Math.min(1, f.getLevel() + 0.28 * gb));
+    });
+    if (V[0]) V[0].level(Math.min(1, V[0].getLevel() + 0.18 * gb));
+  }
 
   // soft accents: the tubes swell in their own colour for about a second, the beams lift. Nothing turns white.
   const bl = Math.exp(-(t - show.bloomT) * 2.2) * show.bloomV;
@@ -645,7 +736,9 @@ export function updateShow(t) {
   const sw = Math.max(0.5 * bl, Math.exp(-(t - show.swellT) * 1.6) * show.swellV);
   if (sw > 0.02) for (const f of B) if (f.get('Shutter') > 10) f.level(Math.min(1, f.getLevel() + 0.45 * sw));
 
-  // one-shot accents on top of any look: a white slam that dies in half a second, as hard as it was hit
+  // one-shot accents on top of any look: a white slam on LEDs (tubes + PARs) that dies in half a second.
+  // Moving heads punch to full dimmer in the cue's own wheel colour so the mechanical wheel doesn't flash rainbows;
+  // only blackout/strobe punches switch the wheel to White.
   const slam = (at, v) => Math.exp(-(t - at) * 6) * v;
   const h = slam(show.hitT, show.hitV);
   const ht = Math.max(h, slam(show.tubeHitT, show.tubeHitV)), hb = Math.max(h, slam(show.beamHitT, show.beamHitV));
@@ -661,10 +754,11 @@ export function updateShow(t) {
     }
   }
   if (hb > 0.02) {
+    const forceWhite = show.scene === 'blackout' || show.scene === 'strobe';
     for (const f of B) {
       f.level(Math.max(f.getLevel(), hb));
       if (f.get('Shutter') <= 10) f.strobe(0);   // a dark head has to open up for the hit
-      if (hb > 0.3) f.colour('White');
+      if (forceWhite) f.colour('White');
     }
   }
 

@@ -93,7 +93,7 @@
   .pad-hint{margin:0;color:var(--amber)}
   [data-scene]{position:relative;overflow:hidden}
   [data-scene]::after{content:"";position:absolute;left:0;bottom:0;height:3px;width:calc(var(--p,0) * 100%);background:var(--live)}
-  body[data-mode="show"] .dock,body:not([data-mode="show"]) .show-ctl,body:not([data-mode="show"]) .hud{display:none}
+  body[data-mode="show"] .dock,body:not([data-mode="show"]) .show-ctl,body:not([data-mode="show"]) .hud,body:not([data-mode="show"]) .rig-status{display:none}
 
   /* Show mode: where we are in the song, big enough to read from the stage */
   .hud{position:fixed;z-index:4;top:16px;left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100vw - 32px);text-align:center;pointer-events:none;text-shadow:0 0 8px #000,0 0 3px #000}
@@ -101,6 +101,16 @@
   .hud-song{color:var(--fg-2);font-size:12px;letter-spacing:.14em;text-transform:uppercase}
   .hud-cue{font-size:34px;font-weight:500;line-height:1.15}
   .hud-next{color:var(--fg-2);font-size:15px}
+  .hud-choke{display:inline-block;margin-top:6px;padding:3px 10px;border-radius:999px;background:var(--amber);color:#111;font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;text-shadow:none}
+
+  /* Show mode: 4-dot pre-flight health strip (Bridge · Rig · Pedal · XR18) */
+  .rig-status{position:fixed;z-index:5;top:16px;left:16px;display:flex;gap:4px;padding:4px 6px;border-radius:999px;align-items:center}
+  .rig-status button{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:999px;padding:3px 8px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--fg-2)}
+  .rig-status button:hover{color:var(--fg);background:var(--tint)}
+  .rig-status i{width:7px;height:7px;border-radius:50%;background:var(--fg-3);flex:none}
+  .rig-status [data-state="ok"] i{background:var(--ok);box-shadow:0 0 6px var(--ok)}
+  .rig-status [data-state="warn"] i{background:var(--amber);box-shadow:0 0 6px var(--amber)}
+  .rig-status [data-state="err"] i{background:var(--live);box-shadow:0 0 6px var(--live)}
 
   input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:20px;margin:0;background:transparent;cursor:pointer;--track:var(--fg)}
   input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:linear-gradient(to right,var(--track) var(--v,0%),var(--line-2) var(--v,0%))}
@@ -112,7 +122,7 @@
 
   /* what opens above the bar, one at a time */
   .sheet{position:fixed;z-index:6;left:16px;bottom:calc(var(--panel-h,70px) + 24px);padding:12px;display:flex;flex-direction:column;gap:12px;max-height:calc(100vh - var(--panel-h,70px) - 48px);max-height:calc(100dvh - var(--panel-h,70px) - 48px);overflow-y:auto}
-  .more-sheet,.pedal,.inputs{left:auto;right:16px}
+  .more-sheet,.pedal,.inputs,.wheel{left:auto;right:16px}
   .scenes{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:4px}
   .scenes button{padding:8px 4px;text-align:center}
   .swatches{display:grid;grid-template-columns:auto repeat(8,20px);gap:6px 4px;align-items:center}
@@ -134,6 +144,13 @@
   .mirror[aria-pressed="true"]{background:var(--live);border-color:var(--live);color:#fff}
 
   .dmx header{display:flex;justify-content:space-between;color:var(--fg-3);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+  .wheel{width:min(320px,calc(100vw - 32px))}
+  .wheel p{margin:0;color:var(--fg-2);font-size:12px}
+  .wheel-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+  .wheel-grid button{display:flex;align-items:center;gap:7px;text-align:left;padding:6px 8px;font-size:12px}
+  .wheel-grid i{width:11px;height:11px;border-radius:50%;background:var(--c);border:1px solid var(--line-2);flex:none}
+  .wheel-grid small{margin-left:auto;color:var(--fg-3);font-variant-numeric:tabular-nums;font-size:10.5px}
+  .wheel-grid button[aria-pressed="true"] small{color:inherit;opacity:.7}
   .dmx canvas{display:block;image-rendering:pixelated;max-width:100%}
   .dmx .hover{height:18px;color:var(--fg-2);font-variant-numeric:tabular-nums;font-size:12px}
   .dmx ul{list-style:none;margin:0;padding:0;color:var(--fg-3);font-size:11.5px;font-variant-numeric:tabular-nums}
@@ -150,6 +167,9 @@
   .inputs{width:min(340px,calc(100vw - 32px));max-height:calc(100vh - 160px);overflow-y:auto}
   .inputs-status{margin:0;color:var(--fg-2);font-size:12px}
   .inputs .check{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--fg-2)}
+  .inputs .stop-row{display:grid;grid-template-columns:1fr 110px auto;gap:8px;align-items:center;font-size:12px;color:var(--fg-2);font-variant-numeric:tabular-nums}
+  .inputs .stop-row output{min-width:44px;text-align:right;color:var(--fg-3)}
+  .inputs .stop-level{margin:0;color:var(--fg-3);font-size:11.5px;font-variant-numeric:tabular-nums}
   .inputs-list{list-style:none;margin:0;padding:0;display:grid;gap:3px}
   .inputs-list .ch{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .inputs-list li{display:grid;grid-template-columns:minmax(22px,84px) 112px 1fr 10px;gap:8px;align-items:center;font-size:12px;color:var(--fg-3);font-variant-numeric:tabular-nums}
@@ -212,7 +232,7 @@
   .setlist .save-status{color:var(--fg-3);font-size:11px}
   .unhide{display:none;position:fixed;z-index:7;right:16px;bottom:16px;background:var(--panel);opacity:.7}
   body.hide-ui .unhide{display:block}
-  body.hide-ui .panel,body.hide-ui .sheet,body.hide-ui .tags,body.hide-ui .place,body.hide-ui .setlist{display:none !important}
+  body.hide-ui .panel,body.hide-ui .sheet,body.hide-ui .tags,body.hide-ui .place,body.hide-ui .setlist,body.hide-ui .rig-status{display:none !important}
   body.no-tags .tags{display:none}
   canvas.stage{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
   body{-webkit-tap-highlight-color:transparent}
@@ -251,8 +271,10 @@
     .padgrid{grid-template-columns:repeat(4,minmax(0,1fr));width:100%}
     .manual-side{min-width:0}
     .dock .row{justify-content:flex-start}
+    .hud{top:56px}
     .hud-cue{font-size:26px}
-    .sheet,.more-sheet,.pedal,.inputs{left:12px;right:12px;width:auto}
+    .rig-status{top:10px;left:12px;right:12px;justify-content:space-between}
+    .sheet,.more-sheet,.pedal,.inputs,.wheel{left:12px;right:12px;width:auto}
     .tag span{display:none}
     .scenes{grid-template-columns:repeat(3,minmax(0,1fr))}
     .setlist{top:auto;bottom:calc(var(--panel-h,110px) + 20px);left:12px;right:12px;width:auto;height:auto;max-height:62vh;max-height:62dvh;gap:8px;padding:10px}
@@ -289,7 +311,13 @@
 <button class="unhide" aria-label="Show the controls">Show controls</button>
 <div id="setlist-root"></div>   <!-- the setlist panel, drawn by setlist-ui.js -->
 
-<div class="hud" aria-live="polite"><p class="hud-song"></p><p class="hud-cue"></p><p class="hud-next"></p></div>
+<div class="rig-status glass" aria-label="Live rig status">
+  <button type="button" class="st-bridge" data-state="off"><i></i>Bridge</button>
+  <button type="button" class="st-rig" data-state="off"><i></i>Rig</button>
+  <button type="button" class="st-pedal" data-state="off"><i></i>Pedal</button>
+  <button type="button" class="st-audio" data-state="off"><i></i>XR18</button>
+</div>
+<div class="hud" aria-live="polite"><p class="hud-song"></p><p class="hud-cue"></p><p class="hud-next"></p><p class="hud-choke" hidden>Dark · band stopped</p></div>
 
 <section class="sheet more-sheet glass" hidden aria-label="Settings">
   <div class="segment views" role="group" aria-label="View"></div>
@@ -303,12 +331,19 @@
     <button class="pedal-toggle">Pedal &amp; pad</button>
     <button class="inputs-toggle">Inputs</button>
     <button class="dmx-toggle">DMX</button>
+    <button class="wheel-toggle" title="Test each colour wheel slot on the real LB150 heads">Wheel check</button>
     <button class="mirror" title="Show what a lighting desk sends, instead of running the show">Mirror a desk</button>
     <button class="reset-layout">Reset stage</button>
     <button class="hide">Hide all</button>
     <button class="keys-open">Shortcuts</button>
     <button class="credits-open">Credits</button>
   </div>
+</section>
+
+<section class="sheet wheel glass" hidden aria-label="LB150 colour wheel check">
+  <div class="pedal-top"><h2>LB150 wheel check</h2><button class="wheel-stop">Done</button></div>
+  <p>Points all 4 beams up on one wheel slot (tubes off). Check Blue, Cyan, Light blue &amp; Green on the real heads.</p>
+  <div class="wheel-grid"></div>
 </section>
 
 <section class="sheet dmx glass" hidden aria-label="DMX monitor">
@@ -330,6 +365,8 @@
   <ul class="inputs-list"></ul>
   <p class="inputs-status inputs-live"></p>
   <label class="check"><input type="checkbox" class="dark-on-stop"> Dark when the band stops dead</label>
+  <label class="stop-row"><span>Stop floor</span><input type="range" class="stop-floor" min="-70" max="-25" step="1" value="-50"><output class="stop-floor-out">-50 dB</output></label>
+  <p class="stop-level"></p>
 </section>
 
 <div class="panel glass">

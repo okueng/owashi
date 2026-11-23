@@ -41,13 +41,17 @@ const { universes: routes } = JSON.parse(readFileSync(rigFile, 'utf8'));
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));   // the repo
 const SHOW = join(ROOT, 'sim', 'show');
 
-const ipv4s = Object.values(networkInterfaces()).flat().filter(i => i && (i.family === 'IPv4' || i.family === 4) && !i.internal);
-// the directed broadcast address of every IPv4 interface — where "broadcast" routes go
-const broadcasts = ipv4s
-  .map(i => {
+// Read IPv4 interfaces on demand so plugging in an Ethernet/Art-Net dongle or joining WLED Wi-Fi after startup works.
+let ipv4s = [], broadcasts = [], localHosts = new Set(['localhost', '127.0.0.1', '[::1]']);
+function refreshNet() {
+  ipv4s = Object.values(networkInterfaces()).flat().filter(i => i && (i.family === 'IPv4' || i.family === 4) && !i.internal);
+  broadcasts = [...new Set(ipv4s.map(i => {
     const ip = i.address.split('.').map(Number), mask = i.netmask.split('.').map(Number);
     return ip.map((b, k) => b | (~mask[k] & 255)).join('.');
-  });
+  }))];
+  localHosts = new Set(['localhost', '127.0.0.1', '[::1]', ...ipv4s.map(i => i.address)]);
+}
+refreshNet();
 
 // ── Art-Net ─────────────────────────────────────────────────────────────────
 
@@ -85,6 +89,7 @@ function sendUniverse(sim, data) {
 }
 
 function poll() {
+  refreshNet();
   const p = header(0x2000, 14);   // ArtPoll
   for (const b of broadcasts) udp.send(p, ARTNET_PORT, b);
 }
@@ -99,7 +104,7 @@ function onArtNet(msg) {
     const out = Buffer.alloc(2 + 512);
     out[0] = 2; out[1] = r.sim;
     msg.copy(out, 2, 18, 18 + Math.min(512, msg.readUInt16BE(16)));
-    for (const c of clients) if (c.mode === 'mirror') writeFrame(c, 2, out);
+    for (const c of clients) if (c.mode === 'mirror') writeFrame(c, 2, out, true);
   }
 
   if (op === 0x2100 && msg.length >= 207) {   // ArtPollReply
@@ -124,6 +129,16 @@ function onArtNet(msg) {
 // The helpers that are running. They'd carry on listening after the bridge is stopped, so they go with it.
 const helpers = new Set();
 for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => { for (const p of helpers) p.kill(); process.exit(0); });
+
+// Keep the Mac awake (display and system) while the bridge is running, so a gig never blacks out mid-set.
+function startAwake() {
+  if (process.platform !== 'darwin') return;
+  const p = spawn('caffeinate', ['-di', '-w', String(process.pid)], { stdio: 'ignore' });
+  p.on('error', () => {});
+  helpers.add(p);
+  p.on('close', () => helpers.delete(p));
+  console.log('  sleep  mac kept awake while the bridge runs');
+}
 
 // A Swift helper next to this file, built once with swiftc into ~/Library/Caches (rebuilt when its source changes).
 // Resolves to the binary, or to null with the reason logged.
@@ -192,7 +207,7 @@ async function startAudio() {
       rest = lines.pop();
       for (const line of lines) {
         const [kind, a, b, c] = line.split('\t');
-        if (kind === 'lv') announce({ type: 'lv', v: a.split(',').map(Number) });
+        if (kind === 'lv') announce({ type: 'lv', v: a.split(',').map(Number) }, true);
         else if (kind === 'on' || kind === 'hi') announce({ type: kind, ch: Number(a), v: Number(b) });   // hi: the band above 5 kHz
         else if (kind === 'names') audioNames = a.split('|');   // a recording's tracks, by file name
         else if (kind === 'open') {
@@ -248,15 +263,20 @@ function setClientMode(c, mode) {
   console.log(`  sim    ${{ off: 'stopped', send: 'is driving the rig', mirror: 'is mirroring incoming Art-Net' }[mode]}`);
 }
 
-function writeFrame(c, opcode, payload) {
+const MAX_QUEUE_DROPPABLE = 64 * 1024;
+const MAX_QUEUE_HARD = 1024 * 1024;
+function writeFrame(c, opcode, payload, droppable = false) {
+  if (!c.socket.writable || c.socket.destroyed) return;
+  if (c.socket.writableLength > MAX_QUEUE_HARD) { c.socket.destroy(); return; }
+  if (droppable && c.socket.writableLength > MAX_QUEUE_DROPPABLE) return;
   const n = payload.length;
   let head;
   if (n < 126) head = Buffer.from([0x80 | opcode, n]);
   else if (n < 65536) head = Buffer.from([0x80 | opcode, 126, n >> 8, n & 255]);
   else { head = Buffer.alloc(10); head[0] = 0x80 | opcode; head[1] = 127; head.writeBigUInt64BE(BigInt(n), 2); }
-  c.socket.write(Buffer.concat([head, payload]));
+  try { c.socket.write(Buffer.concat([head, payload])); } catch { c.socket.destroy(); }
 }
-const sendJson = (c, obj) => writeFrame(c, 1, Buffer.from(JSON.stringify(obj)));
+const sendJson = (c, obj, droppable = false) => writeFrame(c, 1, Buffer.from(JSON.stringify(obj)), droppable);
 
 function readFrames(c) {
   for (;;) {
@@ -297,11 +317,15 @@ function onFrame(c, opcode, data) {
 
 // Only pages from this computer or the band's own network may drive the lights or change the show —
 // not any website that happens to be open in the same browser.
-const LOCAL = new Set(['localhost', '127.0.0.1', '[::1]', ...ipv4s.map(i => i.address)]);
 function originOk(req) {
   const o = req.headers.origin;
   if (!o) return true;
-  try { const u = new URL(o); return u.host === req.headers.host || LOCAL.has(u.hostname); } catch { return false; }
+  try {
+    const u = new URL(o);
+    if (u.host === req.headers.host || localHosts.has(u.hostname)) return true;
+    refreshNet();
+    return localHosts.has(u.hostname);
+  } catch { return false; }
 }
 
 const TYPES = {
@@ -356,7 +380,7 @@ function readBody(req, limit) {
 }
 const readJson = async (file, fallback) => { try { return JSON.parse(await readFile(file, 'utf8')); } catch { return fallback; } };
 const writeJson = (file, data) => writeFile(file, JSON.stringify(data, null, 2) + '\n');
-const announce = msg => { for (const c of clients) sendJson(c, msg); };
+const announce = (msg, droppable = false) => { for (const c of clients) sendJson(c, msg, droppable); };
 const SONG_ID = /^[a-z0-9][a-z0-9-]{0,59}$/;
 const AUDIO_PATH = /^recordings\/[\w .-]{1,80}\.(mp3|m4a|wav)$/;   // a song's own recording, in sim/show/recordings/
 
@@ -448,6 +472,7 @@ server.listen(WS_PORT, LAN ? '0.0.0.0' : '127.0.0.1', () => {
   console.log(`  net    broadcasting on ${broadcasts.join(', ') || 'no network interface found'}`);
   for (const r of routes) console.log(`  route  sim U${r.sim} → Art-Net universe ${r.artnet} → ${r.to}${r.note ? `   (${r.note})` : ''}`);
   console.log('  looking for Art-Net boxes and WLED…\n');
+  startAwake();
   poll();
   setInterval(poll, 10_000);
   startMidi().catch(err => console.warn(`  midi   ${err.message}`));
