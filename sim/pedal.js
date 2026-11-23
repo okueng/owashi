@@ -7,7 +7,14 @@ const SAME_PRESS_MS = 40;    // one press can arrive twice, over USB and Bluetoo
 const PEDAL_DEBOUNCE_MS = 350;   // guard foot switches (next / back / blackout) against accidental boot double-bounces
 const TAP_DEBOUNCE_MS = 120;     // tap tempo stays responsive up to ~240+ BPM
 const PAD_STORE = 'owashi-sim:pad';
+const ANAGRAM_STORE = 'owashi-sim:anagram';
 export const PAD_COUNT = 16;
+export const ANAGRAM_SCENES = [
+  [1, 'Heavy'],
+  [2, 'Clean'],
+  [3, 'Reverb'],
+];
+export const ANAGRAM_LABEL = Object.fromEntries(ANAGRAM_SCENES);
 // The M-Vave SMC-PAD Pocket as it comes, read from Midi Suite on 2026-11-08: channel 10, PAD 1 (bottom left) is
 // note 36, counting left to right and upwards to PAD 16 (top right), note 51. Pads here run top left first.
 export const SMC_PAD_POCKET = Array.from({ length: PAD_COUNT }, (_, i) => `note:9:${36 + (3 - Math.floor(i / 4)) * 4 + (i % 4)}`);
@@ -33,6 +40,9 @@ export const pedal = {
   tapPads: new Set(),   // pads where every press counts, even right after a release (Hit, Tap tempo…)
   bridge: null,     // the MIDI devices the bridge sees, while the sim gets its MIDI from there
   bridgeConnected: false,   // true while the bridge WebSocket is open
+  destinations: [], // MIDI outputs the bridge (or browser) sees, for sending scene changes to the Anagram
+  anagram: { target: 'auto', channel: 1, cc: 107 },   // Darkglass Anagram: CC 107, values 1–3
+  anagramLast: 0,   // last scene number sent (1–3)
   onAction: () => {},
   onChange: () => {},
   describe,
@@ -42,6 +52,57 @@ try {
   pedal.map = saved && actions.some(a => saved[a.id]) ? saved : { ...CHOCOLATE };   // older saves had other actions
 } catch { pedal.map = { ...CHOCOLATE }; }
 try { pedal.pads = JSON.parse(localStorage.getItem(PAD_STORE)) || [...SMC_PAD_POCKET]; } catch { pedal.pads = [...SMC_PAD_POCKET]; }
+try {
+  const a = JSON.parse(localStorage.getItem(ANAGRAM_STORE));
+  if (a && typeof a === 'object') {
+    pedal.anagram = {
+      target: typeof a.target === 'string' ? a.target : 'auto',
+      channel: Math.min(16, Math.max(1, Math.round(+a.channel || 1))),
+      cc: Math.min(127, Math.max(0, Math.round(Number.isFinite(+a.cc) ? +a.cc : 107))),
+    };
+  }
+} catch { /* defaults */ }
+
+export function setAnagram(patch) {
+  pedal.anagram = {
+    target: typeof patch.target === 'string' ? patch.target : pedal.anagram.target,
+    channel: Math.min(16, Math.max(1, Math.round(+(patch.channel ?? pedal.anagram.channel) || 1))),
+    cc: Math.min(127, Math.max(0, Math.round(Number.isFinite(+(patch.cc ?? pedal.anagram.cc)) ? +(patch.cc ?? pedal.anagram.cc) : 107))),
+  };
+  try { localStorage.setItem(ANAGRAM_STORE, JSON.stringify(pedal.anagram)); } catch { /* visit only */ }
+  pedal.onChange();
+}
+
+export function anagramTarget() {
+  const { target } = pedal.anagram;
+  if (!target || target === 'off') return null;
+  if (target === 'auto') return pedal.destinations.find(n => /anagram|darkglass/i.test(n)) || null;
+  return pedal.destinations.includes(target) ? target : null;
+}
+
+let bridgeWs = null, midiAccess = null;
+export function sendAnagramScene(scene) {
+  const n = Math.round(+scene || 0);
+  if (n < 1 || n > 127) return false;
+  const to = anagramTarget();
+  if (!to) return false;
+  const { channel, cc } = pedal.anagram;
+  const data = [0xb0 | ((channel - 1) & 0x0f), cc & 0x7f, n & 0x7f];
+  if (bridgeWs?.readyState === WebSocket.OPEN) {
+    bridgeWs.send(JSON.stringify({ type: 'midi-out', to, data }));
+    pedal.anagramLast = n;
+    pedal.onChange();
+    return true;
+  }
+  const out = midiAccess && [...midiAccess.outputs.values()].find(o => o.name === to);
+  if (out) {
+    out.send(data);
+    pedal.anagramLast = n;
+    pedal.onChange();
+    return true;
+  }
+  return false;
+}
 
 // A switch or pad is its message type, channel and number. Pressing is a note on, a control change above 0
 // or a program change; releasing is a note off or a control change back to 0.
@@ -152,6 +213,7 @@ export function connectBridge(url) {
   if (location.protocol === 'https:') return;   // the website can't reach a bridge on this computer
   let ws;
   try { ws = new WebSocket(url); } catch { return; }
+  bridgeWs = ws;
   ws.onopen = () => {
     pedal.bridgeConnected = true;
     pedal.onChange();
@@ -162,24 +224,32 @@ export function connectBridge(url) {
     if (m.type === 'midi' && Array.isArray(m.data)) handle(m.data, performance.now(), m.from || 'bridge');
     else if (m.type === 'midi-sources' || m.midiSources) {
       pedal.bridge = m.names || m.midiSources;
+      if (Array.isArray(m.midiDestinations)) pedal.destinations = m.midiDestinations;
+      pedal.onChange();
+    } else if (m.type === 'midi-destinations') {
+      pedal.destinations = Array.isArray(m.names) ? m.names : [];
       pedal.onChange();
     }
     for (const f of bridgeListeners) f(m);
   };
   ws.onclose = () => {
-    const changed = pedal.bridgeConnected || !!pedal.bridge;
+    if (bridgeWs === ws) bridgeWs = null;
+    const changed = pedal.bridgeConnected || !!pedal.bridge || pedal.destinations.length > 0;
     pedal.bridgeConnected = false;
     pedal.bridge = null;
+    if (!midiAccess) pedal.destinations = [];
     if (changed) pedal.onChange();
     setTimeout(() => connectBridge(url), 5000);   // the bridge may start later, or restart
   };
 }
 
 function listen(access) {
+  midiAccess = access;
   const refresh = () => {
     const inputs = [...access.inputs.values()];
     for (const input of inputs) input.onmidimessage = e => { if (!pedal.bridge) handle(e.data, performance.now(), input.id || input.name); };
     pedal.inputs = inputs.map(i => i.name || 'MIDI device');
+    if (!pedal.bridgeConnected) pedal.destinations = [...access.outputs.values()].map(o => o.name || 'MIDI device');
     pedal.state = 'ready';
     pedal.onChange();
   };

@@ -160,14 +160,21 @@ async function buildHelper(name, tag, what) {
   return bin;
 }
 
-let midiSources = [];
+let midiSources = [], midiDestinations = [], midiProc = null;
+function sendMidiOut(to, data) {
+  if (!midiProc?.stdin?.writable || !to || !Array.isArray(data) || !data.length || data.length > 16) return;
+  const target = String(to).replace(/[\t\r\n]/g, '').slice(0, 120);
+  const hex = data.map(b => (Number(b) & 0xff).toString(16).padStart(2, '0').toUpperCase()).join(' ');
+  try { midiProc.stdin.write(`send\t${target}\t${hex}\n`); } catch { /* restarting */ }
+}
 async function startMidi() {
   if (process.platform !== 'darwin') return;
   const bin = await buildHelper('midi-in', 'midi  ', 'MIDI reader');
   if (!bin) { console.warn('  midi   pedal and pad then need Chrome'); return; }
   const run = () => {
-    const p = spawn(bin, [], { stdio: ['ignore', 'pipe', 'inherit'] });
-    helpers.add(p); p.on('close', () => helpers.delete(p));
+    const p = spawn(bin, [], { stdio: ['pipe', 'pipe', 'inherit'] });
+    midiProc = p;
+    helpers.add(p); p.on('close', () => { helpers.delete(p); if (midiProc === p) midiProc = null; });
     let rest = '';
     p.stdout.on('data', chunk => {
       const lines = (rest + chunk).split('\n');
@@ -178,6 +185,10 @@ async function startMidi() {
           midiSources = hex ? hex.split('|') : [];
           console.log(`  midi   ${midiSources.length ? midiSources.join(', ') : 'no MIDI devices'}`);
           announce({ type: 'midi-sources', names: midiSources });
+        } else if (from === 'destinations') {
+          midiDestinations = hex ? hex.split('|') : [];
+          if (midiDestinations.length) console.log(`  midi   out: ${midiDestinations.join(', ')}`);
+          announce({ type: 'midi-destinations', names: midiDestinations });
         } else if (hex) {
           announce({ type: 'midi', from, data: hex.split(' ').map(h => parseInt(h, 16)) });
         }
@@ -304,6 +315,7 @@ function onFrame(c, opcode, data) {
     try { m = JSON.parse(data.toString('utf8')); } catch { return; }
     if (m.type === 'mode' && ['off', 'send', 'mirror'].includes(m.mode)) setClientMode(c, m.mode);
     if (m.type === 'poll') poll();
+    if (m.type === 'midi-out') sendMidiOut(m.to, m.data);
     return;
   }
   // binary: [1, then per universe: sim number + 512 bytes]
@@ -441,7 +453,7 @@ server.on('upgrade', (req, socket) => {
   const c = { socket, mode: 'off', buf: Buffer.alloc(0) };
   clients.add(c);
   console.log(`  sim    connected from ${socket.remoteAddress}`);
-  sendJson(c, { type: 'hello', routes, receiving, nodes: [...nodes.values()], midiSources, audio });
+  sendJson(c, { type: 'hello', routes, receiving, nodes: [...nodes.values()], midiSources, midiDestinations, audio });
   socket.on('data', chunk => { c.buf = Buffer.concat([c.buf, chunk]); readFrames(c); });
   const drop = () => {
     if (driver === c) driver = null;

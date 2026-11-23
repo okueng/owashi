@@ -15,7 +15,7 @@ import { effect } from '@preact/signals';
 import * as setlist from './setlist.js';
 import { mountSetlist } from './setlist-ui.js';
 import { createLabels } from './labels.js';
-import { actions as pedalActions, bridgeListeners, connect as connectPedal, connectBridge, connectIfAllowed, learnPads, PAD_COUNT, pedal, SMC_PAD_POCKET } from './pedal.js';
+import { actions as pedalActions, ANAGRAM_LABEL, ANAGRAM_SCENES, anagramTarget, bridgeListeners, connect as connectPedal, connectBridge, connectIfAllowed, learnPads, PAD_COUNT, pedal, sendAnagramScene, setAnagram, SMC_PAD_POCKET } from './pedal.js';
 import { inputs, onBridgeMessage, ROLES, setRole } from './inputs.js';
 import { configure as configureLive, live, setDarkOnStop, setStopFloor, tick as liveTick } from './live.js';
 
@@ -426,6 +426,60 @@ const clock = new THREE.Clock();   // for drawing: how long since the last frame
 const showStart = performance.now();
 const showTime = () => (performance.now() - showStart) / 1000;
 
+const nextSong = () => { const l = setlist.songs.value, i = l.findIndex(x => x.id === setlist.songId.value); return i >= 0 ? l[i + 1] : null; };
+// Show mode's readout: the song, where we are in it, what comes next, and an approximate countdown to the next switch.
+const hudTimerEl = $('.hud-timer'), hudEtaEl = $('.hud-eta'), hudBarFill = $('.hud-bar i');
+let hudCueKey = '', hudCueT0 = 0, lastHudTick = -1;
+const fmtEta = sec => {
+  const s = Math.max(0, Math.round(sec)), m = Math.floor(s / 60);
+  return `${m}:${String(s % 60).padStart(2, '0')}`;
+};
+function updateCueProgress(t) {
+  const cues = setlist.cues.value, i = setlist.index.value, cur = cues[i], next = cues[i + 1];
+  const expected = cur && next ? next.t - cur.t : 0;
+  const onCue = cur && show.scene === cur.scene && show.variant === cur.variant;
+  if (!onCue || !next || expected < 2 || (cur.scene === 'blackout' && cur.t === 0)) {
+    show.cueP = 0.5;   // neutral mid-arc in Manual mode or on ready/final cues
+    return null;
+  }
+  const elapsed = setlist.follow.value && setlist.playing.value
+    ? Math.max(0, setlist.position() - cur.t)
+    : Math.max(0, t - hudCueT0);
+  const p = Math.min(1, Math.max(0, elapsed / expected));
+  show.cueP = p;
+  return { expected, elapsed, p };
+}
+function syncHudTimer(t, force = false) {
+  if (!force && (document.body.dataset.mode !== 'show' || t - lastHudTick < 0.15)) return;
+  lastHudTick = t;
+  const info = updateCueProgress(t);
+  if (!info) {
+    hudTimerEl.hidden = true;
+    return;
+  }
+  const { expected, elapsed, p } = info;
+  const rem = expected - elapsed;
+  hudTimerEl.hidden = false;
+  hudTimerEl.dataset.state = rem <= 0 ? 'due' : rem <= 10 ? 'soon' : 'ok';
+  hudEtaEl.textContent = rem > 0 ? `~${fmtEta(rem)}` : rem > -3 ? 'NOW' : `+${fmtEta(-rem)}`;
+  hudBarFill.style.width = `${(p * 100).toFixed(1)}%`;
+}
+function syncHud() {
+  const s = setlist.song.value, cues = setlist.cues.value, i = setlist.index.value, cur = cues[i], next = cues[i + 1];
+  const key = `${s?.id || ''}:${i}:${cur?.id || ''}`;
+  if (key !== hudCueKey) { hudCueKey = key; hudCueT0 = showTime(); }
+  const ana = cur?.anagram ? ` · Anagram ${cur.anagram} ${ANAGRAM_LABEL[cur.anagram]}` : '';
+  $('.hud-song').textContent = s ? (cur ? `${s.title} · cue ${cur.id}${ana}` : s.title) : 'No song';
+  $('.song-name').textContent = s?.title || 'No song';
+  $('.hud-cue').textContent = show.scene === 'blackout' ? 'Blackout' : cur ? `${cur.name} · ${labelOf(show.scene)}` : labelOf(show.scene);
+  const nextAna = next?.anagram ? ` → Anagram ${next.anagram} ${ANAGRAM_LABEL[next.anagram]}` : '';
+  $('.hud-next').textContent = !cues.length ? 'No cues yet: Next steps through the looks'
+    : next ? `Next: ${next.name} · ${labelOf(next.scene)}${nextAna}`
+    : nextSong() ? `Next song: ${nextSong().title}` : 'End of the set';
+  $('.hud-choke').hidden = !show.autoChoke;
+  syncHudTimer(showTime(), true);
+}
+
 const sceneButtons = SCENE_LIST.map(([id, label, key, , hint]) => {
   const b = button(label, null, () => setScene(id));
   b.dataset.scene = id; b.title = `${hint} (key ${key.toUpperCase()})`;
@@ -491,18 +545,6 @@ effect(() => {   // the setlist opens and closes with Setup: move the stage over
     if (drawer && !drawer.dataset.watched) { drawer.dataset.watched = 1; new ResizeObserver(resize).observe(drawer); }
   });
 });
-const nextSong = () => { const l = setlist.songs.value, i = l.findIndex(x => x.id === setlist.songId.value); return i >= 0 ? l[i + 1] : null; };
-// Show mode's readout: the song, where we are in it, and what comes next
-function syncHud() {
-  const s = setlist.song.value, cues = setlist.cues.value, i = setlist.index.value, cur = cues[i], next = cues[i + 1];
-  $('.hud-song').textContent = s ? (cur ? `${s.title} · cue ${cur.id}` : s.title) : 'No song';
-  $('.song-name').textContent = s?.title || 'No song';
-  $('.hud-cue').textContent = show.scene === 'blackout' ? 'Blackout' : cur ? `${cur.name} · ${labelOf(show.scene)}` : labelOf(show.scene);
-  $('.hud-next').textContent = !cues.length ? 'No cues yet: Next steps through the looks'
-    : next ? `Next: ${next.name} · ${labelOf(next.scene)}`
-    : nextSong() ? `Next song: ${nextSong().title}` : 'End of the set';
-  $('.hud-choke').hidden = !show.autoChoke;
-}
 effect(syncHud);
 window.sim.setlist = setlist;
 const flashBtn = $('.flash');
@@ -787,6 +829,13 @@ function syncRigStatus() {
   const pedalState = midiNames.length ? 'ok' : (pedal.bridgeConnected || pedal.state === 'ready') ? 'warn' : 'off';
   setDot('.st-pedal', pedalState, midiNames.length ? `MIDI: ${midiNames.join(', ')}` : 'No MIDI pedal or pad connected');
 
+  const anaOut = anagramTarget();
+  const anaState = pedal.anagram.target === 'off' ? 'off' : anaOut ? 'ok' : 'warn';
+  const anaTitle = pedal.anagram.target === 'off' ? 'Anagram MIDI out is off'
+    : anaOut ? `Anagram: ${anaOut} · ch ${pedal.anagram.channel} · CC ${pedal.anagram.cc}${pedal.anagramLast ? ` (scene ${pedal.anagramLast})` : ''}`
+    : 'Anagram not found — plug in over USB-C';
+  setDot('.st-anagram', anaState, anaTitle);
+
   const audioState = !inputs.device ? 'off' : show.autoChoke ? 'warn' : 'ok';
   const audioTitle = !inputs.device ? (inputs.note || 'No audio interface connected')
     : show.autoChoke ? `${inputs.device} · dead stop active (lights dark)` : `${inputs.device}: ${inputs.channels} ch`;
@@ -795,6 +844,7 @@ function syncRigStatus() {
 $('.st-bridge').addEventListener('click', () => toast(pedal.bridgeConnected || artnet.state === 'connected' ? 'Bridge connected' : 'Bridge offline · node sim/bridge/artnet-bridge.mjs'));
 $('.st-rig').addEventListener('click', () => $('.rig').click());
 $('.st-pedal').addEventListener('click', () => toggleSheet($('.pedal')));
+$('.st-anagram').addEventListener('click', () => toggleSheet($('.pedal')));
 $('.st-audio').addEventListener('click', () => toggleSheet($('.inputs')));
 
 syncArtnet();
@@ -1039,6 +1089,49 @@ const pedalRows = pedalActions.map(({ id, label }) => {
   $('.pedal-map').append(li);
   return { id, set: li.querySelector('small'), learn: li.querySelector('.learn') };
 });
+const anagramDestEl = $('.anagram-dest'), anagramChEl = $('.anagram-ch'), anagramCcEl = $('.anagram-cc');
+for (let ch = 1; ch <= 16; ch++) {
+  const o = document.createElement('option'); o.value = ch; o.textContent = `Ch ${ch}`;
+  anagramChEl.append(o);
+}
+anagramDestEl.addEventListener('change', () => setAnagram({ target: anagramDestEl.value }));
+anagramChEl.addEventListener('change', () => setAnagram({ channel: +anagramChEl.value }));
+anagramCcEl.addEventListener('change', () => setAnagram({ cc: +anagramCcEl.value }));
+const anagramButtons = ANAGRAM_SCENES.map(([n, label]) => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.textContent = `${n} · ${label}`;
+  b.dataset.scene = n;
+  b.addEventListener('click', () => {
+    if (!sendAnagramScene(n)) toast('Anagram not connected over USB-C');
+  });
+  $('.anagram-test').append(b);
+  return b;
+});
+function syncAnagram() {
+  const out = anagramTarget();
+  $('.anagram-status').textContent = pedal.anagram.target === 'off' ? 'Anagram MIDI out: off'
+    : out ? `Anagram: ${out}`
+    : 'Anagram: plug in over USB-C (auto-matches Darkglass / Anagram)';
+  const opts = [['auto', 'Auto (Anagram)'], ['off', 'Off'], ...pedal.destinations.map(n => [n, n])];
+  if (pedal.anagram.target !== 'auto' && pedal.anagram.target !== 'off' && !pedal.destinations.includes(pedal.anagram.target)) {
+    opts.push([pedal.anagram.target, `${pedal.anagram.target} (unplugged)`]);
+  }
+  const key = opts.map(o => o[0]).join('|');
+  if (anagramDestEl.dataset.key !== key) {
+    anagramDestEl.replaceChildren(...opts.map(([val, text]) => {
+      const o = document.createElement('option'); o.value = val; o.textContent = text; return o;
+    }));
+    anagramDestEl.dataset.key = key;
+  }
+  anagramDestEl.value = pedal.anagram.target;
+  anagramChEl.value = String(pedal.anagram.channel);
+  anagramCcEl.value = String(pedal.anagram.cc);
+  anagramButtons.forEach(b => {
+    b.disabled = !out;
+    b.setAttribute('aria-pressed', pedal.anagramLast === +b.dataset.scene);
+  });
+}
 function syncPedal() {
   const padsSet = pedal.pads.filter(Boolean).length;
   const builtIn = pedal.pads.join() === SMC_PAD_POCKET.join();
@@ -1058,6 +1151,7 @@ function syncPedal() {
     r.set.textContent = key ? pedal.describe(key) : '';
     r.learn.setAttribute('aria-pressed', pedal.learning === r.id);
   }
+  syncAnagram();
   syncRigStatus();
 }
 pedal.onChange = syncPedal;
@@ -1147,6 +1241,7 @@ function stepShow(t) {
   try {
     setlist.tick();   // a song that's playing moves the cues (and the tempo grid) along
     liveTick();       // and its recording's drums drive the looks
+    updateCueProgress(t);   // drive each look's dramatic arc along the chapter timer
     // mirroring a desk: the show stays out of the universes, the desk fills them
     lastBeat = artnet.mode === 'mirror' ? (t - show.beat0) * show.bpm / 60 : updateShow(t);
   } catch (err) {
@@ -1199,6 +1294,7 @@ renderer.setAnimationLoop(now => {
   beatDots.forEach((d, i) => { d.style.opacity = i === beatNow ? 0.25 + 0.75 * nod : 0.15; });
   const progress = lookProgress(t);
   document.querySelectorAll(`.panel [data-scene="${show.scene}"]`).forEach(b => b.style.setProperty('--p', progress));
+  syncHudTimer(t);
   if (uiShown) labels.update(innerWidth, innerHeight);
   if (!dmxPanel.hidden) {
     drawMonitor();

@@ -7,6 +7,7 @@
 import { batch, computed, effect, signal } from '@preact/signals';
 import { beamHit, cue, DRUM_LOOKS, hit, PALETTE, SCENE_LIST, show, tubeHit, VARIANTS } from './show.js';
 import { addSong, loadShow, saveSong, showStore } from './showstore.js';
+import { sendAnagramScene } from './pedal.js';
 
 export const LOOKS = SCENE_LIST.map(([id, label]) => ({ id, label }));
 export const LOOK_LABEL = Object.fromEntries(LOOKS.map(l => [l.id, l.label]));
@@ -40,6 +41,7 @@ export const clean = c => ({
   lead: LEADS.includes(c.lead) ? c.lead : '',
   react: REACTS.includes(c.react) ? c.react : 'crash',   // which live accents fire during this cue (live.js)
   punch: !!c.punch,   // lands with a white slam on everything: for the big entries, pressed right on the hit
+  ...([1, 2, 3].includes(+c.anagram) ? { anagram: +c.anagram } : {}),   // optional Darkglass Anagram scene (1–3)
 });
 // Every cue keeps a number of its own within its song, so it can be named ("New Land 17") whatever gets added,
 // moved or removed around it. A cue without one, or with one that's taken, gets the next free number.
@@ -282,6 +284,7 @@ function apply(i, p = null, cut = false, forward = true) {
   show.colorA = c.a; show.colorB = c.b; show.bpm = c.bpm;
   cue(c.scene, now(), cut ? 0 : (c.fade * 240) / c.bpm, c.variant);
   if (c.punch && !cut && forward) hit(now(), 1);   // not when jumping about or stepping back
+  if (c.anagram) sendAnagramScene(c.anagram);
   songT0 = now() - (p ?? c.t);
   align(c, p ?? c.t);
   onApplied();

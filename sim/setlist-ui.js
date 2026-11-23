@@ -7,6 +7,7 @@ import { computed, useSignalEffect } from '@preact/signals';
 import htm from 'htm';
 import * as S from './setlist.js';
 import { PALETTE, VARIANTS } from './show.js';
+import { ANAGRAM_LABEL, ANAGRAM_SCENES } from './pedal.js';
 
 const html = htm.bind(h);
 
@@ -105,6 +106,7 @@ function CueRow({ c, i, on }) {
       <span class="id" title="This cue's number: it stays with the cue">${c.id}</span>
       <input class="t" value=${S.fmt(c.t)} aria-label="Cue time" size="6" onChange=${setTime} />
       <input class="n" value=${c.name} aria-label="Cue name" onChange=${e => S.updateCue(i, { name: e.currentTarget.value.trim() })} />
+      ${c.anagram ? html`<span class="anagram-tag" title=${`Sends Anagram scene ${c.anagram} (${ANAGRAM_LABEL[c.anagram]}) over MIDI`}>${c.anagram}·${ANAGRAM_LABEL[c.anagram]}</span>` : null}
       ${hears ? html`<span class="hears" title="What this cue follows live, through the mixer. With a recording, its drums and crashes are replayed; guitars and fills are not.">${hears}</span>` : null}
       <button class="x" aria-label="Delete cue" onClick=${() => S.deleteCue(i)}>×</button>
     </div>
@@ -134,6 +136,14 @@ function CueRow({ c, i, on }) {
       </select>
       <button class="punch" aria-pressed=${c.punch} title="Punch: this cue lands with a white slam on everything. For the big entries."
         onClick=${() => S.updateCue(i, { punch: !c.punch })}>Punch</button>
+    </div>
+    <div class="l2">
+      <span>Anagram</span>
+      <select class="lead" aria-label="Anagram scene" value=${c.anagram || ''} title="Darkglass Anagram scene sent over USB-C MIDI when this cue fires"
+        onChange=${e => S.updateCue(i, { anagram: e.currentTarget.value ? +e.currentTarget.value : 0 })}>
+        <option value="">— unchanged</option>
+        ${ANAGRAM_SCENES.map(([n, label]) => html`<option key=${n} value=${n}>${n} · ${label}</option>`)}
+      </select>
     </div>` : null}
   </li>`;
 }

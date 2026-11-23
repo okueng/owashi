@@ -142,7 +142,10 @@ export class Fixture {
     const k = this.virtual.level * rateGate(this.virtual.strobe, t), z = this.virtual.raw;
     for (let i = 0; i < this.n; i++) {
       const r = z[i * 3] * k, g = z[i * 3 + 1] * k, b = z[i * 3 + 2] * k;
-      const w = Math.min(r, g, b);   // the part all three share goes to the white LEDs instead
+      // The WS2814 tubes' W diode is warm white (~3000 K): using it for neutral/cool white or Ice turns them yellow,
+      // so keep cool/neutral mixes on crisp RGB and only feed W when the colour is genuinely warm (R > B).
+      const warm = r > b ? (r - b) / Math.max(r, 1) : 0;
+      const w = Math.min(r, g, b) * warm;
       const a = this.zone0 + i * 4;
       this.u[a] = clamp255(r - w); this.u[a + 1] = clamp255(g - w); this.u[a + 2] = clamp255(b - w); this.u[a + 3] = clamp255(w);
     }
