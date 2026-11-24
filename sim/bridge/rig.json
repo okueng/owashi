@@ -9,13 +9,13 @@
     {
       "sim": 2,
       "artnet": 2,
-      "to": "192.168.2.1",
+      "to": "192.168.1.20",
       "note": "WLED, start universe 2, Multi RGBW, address 1: tube 1 (ch 1–256), tube 2 (ch 257–512)"
     },
     {
       "sim": 3,
       "artnet": 3,
-      "to": "192.168.2.1",
+      "to": "192.168.1.20",
       "note": "WLED: tube 3 (ch 1–256), tube 4 (ch 257–512)"
     }
   ]
