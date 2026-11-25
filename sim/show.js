@@ -94,9 +94,26 @@ function paint(f, fn, level = 1, strobe = 0) {
   f.level(level); f.strobe(strobe);
   for (let i = 0; i < f.n; i++) { const c = fn((i + 0.5) / f.n); f.setZone(i, c[0], c[1], c[2]); }
 }
-function beam(f, { pan, tilt, color = 'White', level = 1, prism = false, strobe = 0, speed = 0 }) {
+// The December room: the heads stand at the back of an alcove whose ceiling is 2.6 m, under a soffit at 2.4 m. A beam
+// leaning towards the audience hits that ceiling above the band after about 2 m and, seen from the room, comes
+// straight at you and looks short. Leaning sideways it draws a long diagonal across the black curtain. So the
+// looks' side angle is widened here (pan × SIDEWAYS, up to the ±90° limit) and their lean is kept: the same
+// moves, turned to the sides. Set SIDEWAYS to 1 for a stage with height over the audience.
+const SIDEWAYS = 1.7;
+// The alcove is about 5 m wide, so the outer heads stand only about 0.7 m from its side walls, by the steps and the
+// doorway on the right. No beam may land on a side wall below 2.2 m (head height on the steps): leaning outwards,
+// its sideways run may be at most half its rise, about 27° from upright. Leaning inwards it's free.
+const MAX_OUT_LEAN = 0.5;
+const D2R = Math.PI / 180;
+function aim(f, pan, tilt) {
+  const out = Math.sin(tilt * D2R) * Math.sin(pan * D2R) * SIDE[B.indexOf(f)];   // > 0 when leaning towards its wall
+  if (out > 0 && out / Math.cos(tilt * D2R) > MAX_OUT_LEAN) tilt = Math.sign(tilt) * Math.atan(MAX_OUT_LEAN / Math.abs(Math.sin(pan * D2R))) / D2R;
+  f.aim(pan, tilt);
+}
+// `exact` aims a head as given, for shapes that need each head placed (the crossing behind the drums)
+function beam(f, { pan, tilt, exact = false, color = 'White', level = 1, prism = false, strobe = 0, speed = 0 }) {
   // the inner pair stands nearer the middle: it leans out less and stays more upright, so the four make a fan
-  if (pan !== undefined) isInner.has(f) ? f.aim(pan * 0.45, tilt * 0.8) : f.aim(pan, tilt);
+  if (pan !== undefined) exact ? aim(f, pan, tilt) : isInner.has(f) ? aim(f, pan * 0.45 * SIDEWAYS, tilt * 0.8) : aim(f, pan * SIDEWAYS, tilt);
   f.colour(color); f.level(level); f.strobe(strobe); f.prism(prism);
   f.set('P/T speed', speed); f.set('Gobo', 0); f.set('Function', 0);
 }
@@ -106,16 +123,23 @@ const isBack = k => k === 1 || k === 2;   // V2 and V3 stand at the back, V1 and
 // paint the two front bars as one line, x = 0 (audience's left) to 1 (right)
 const line = (fn, level = 1, strobe = 0) => H.forEach((f, k) => paint(f, u => fn((k + u) / 2), level, strobe));
 
-// beam positions the heavy looks jump between (always moved while dark)
+// beam positions the heavy looks jump between. The jumps can be 150° (from the fan to the crossing), so the heads
+// only ever make them with the shutter closed: see MOVE_S and its use in Drive and Breakdown. Under the alcove's low
+// ceiling they're shapes across the back of the stage: nothing reaches over the audience.
 const POSITIONS = [
   k => ({ pan: SIDE[k] * 12, tilt: 8 }),    // straight up, tight fan
-  k => ({ pan: SIDE[k] * 16, tilt: 45 }),   // out over the crowd, as low as the limit allows
-  k => ({ pan: -SIDE[k] * 30, tilt: 38 }),  // crossing over the middle
-  k => ({ pan: SIDE[k] * 55, tilt: 42 }),   // wide out to the walls
+  k => ({ pan: SIDE[k] * 55, tilt: 45 }),   // wide fan, the outer pair leaning out as far as MAX_OUT_LEAN allows
+  // crossing: the inner pair makes an X behind the drummer, about 1.7 m up, the outer pair leans in over it
+  k => (k < 2 ? { pan: -SIDE[k] * 60, tilt: 40, exact: true } : { pan: -SIDE[k] * 90, tilt: 42, exact: true }),
+  // all four leaning the same way, parallel: to the left, away from the steps and doorway, within MAX_OUT_LEAN
+  () => ({ pan: -70, tilt: 27, exact: true, parallel: true }),
 ];
+// Seconds the heads get, dark and at full speed, to reach a new position: the LB150 pans 540° in 2.5 s, so a 150°
+// jump takes 0.7 s, plus time to settle.
+const MOVE_S = 1.0;
 
-// where Drive's beams rest, 8 bars each: crossed, out to the walls, over the crowd, straight up
-const DRIVE_POSITIONS = [POSITIONS[2], POSITIONS[3], POSITIONS[1], POSITIONS[0]];
+// where Drive's beams rest, 8 bars each: crossed, fanned out, leaning, straight up
+const DRIVE_POSITIONS = [POSITIONS[2], POSITIONS[1], POSITIONS[3], POSITIONS[0]];
 
 // The rig has depth, and the looks use it: the back pair and the side pair answer each other. The front bars
 // are the only light on the band's faces, so they stay low until a look means to reveal the band, and their
@@ -248,8 +272,13 @@ const SCENES = {
     }
     V.forEach((f, k) => paint(f, () => c, isBack(k) ? ring : e));
     line(() => c, e);
-    const pos = POSITIONS[wrap(ph < 0.4 ? h : h + 1, POSITIONS.length)];
-    B.forEach((f, k) => beam(f, { ...pos(k), color: h % 4 === 0 ? 'White' : A.wheel, level: e }));
+    // each slam lands somewhere new: the beams close a quarter of the way in and head for the next position at
+    // full speed in the dark (0.75 s at 120 BPM; live, the next snare may still catch them on the way)
+    const moved = ph >= 0.25, pos = POSITIONS[wrap(moved ? h + 1 : h, POSITIONS.length)];
+    B.forEach((f, k) => {
+      beam(f, { ...pos(k), color: h % 4 === 0 ? 'White' : A.wheel, level: moved ? 0 : e, speed: moved ? 0 : SLOW });
+      if (moved) dark(f);
+    });
   },
 
   // Wall of sound / climax, and the one place the band is fully revealed: tubes full with a molten upward
@@ -343,13 +372,19 @@ const SCENES = {
     });
     const pos = DRIVE_POSITIONS[wrap(Math.floor(beat / 32) + v, DRIVE_POSITIONS.length)];
     const usePrism = p > 0.66 || phrase === 2;
+    // a new position every 32 beats: close half a beat before, swing there fast in the dark, open once arrived
+    const at32 = frac(beat / 32) * 32, travel = MOVE_S * show.bpm / 60;
+    const moving = at32 < travel, open = at32 > 31.5 ? 0 : smooth(travel, travel + 1, at32);
+    // the drift is shared (the lean stays parallel) or mirrored (the fan and the crossing stay symmetric)
+    const drift = 3 * Math.sin(t * 0.1), lift = 2 * Math.sin(t * 0.13);
     B.forEach((f, k) => {
       const at = pos(k);
       const baseLv = isInner.has(f) ? 0.14 + 0.66 * p : 0.36 + 0.52 * p;
       beam(f, {
-        pan: at.pan + 3 * Math.sin(t * 0.1 + k), tilt: at.tilt - 5 * p + 2 * Math.sin(t * 0.13 + k * 2),
-        color: A.wheel, level: baseLv, prism: usePrism, speed: SLOW,
+        ...at, pan: at.pan + (at.parallel ? 1 : SIDE[k]) * drift, tilt: at.tilt - 5 * p + lift,
+        color: A.wheel, level: baseLv * open, prism: usePrism, speed: moving ? 0 : SLOW,
       });
+      if (open === 0) dark(f);
     });
   },
 
@@ -604,9 +639,21 @@ function blend(k) {
       f.set('Colour', h.col);
       f.set('Prism', h.prism);
       f.strobe(0);
-    } else if (h.lv > 0.02 && now > 0) {   // lit on both sides: glide pan/tilt and swap mechanical wheel at midpoint
+    } else if (h.lv > 0.02 && now > 0) {   // lit on both sides
       const [np, nt] = f.angles();
-      f.aim(h.pan + (np - h.pan) * k, h.tilt + (nt - h.tilt) * k);
+      if (Math.abs(np - h.pan) > 45 || Math.abs(nt - h.tilt) > 30) {
+        // a big move doesn't sweep across the stage lit: out on the old aim, across in the dark (MOVE_S, as much of
+        // it as the fade allows), in on the new
+        const darkK = Math.min(0.8, Math.max(0.4, MOVE_S / Math.max(show.fromLen, 0.01))), k0 = (1 - darkK) / 2, k1 = k0 + darkK;
+        const gone = k >= k0;
+        if (!gone) { f.aim(h.pan, h.tilt); f.set('Colour', h.col); f.set('Prism', h.prism); }
+        f.set('P/T speed', gone ? 0 : SLOW);
+        f.level(h.lv * (1 - smooth(0, k0, k)) + now * smooth(k1, 1, k));
+        if (gone && k < k1) dark(f);
+        continue;
+      }
+      // a small one glides, and the mechanical wheel swaps at the midpoint
+      aim(f, h.pan + (np - h.pan) * k, h.tilt + (nt - h.tilt) * k);
       f.set('P/T speed', SLOW);
       if (k < 0.5) { f.set('Colour', h.col); f.set('Prism', h.prism); }
     }
@@ -801,11 +848,34 @@ export function updateShow(t) {
     B.forEach(dark);
     P.forEach(f => f.level(0));
   }
+  noLitSwings(t);
   for (const f of H) f.level(f.getLevel() * FRONT_BAR_MAX);
   for (const f of B) f.level(f.getLevel() * show.beams);
   if (show.master < 1) for (const f of fixtures) f.level(f.getLevel() * show.master);
   for (const f of fixtures) f.commit(t);
   return beat;
+}
+
+// A head never swings across the stage lit. The show follows where each head physically is (at the speed it was
+// last sent, like the sim draws it), and keeps it closed, moving at full speed, while it's more than 3° from
+// where it's meant to be: after a cut to another look, a punch, anything that jumps the aim. Glides keep up and
+// pass. Blast whips its beams on every beat on purpose, out to the sides within MAX_OUT_LEAN, so it's left alone.
+const SWING_DEG = 3;
+const travel = new Map(B.map(f => [f, { pan: 0, tilt: 0, speed: 0, t: null }]));
+function noLitSwings(t) {
+  for (const f of B) {
+    const g = travel.get(f), [pan, tilt] = f.angles(), d = f.def;
+    const dt = g.t === null ? 0 : Math.min(0.5, Math.max(0, t - g.t)), k = d.speedFactor(g.speed);
+    if (g.t === null) { g.pan = pan; g.tilt = tilt; }
+    const step = (x, to, rate) => x + Math.max(-rate * dt, Math.min(rate * dt, to - x));
+    g.pan = step(g.pan, pan, (d.panRange / d.panTime) * k);
+    g.tilt = step(g.tilt, tilt, (d.tiltRange / d.tiltTime) * k);
+    g.t = t;
+    if (Math.max(Math.abs(pan - g.pan), Math.abs(tilt - g.tilt)) > SWING_DEG && !(show.scene === 'blast' && !show.from)) {
+      dark(f); f.set('P/T speed', 0);
+    }
+    g.speed = f.get('P/T speed');
+  }
 }
 
 const taps = [];

@@ -77,6 +77,19 @@ const LENS_R = 0.045;
 const HALF_ANGLE = 0.86;   // degrees — the LB150 is a 1.72° beam
 const FACETS = 6;          // 6-facet prism
 
+// Where the room stops a beam: the inside of the room, plus solid blocks (a low ceiling, a soffit) it can't pass.
+let stops = null;
+export function setBeamStops(room, solids = []) { stops = { room, solids }; }
+const stopRay = new THREE.Ray(), stopHit = new THREE.Vector3();
+function reach(origin, dir) {
+  if (!stops) return BEAM_LEN;
+  if (!stops.room.containsPoint(origin) || stops.solids.some(b => b.containsPoint(origin))) return 0;   // a head inside something
+  stopRay.set(origin, dir);
+  let d = BEAM_LEN;
+  for (const b of [stops.room, ...stops.solids]) if (stopRay.intersectBox(b, stopHit)) d = Math.min(d, stopHit.distanceTo(origin));
+  return d;
+}
+
 const beamGeometry = (() => {
   const r0 = LENS_R * 0.85, r1 = r0 + BEAM_LEN * Math.tan(THREE.MathUtils.degToRad(HALF_ANGLE));
   const g = new THREE.CylinderGeometry(r1, r0, BEAM_LEN, 36, 1, true);
@@ -101,6 +114,7 @@ const beamShader = {
     uniform vec3 uColor;
     uniform float uIntensity;
     uniform float uTime;
+    uniform float uReach;
     varying float vT;
     varying vec3 vPosW;
     varying vec3 vNormW;
@@ -112,6 +126,7 @@ const beamShader = {
                  mix(mix(hash(i + vec3(0, 0, 1)), hash(i + vec3(1, 0, 1)), f.x), mix(hash(i + vec3(0, 1, 1)), hash(i + vec3(1, 1, 1)), f.x), f.y), f.z);
     }
     void main() {
+      if (vT > uReach) discard;                                      // it hit the ceiling or a wall
       vec3 V = normalize(cameraPosition - vPosW);
       float core = pow(abs(dot(V, normalize(vNormW))), 1.6);        // brightest down the middle of the pencil
       float fall = pow(1.0 - vT, 1.5) * smoothstep(0.0, 0.01, vT);  // fades out with distance
@@ -125,7 +140,7 @@ function beamMaterial() {
   return new THREE.ShaderMaterial({
     ...beamShader,
     uniforms: {
-      uLength: { value: BEAM_LEN }, uColor: { value: new THREE.Color() }, uIntensity: { value: 0 }, uTime: { value: 0 },
+      uLength: { value: BEAM_LEN }, uColor: { value: new THREE.Color() }, uIntensity: { value: 0 }, uTime: { value: 0 }, uReach: { value: 1 },
     },
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
   });
@@ -167,12 +182,14 @@ export class BeamHead {
     this.beams = new THREE.Group(); this.beams.position.y = 0.086;
     this.mainMat = beamMaterial();
     this.main = new THREE.Mesh(beamGeometry, this.mainMat);
-    this.prismMat = beamMaterial();
+    // each prism facet leans 3.2° its own way, so each stops at its own distance: one material per facet
     this.prism = new THREE.Group();
+    this.facets = [];
     for (let k = 0; k < FACETS; k++) {
       const arm = new THREE.Group(); arm.rotation.y = (k * 2 * Math.PI) / FACETS;
-      const m = new THREE.Mesh(beamGeometry, this.prismMat); m.rotation.z = THREE.MathUtils.degToRad(3.2);
+      const m = new THREE.Mesh(beamGeometry, beamMaterial()); m.rotation.z = THREE.MathUtils.degToRad(3.2);
       arm.add(m); this.prism.add(arm);
+      this.facets.push(m);
     }
     this.beams.add(this.main, this.prism);
     this.head.add(this.beams);
@@ -191,6 +208,7 @@ export class BeamHead {
     this.head.add(this.glare);
 
     this.dir = new THREE.Vector3(); this.lensW = new THREE.Vector3(); this.toCam = new THREE.Vector3();
+    this.fromW = new THREE.Vector3(); this.facetDir = new THREE.Vector3();
     this.output = [0, 0, 0];   // the beam's colour right now, 0–1, for its label
   }
 
@@ -211,27 +229,42 @@ export class BeamHead {
     const prism = def.decodePrism(f.get('Prism'));
     this.prismAngle += prism.spin * dt * 4;
 
-    for (const mat of [this.mainMat, this.prismMat]) {
+    this.prism.rotation.y = this.prismAngle;
+
+    // where each beam stops, cast from where the beam mesh starts
+    this.head.updateWorldMatrix(true, true);
+    this.dir.set(0, 1, 0).transformDirection(this.head.matrixWorld);
+    this.lensW.set(0, 0.1, 0).applyMatrix4(this.head.matrixWorld);
+    this.beams.getWorldPosition(this.fromW);
+    const mainReach = reach(this.fromW, this.dir);
+    const level = k * haze * 1.6;
+    const set = (mat, intensity, stopAt) => {
       mat.uniforms.uColor.value.setRGB(r, g, b);
       mat.uniforms.uTime.value = t;
+      mat.uniforms.uIntensity.value = intensity;
+      mat.uniforms.uReach.value = stopAt / BEAM_LEN;
+    };
+    set(this.mainMat, prism.on ? 0 : level, mainReach);
+    let lightReach = mainReach;
+    if (prism.on && k > 0) {
+      lightReach = 0;
+      for (const m of this.facets) {
+        const d = reach(this.fromW, this.facetDir.set(0, 1, 0).transformDirection(m.matrixWorld));
+        set(m.material, level * 0.45, d);
+        lightReach = Math.max(lightReach, d);
+      }
     }
-    const level = k * haze * 1.6;
-    this.mainMat.uniforms.uIntensity.value = prism.on ? 0 : level;
-    this.prismMat.uniforms.uIntensity.value = prism.on ? level * 0.45 : 0;
     this.main.visible = !prism.on && k > 0;
     this.prism.visible = prism.on && k > 0;
-    this.prism.rotation.y = this.prismAngle;
 
     this.lensMat.color.setRGB(r * k * 8, g * k * 8, b * k * 8);
 
     this.spot.color.setRGB(r, g, b);
     this.spot.intensity = k * 1400;
+    this.spot.distance = lightReach + 0.4;   // lights what the beam lands on, not the room behind it
     this.spot.angle = Math.atan((LENS_R + BEAM_LEN * Math.tan(THREE.MathUtils.degToRad(HALF_ANGLE))) / BEAM_LEN) * (prism.on ? 5 : 1.4);
 
     // glare grows as the beam swings towards the camera
-    this.head.updateWorldMatrix(true, false);
-    this.dir.set(0, 1, 0).transformDirection(this.head.matrixWorld);
-    this.lensW.set(0, 0.1, 0).applyMatrix4(this.head.matrixWorld);
     const facing = Math.max(0, this.dir.dot(this.toCam.subVectors(camera.position, this.lensW).normalize()));
     const glow = k * (0.25 + 3 * facing ** 10);
     this.glare.material.color.setRGB(r * glow, g * glow, b * glow);

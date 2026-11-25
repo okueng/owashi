@@ -9,7 +9,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 import { byId, channelMaps, LB150_WHEEL, PATCH, PROFILES, universes } from './dmx.js';
 import { beamHit, cue, hit, lookProgress, PALETTE, SCENE_LIST, show, tap, tubeHit, updateShow } from './show.js';
-import { BeamHead, CobTube, WashPar } from './fixtures.js';
+import { BeamHead, CobTube, setBeamStops, WashPar } from './fixtures.js';
 import { artnet, bridgeUrl, pump, setMode } from './artnet.js';
 import { effect } from '@preact/signals';
 import * as setlist from './setlist.js';
@@ -20,13 +20,14 @@ import { inputs, onBridgeMessage, ROLES, setRole } from './inputs.js';
 import { configure as configureLive, live, setDarkOnStop, setStopFloor, tick as liveTick } from './live.js';
 
 // ── layout (metres; x = stage left→right as the audience sees it, z = towards the audience) ──
-// The rig is placed for the audience's sightlines and the beams' distance from the band's eyes. The stage is
-// the band's estimate for the December 2026 room, about 4 m wide and 4 m deep: change DECK and the places below
-// once there's a real stage plot.
+// The rig is placed for the audience's sightlines and the beams' distance from the band's eyes. The room is the
+// December 2026 venue as read from photos of last year's concert there: the band plays on the floor (no riser) in
+// a black-curtained alcove under a low white ceiling, with the room's own rig on a bar over the audience. Every
+// size here is an estimate from those photos: measure the room and change DECK and ROOM.
 
-const DECK = { w: 4, d: 4, h: 0.5, front: 1.5 };      // a small club stage: deck runs from z = -2.5 to z = +1.5
+const DECK = { w: 5, d: 3.5, h: 0, front: 1.0 };      // the playing area, on the floor: z = -2.5 to z = +1.0
 const S = DECK.h;
-const KIT_Z = -1.0;                                    // drums on the deck with everyone else, no riser
+const KIT_Z = -1.0;                                    // drums on the rug, no riser
 
 // On 4 m the kit and the 2 m banner fill the middle, which leaves about 95 cm each side at the back. So each
 // back corner carries two heads side by side with a tube between them, a little in front.
@@ -71,11 +72,15 @@ const PROPS = [
   { model: 'bassAmp', pos: [1.45, S, -1.45], rotY: -15 },
 ];
 
+// all inside the room: the back wall is at z = 6.5 and the ceiling at 2.8 m
 const VIEWS = {
-  FOH: { pos: [0, 1.9, 9], look: [0, 1.5, -0.5] },
-  Pit: { pos: [-1.4, 1.1, 3.6], look: [0.2, 1.8, -1] },
-  Side: { pos: [6.2, 2.3, 2.0], look: [0, 1.4, -0.6] },
-  Balcony: { pos: [0, 4.8, 12.5], look: [0, 1.1, -1] },
+  FOH: { pos: [0, 1.7, 6.2], look: [0, 1.3, -0.8] },
+  Pit: { pos: [-1.4, 1.1, 3.0], look: [0.2, 1.7, -1] },
+  Side: { pos: [2.6, 1.9, 3.4], look: [-0.6, 1.2, -1.2] },
+  Corner: { pos: [-2.2, 1.75, 5.6], look: [0.3, 1.3, -1.2] },
+  // where the cameras go at the gig: the 360 on a stand centre stage in front of the kick, the phone at the back
+  '360°': { pos: [0, 1.6, 0.4], look: [0, 1.5, -1.6] },
+  Phone: { pos: [0, 2.0, 6.3], look: [0, 1.2, -1.0] },
 };
 
 // ── renderer ────────────────────────────────────────────────────────────────
@@ -97,7 +102,7 @@ camera.position.set(...VIEWS.FOH.pos);
 const controls = new OrbitControls(camera, canvas);
 controls.target.set(...VIEWS.FOH.look);
 controls.enableDamping = true;
-controls.maxDistance = 18;
+controls.maxDistance = 9;
 controls.maxPolarAngle = Math.PI * 0.53;
 
 const composer = new EffectComposer(renderer);
@@ -133,18 +138,175 @@ const toggleUi = () => { document.body.classList.toggle('hide-ui'); resize(); };
 
 // ── room & deck ─────────────────────────────────────────────────────────────
 
-const ROOM = { w: 12, h: 6, back: DECK.front - DECK.d - 0.05, front: 16 };
-const room = new THREE.Mesh(
-  new THREE.BoxGeometry(ROOM.w, ROOM.h, ROOM.front - ROOM.back),
-  new THREE.MeshStandardMaterial({ color: 0x111113, roughness: 0.95, side: THREE.BackSide }),
-);
-room.position.set(0, ROOM.h / 2, (ROOM.front + ROOM.back) / 2);
-scene.add(room);
+// The alcove (5 m wide, black walls and curtain, acoustic panels hung at 2.6 m under a 2.8 m ceiling) opens onto
+// the audience room (6 m wide, white walls, white ceiling at 2.8 m) under a white soffit that hangs to 2.4 m, with
+// a black duct along it that turns towards the audience on the right. At the back right, three steps lead up to a
+// doorway behind the curtain. The room's own lights hang from a bar over the front of the audience: drawn, never
+// lit (we don't drive them). Glass double doors at the back of the room, a counter and a glowing cube on the left.
+const ROOM = {
+  w: 6, alcoveW: 5, back: DECK.front - DECK.d - 0.05, front: 6.5, h: 2.8, stageH: 2.6,
+  soffit: { z: 0.6, d: 0.35, bottom: 2.4 }, houseBar: { z: 2.0, y: 2.68 },
+};
+ROOM.lip = ROOM.soffit.z + ROOM.soffit.d;   // where the alcove opens into the room
+{
+  const tex = (w, h, paint) => {
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    paint(c.getContext('2d'), w, h);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+    return t;
+  };
+  const rnd = n => { const v = Math.sin(n * 91.7 + 47.3) * 43758.5453; return v - Math.floor(v); };
+  const mat = (color, roughness, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness, ...extra });
+  const plane = (w, h, material, pos, rot) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), material);
+    m.position.set(...pos); m.rotation.set(...rot);
+    scene.add(m);
+    return m;
+  };
+  const block = (size, material, pos) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(...size), material);
+    m.position.set(...pos);
+    scene.add(m);
+    return m;
+  };
+  const pipeMesh = (a, b, r, material) => {   // a cylinder from point a to point b
+    const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), d = B.clone().sub(A);
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, d.length(), 16), material);
+    m.position.copy(A).addScaledVector(d, 0.5);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
+    scene.add(m);
+    return m;
+  };
+  const box3 = (x0, y0, z0, x1, y1, z1) => new THREE.Box3(new THREE.Vector3(x0, y0, z0), new THREE.Vector3(x1, y1, z1));
+  const stops = [];   // the solid things a beam can't pass
+  const W = ROOM.w, AW = ROOM.alcoveW, H = ROOM.h, lip = ROOM.lip, hall = ROOM.front - lip, alcove = lip - ROOM.back;
 
-const deckMat = new THREE.MeshStandardMaterial({ color: 0x0b0b0c, roughness: 0.32, metalness: 0.15 });
-const deck = new THREE.Mesh(new THREE.BoxGeometry(DECK.w, DECK.h, DECK.d), deckMat);
-deck.position.set(0, DECK.h / 2, DECK.front - DECK.d / 2);
-scene.add(deck);
+  // dark grey vinyl tiles, 50 cm
+  const tiles = tex(512, 512, (x, w, h) => {
+    x.fillStyle = '#2c2c2f'; x.fillRect(0, 0, w, h);
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
+      x.fillStyle = `rgba(255,255,255,${0.01 + rnd(i * 4 + j) * 0.025})`; x.fillRect(i * 128 + 2, j * 128 + 2, 124, 124);
+    }
+  });
+  const L = ROOM.front - ROOM.back;
+  tiles.wrapS = tiles.wrapT = THREE.RepeatWrapping; tiles.repeat.set(W / 2, L / 2);
+  plane(W, L, mat(0xffffff, 0.42, { map: tiles, metalness: 0.08 }), [0, 0, (ROOM.front + ROOM.back) / 2], [-Math.PI / 2, 0, 0]);
+
+  // the Persian rug under the drums
+  const rug = tex(1024, 768, (x, w, h) => {
+    x.fillStyle = '#5e1712'; x.fillRect(0, 0, w, h);
+    x.strokeStyle = '#1c2340'; x.lineWidth = 46; x.strokeRect(40, 40, w - 80, h - 80);
+    x.strokeStyle = '#b08a55'; x.lineWidth = 6; x.strokeRect(70, 70, w - 140, h - 140); x.strokeRect(14, 14, w - 28, h - 28);
+    for (let i = 0; i < 900; i++) {
+      x.fillStyle = ['#8a2a1c', '#1c2340', '#b08a55', '#3a0e0b'][i % 4];
+      x.globalAlpha = 0.35; x.fillRect(100 + rnd(i) * (w - 200), 100 + rnd(i + 0.5) * (h - 200), 6 + rnd(i + 2) * 14, 4 + rnd(i + 3) * 8);
+    }
+    x.globalAlpha = 1; x.fillStyle = '#1c2340';
+    x.beginPath(); x.ellipse(w / 2, h / 2, 150, 110, 0, 0, Math.PI * 2); x.fill();
+    x.fillStyle = '#b08a55'; x.beginPath(); x.ellipse(w / 2, h / 2, 60, 42, 0, 0, Math.PI * 2); x.fill();
+  });
+  plane(3.0, 2.25, mat(0xffffff, 0.95, { map: rug }), [0, 0.004, KIT_Z - 0.25], [-Math.PI / 2, 0, 0]);
+
+  // walls: black curtain across the back and black alcove sides, white from the soffit forward
+  const curtain = tex(1024, 256, (x, w, h) => {
+    x.fillStyle = '#0d0d10'; x.fillRect(0, 0, w, h);
+    for (let i = 0; i < 60; i++) {
+      const fx = (i + rnd(i) * 0.6) * (w / 60), g = x.createLinearGradient(fx - 9, 0, fx + 9, 0);
+      g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.5, 'rgba(255,255,255,0.05)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+      x.fillStyle = g; x.fillRect(fx - 9, 0, 18, h);
+    }
+  });
+  const black = mat(0xffffff, 0.97, { map: curtain }), white = mat(0xd9d9d6, 0.9), ceiling = mat(0xe4e4e0, 0.95);
+  plane(AW, H, black, [0, H / 2, ROOM.back], [0, 0, 0]);
+  // the alcove's sides; on the right, a doorway near the back at the top of the steps
+  const STEPS = { x: 2.0, rise: 0.18, fronts: [-1.35, -1.65, -1.95] }, DOOR = { z0: -2.45, z1: -1.6, top: 2.45 };
+  const doorBottom = STEPS.rise * STEPS.fronts.length;
+  const wallX = side => side * AW / 2;
+  plane(alcove, H, black, [wallX(-1), H / 2, ROOM.back + alcove / 2], [0, Math.PI / 2, 0]);
+  const rightWall = (z0, z1, y0, y1) => plane(z1 - z0, y1 - y0, black, [wallX(1), (y0 + y1) / 2, (z0 + z1) / 2], [0, -Math.PI / 2, 0]);
+  rightWall(ROOM.back, DOOR.z0, 0, H);
+  rightWall(DOOR.z1, lip, 0, H);
+  rightWall(DOOR.z0, DOOR.z1, DOOR.top, H);
+  rightWall(DOOR.z0, DOOR.z1, 0, doorBottom);
+  // light from the corridor behind the doorway
+  plane(DOOR.z1 - DOOR.z0, DOOR.top - doorBottom, new THREE.MeshBasicMaterial({ color: 0x4a4740 }),
+    [wallX(1) + 0.35, (DOOR.top + doorBottom) / 2, (DOOR.z0 + DOOR.z1) / 2], [0, -Math.PI / 2, 0]);
+  for (const s of [-1, 1]) block([0.02, DOOR.top - doorBottom, 0.35], black, [wallX(1) + 0.17, (DOOR.top + doorBottom) / 2, s < 0 ? DOOR.z0 : DOOR.z1]);
+  // three steps up to it, against the right wall
+  STEPS.fronts.forEach((z, i) => {
+    const h = STEPS.rise * (i + 1), d = z - ROOM.back;
+    block([AW / 2 - STEPS.x, h, d], mat(0x1a1a1c, 0.8), [(STEPS.x + AW / 2) / 2, h / 2, ROOM.back + d / 2]);
+  });
+  // the room is wider than the alcove: short white returns either side of the opening
+  for (const side of [-1, 1]) {
+    plane((W - AW) / 2, H, white, [side * (W + AW) / 4, H / 2, lip], [0, 0, 0]);
+    plane(hall, H, white, [side * W / 2, H / 2, lip + hall / 2], [0, -side * Math.PI / 2, 0]);
+    stops.push(side < 0 ? box3(-W / 2, 0, ROOM.back, -AW / 2, H, lip) : box3(AW / 2, 0, ROOM.back, W / 2, H, lip));
+  }
+  // the back wall of the room, with glass double doors
+  plane(W, H, white, [0, H / 2, ROOM.front], [0, Math.PI, 0]);
+  const glass = mat(0x1a2530, 0.15, { metalness: 0.4 });
+  for (const dx of [-0.41, 0.41]) plane(0.78, 2.05, glass, [-0.4 + dx, 1.05, ROOM.front - 0.01], [0, Math.PI, 0]);
+
+  // ceilings: the alcove's real ceiling with three acoustic panels hung below it (gaps between them), the soffit,
+  // and the room's ceiling
+  plane(AW, ROOM.soffit.z - ROOM.back, ceiling, [0, H, (ROOM.back + ROOM.soffit.z) / 2], [Math.PI / 2, 0, 0]);
+  const PANEL_GAP = 0.15, panelD = (ROOM.soffit.z - ROOM.back - 0.1 - 2 * PANEL_GAP) / 3;
+  for (let i = 0; i < 3; i++) {
+    const z0 = ROOM.back + 0.05 + i * (panelD + PANEL_GAP);
+    block([AW - 0.4, 0.04, panelD], ceiling, [0, ROOM.stageH, z0 + panelD / 2]);
+    stops.push(box3(-(AW - 0.4) / 2, ROOM.stageH - 0.02, z0, (AW - 0.4) / 2, ROOM.stageH + 0.02, z0 + panelD));
+  }
+  plane(W, hall, ceiling, [0, H, lip + hall / 2], [Math.PI / 2, 0, 0]);
+  block([AW, H - ROOM.soffit.bottom, ROOM.soffit.d], ceiling, [0, (H + ROOM.soffit.bottom) / 2, ROOM.soffit.z + ROOM.soffit.d / 2]);
+  stops.push(box3(-AW / 2, ROOM.soffit.bottom, ROOM.soffit.z, AW / 2, H, lip));
+  // the duct: along the soffit, then up and along the right-hand side towards the audience
+  const ductMat = mat(0x101012, 0.5), DR = 0.075, dy = ROOM.soffit.bottom - 0.08, dz = lip - 0.1;
+  pipeMesh([-AW / 2, dy, dz], [2.3, dy, dz], DR, ductMat);
+  pipeMesh([2.3, dy, dz], [2.7, H - 0.2, lip + 0.35], DR, ductMat);
+  pipeMesh([2.7, H - 0.2, lip + 0.35], [2.7, H - 0.2, 4.2], DR, ductMat);
+  stops.push(box3(-AW / 2, dy - DR, dz - DR, 2.3, dy + DR, dz + DR), box3(2.6, H - 0.2 - DR, lip, 2.8, H, 4.2));
+
+  // the PA tops on poles at the corners of the opening, and two wedges
+  const gear = mat(0x18181a, 0.7);
+  for (const side of [-1, 1]) {
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 1.6, 8), gear);
+    pole.position.set(side * 2.25, 0.8, 0.55); scene.add(pole);
+    block([0.42, 0.68, 0.38], gear, [side * 2.25, 1.94, 0.55]);
+    const wedge = block([0.55, 0.32, 0.4], gear, [side * 1.1, 0.16, 1.25]);
+    wedge.rotation.x = -0.45;
+  }
+
+  // the service counter on the audience's left, and the cube that glows by it
+  block([0.6, 1.0, 1.8], mat(0x202022, 0.6), [-W / 2 + 0.3, 0.5, 2.4]);
+  block([0.6, 0.6, 0.6], new THREE.MeshBasicMaterial({ color: 0x163a55 }), [-W / 2 + 0.45, 0.3, 1.2]);
+
+  // the room's rig: moving heads and flat 7-LED PARs (JB Systems Plano Spot) alternating along one bar
+  const { z: bz, y: by } = ROOM.houseBar;
+  const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, W - 0.4, 10), mat(0x9a9a9e, 0.4, { metalness: 0.7 }));
+  pipe.rotation.z = Math.PI / 2; pipe.position.set(0, by, bz);
+  scene.add(pipe);
+  stops.push(box3(-(W - 0.4) / 2, by - 0.03, bz - 0.03, (W - 0.4) / 2, H, bz + 0.03));
+  for (let i = 0; i < 9; i++) {
+    const x = -2.6 + i * 0.65;
+    if (i % 2) {   // hanging moving head: base, yoke, head pointing down
+      block([0.34, 0.13, 0.26], gear, [x, by - 0.09, bz]);
+      for (const dx of [-0.13, 0.13]) block([0.04, 0.26, 0.12], gear, [x + dx, by - 0.28, bz]);
+      block([0.21, 0.24, 0.22], gear, [x, by - 0.38, bz]);
+      stops.push(box3(x - 0.17, by - 0.5, bz - 0.13, x + 0.17, by, bz + 0.13));
+    } else {       // PAR in its bracket, tilted towards the stage
+      const par = block([0.24, 0.2, 0.09], gear, [x, by - 0.17, bz]);
+      par.rotation.x = -0.7;
+      stops.push(box3(x - 0.12, by - 0.3, bz - 0.1, x + 0.12, by, bz + 0.1));
+    }
+  }
+  // two lights in the alcove ceiling near the curtain
+  block([0.3, 0.26, 0.3], gear, [-1.0, ROOM.stageH - 0.15, -1.9]);
+  block([0.22, 0.2, 0.22], gear, [1.3, ROOM.stageH - 0.12, -2.0]);
+
+  // the beams end where they hit the ceiling, the soffit, a wall or the house rig
+  setBeamStops(box3(-W / 2, 0, ROOM.back, W / 2, H, ROOM.front), stops);
+}
 
 // The ŌWASHI banner: 2 × 1 m of black cloth with the logo printed in white, so it takes the colour of whatever
 // light hits it. It hangs from a telescopic bar between two light stands (Ulanzi MT-89, 2 m at full height)
@@ -197,7 +359,7 @@ paintBanner();
 // house light: a little ambient so the room isn't a void, plus a front fill the slider controls
 scene.add(new THREE.HemisphereLight(0x8899aa, 0x000000, 0.06));
 const fill = new THREE.SpotLight(0xffe2c0, 0, 0, 0.42, 0.8, 2);
-fill.position.set(0, 5.4, 9.5);
+fill.position.set(0, 2.7, 6.8);
 fill.target.position.set(0, 1.2, -0.5);
 scene.add(fill, fill.target);
 
@@ -699,7 +861,7 @@ function setHover(m) {
 function showPlace(m) {
   const { x, z } = m.holder.position;
   const side = Math.abs(x) < 0.05 ? 'centre' : `${Math.abs(x).toFixed(1)} m ${x < 0 ? 'left' : 'right'} of centre`;
-  placeTag.textContent = `${m.id[0].toUpperCase() + m.id.slice(1)} · ${side} · ${(DECK.front - z).toFixed(1)} m from the front edge`;
+  placeTag.textContent = `${m.id[0].toUpperCase() + m.id.slice(1)} · ${side} · ${(DECK.front - z).toFixed(1)} m from the front of the stage`;
   placeTag.classList.add('on');
   clearTimeout(placeTimer);
 }
@@ -900,7 +1062,7 @@ const LABELS_KEY = 'owashi-sim:labels-on';   // off unless turned on in Settings
 const labels = createLabels($('.tags'), [...bars, ...heads, ...pars].map(({ f }) => {
   const [x, y, z] = RIG[f.id].pos;
   const at = f.profile === 'hexpar' ? [x, y + 0.4, z + 0.1] : f.profile === 'lb150' ? [x, y + Math.max(RIG[f.id].riser / 2, 0.12), z + 0.25]   // on the front of its flight case, or of its base
-    : RIG[f.id].raise ? [x, y - 0.14, DECK.front]                              // on the front edge of the deck
+    : RIG[f.id].raise ? [x, y + RIG[f.id].raise + 0.12, z]                     // just above the bar
     : [x, y + 2.2, z];                                                         // just above the tube
   return { f, at };
 }), camera);
@@ -1231,6 +1393,15 @@ function adaptQuality(frameTime) {
   sampled = slow = 0;
 }
 
+// The camera stays inside the room (the walls only show their inside faces), and inside the alcove's width
+// when it's back there.
+function keepInside(p) {
+  const halfW = (p.z < ROOM.lip ? ROOM.alcoveW : ROOM.w) / 2 - 0.12;
+  p.x = Math.min(halfW, Math.max(-halfW, p.x));
+  p.y = Math.min(ROOM.h - 0.12, Math.max(0.2, p.y));
+  p.z = Math.min(ROOM.front - 0.12, Math.max(ROOM.back + 0.12, p.z));
+}
+
 const beatDots = [...document.querySelectorAll('.beats i')];
 let frames = 0, fpsT = 0;
 
@@ -1288,6 +1459,7 @@ renderer.setAnimationLoop(now => {
     if (flight.t === 1) flight = null;
   }
   controls.update();
+  keepInside(camera.position);
   composer.render();
 
   const beatNow = ((Math.floor(beat) % 4) + 4) % 4;
