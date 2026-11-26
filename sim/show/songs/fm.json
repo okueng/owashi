@@ -16,7 +16,8 @@
       "fade": 0,
       "lead": "",
       "react": "off",
-      "punch": false
+      "punch": false,
+      "anagram": 2
     },
     {
       "id": 2,
@@ -61,7 +62,8 @@
       "fade": 2,
       "lead": "",
       "react": "guitar",
-      "punch": false
+      "punch": false,
+      "anagram": 3
     },
     {
       "id": 5,
@@ -76,7 +78,8 @@
       "fade": 0,
       "lead": "",
       "react": "crash",
-      "punch": true
+      "punch": true,
+      "anagram": 2
     },
     {
       "id": 6,
@@ -95,7 +98,7 @@
     },
     {
       "id": 7,
-      "t": 212.2,
+      "t": 215,
       "name": "Thrash gear-shift & riff barrage",
       "scene": "riff",
       "variant": 0,
@@ -136,7 +139,8 @@
       "fade": 0,
       "lead": "",
       "react": "crash",
-      "punch": true
+      "punch": true,
+      "anagram": 1
     },
     {
       "id": 10,
@@ -166,7 +170,8 @@
       "fade": 0,
       "lead": "",
       "react": "all",
-      "punch": false
+      "punch": false,
+      "anagram": 2
     },
     {
       "id": 12,
@@ -185,7 +190,7 @@
     },
     {
       "id": 13,
-      "t": 420.3,
+      "t": 432,
       "name": "Slow solo rises to a scream",
       "scene": "searchlight",
       "variant": 0,
@@ -196,11 +201,12 @@
       "fade": 0,
       "lead": "left",
       "react": "guitar",
-      "punch": false
+      "punch": false,
+      "anagram": 1
     },
     {
       "id": 14,
-      "t": 450.6,
+      "t": 439,
       "name": "The soaring theme returns, full band",
       "scene": "drive",
       "variant": 1,
@@ -226,7 +232,8 @@
       "fade": 1,
       "lead": "",
       "react": "off",
-      "punch": false
+      "punch": false,
+      "anagram": 2
     },
     {
       "id": 16,
@@ -241,11 +248,12 @@
       "fade": 0,
       "lead": "",
       "react": "off",
-      "punch": false
+      "punch": false,
+      "anagram": 1
     },
     {
       "id": 17,
-      "t": 557.5,
+      "t": 573,
       "name": "The apex: the lead over double kick",
       "scene": "wall",
       "variant": 0,
