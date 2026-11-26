@@ -16,7 +16,8 @@
       "fade": 0,
       "lead": "",
       "react": "off",
-      "punch": false
+      "punch": false,
+      "anagram": 2
     },
     {
       "id": 2,
@@ -76,7 +77,8 @@
       "fade": 0,
       "lead": "",
       "react": "off",
-      "punch": false
+      "punch": false,
+      "anagram": 1
     },
     {
       "id": 6,
@@ -95,7 +97,7 @@
     },
     {
       "id": 7,
-      "t": 150.4,
+      "t": 133,
       "name": "Wailing lead theme",
       "scene": "surge",
       "variant": 0,
@@ -121,7 +123,8 @@
       "fade": 1,
       "lead": "",
       "react": "off",
-      "punch": false
+      "punch": false,
+      "anagram": 2
     },
     {
       "id": 9,
@@ -181,11 +184,12 @@
       "fade": 0,
       "lead": "left",
       "react": "guitar",
-      "punch": true
+      "punch": true,
+      "anagram": 1
     },
     {
       "id": 13,
-      "t": 400.5,
+      "t": 405,
       "name": "Shred assault → tapping climax",
       "scene": "shimmer",
       "variant": 0,
@@ -275,7 +279,7 @@
     },
     {
       "id": 19,
-      "t": 748,
+      "t": 772,
       "name": "Tapping return → tremolo peak",
       "scene": "glint",
       "variant": 0,
