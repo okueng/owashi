@@ -4,7 +4,7 @@
   "audio": "recordings/fm-2026-11-15.mp3",
   "cues": [
     {
-      "id": 14,
+      "id": 1,
       "t": 0,
       "name": "Before the first swell",
       "scene": "blackout",
@@ -19,7 +19,7 @@
       "punch": false
     },
     {
-      "id": 1,
+      "id": 2,
       "t": 0.3,
       "name": "Signal in the dark: swells",
       "scene": "searchlight",
@@ -34,7 +34,7 @@
       "punch": false
     },
     {
-      "id": 2,
+      "id": 3,
       "t": 37.6,
       "name": "The two doom chords",
       "scene": "slab",
@@ -49,7 +49,7 @@
       "punch": true
     },
     {
-      "id": 3,
+      "id": 4,
       "t": 64.5,
       "name": "Clean arpeggios, nocturnal, swelling",
       "scene": "orbit",
@@ -64,7 +64,7 @@
       "punch": false
     },
     {
-      "id": 4,
+      "id": 5,
       "t": 121.3,
       "name": "The groove locks in: main riff",
       "scene": "drive",
@@ -79,7 +79,7 @@
       "punch": true
     },
     {
-      "id": 15,
+      "id": 6,
       "t": 161.6,
       "name": "Lead theme soars over the groove",
       "scene": "sweep",
@@ -94,7 +94,7 @@
       "punch": true
     },
     {
-      "id": 16,
+      "id": 7,
       "t": 212.2,
       "name": "Thrash gear-shift & riff barrage",
       "scene": "riff",
@@ -109,7 +109,7 @@
       "punch": true
     },
     {
-      "id": 17,
+      "id": 8,
       "t": 242,
       "name": "Wailing blues-metal lead climb",
       "scene": "fan",
@@ -124,7 +124,7 @@
       "punch": false
     },
     {
-      "id": 5,
+      "id": 9,
       "t": 279.9,
       "name": "After the stop: heavy chug",
       "scene": "slab",
@@ -139,7 +139,7 @@
       "punch": true
     },
     {
-      "id": 18,
+      "id": 10,
       "t": 307.3,
       "name": "The shred solo erupts",
       "scene": "glint",
@@ -154,7 +154,7 @@
       "punch": true
     },
     {
-      "id": 6,
+      "id": 11,
       "t": 352.1,
       "name": "The floor gives way: one chord, then rimshots",
       "scene": "collapse",
@@ -169,7 +169,7 @@
       "punch": false
     },
     {
-      "id": 7,
+      "id": 12,
       "t": 388.9,
       "name": "Heavy chords return, slow & mourning",
       "scene": "sweep",
@@ -184,7 +184,7 @@
       "punch": false
     },
     {
-      "id": 19,
+      "id": 13,
       "t": 420.3,
       "name": "Slow solo rises to a scream",
       "scene": "searchlight",
@@ -199,7 +199,7 @@
       "punch": false
     },
     {
-      "id": 20,
+      "id": 14,
       "t": 450.6,
       "name": "The soaring theme returns, full band",
       "scene": "drive",
@@ -214,7 +214,7 @@
       "punch": true
     },
     {
-      "id": 8,
+      "id": 15,
       "t": 487.9,
       "name": "Hush: clean chords hang",
       "scene": "ambient",
@@ -229,7 +229,7 @@
       "punch": false
     },
     {
-      "id": 9,
+      "id": 16,
       "t": 514.6,
       "name": "Rebuild",
       "scene": "shimmer",
@@ -244,7 +244,7 @@
       "punch": false
     },
     {
-      "id": 10,
+      "id": 17,
       "t": 557.5,
       "name": "The apex: the lead over double kick",
       "scene": "wall",
@@ -259,7 +259,7 @@
       "punch": true
     },
     {
-      "id": 11,
+      "id": 18,
       "t": 588.5,
       "name": "Sludge stomp",
       "scene": "drive",
@@ -274,7 +274,7 @@
       "punch": true
     },
     {
-      "id": 21,
+      "id": 19,
       "t": 614.8,
       "name": "Double-kick barrage & last solo",
       "scene": "surge",
@@ -289,7 +289,7 @@
       "punch": true
     },
     {
-      "id": 12,
+      "id": 20,
       "t": 644.6,
       "name": "Half-time stomp",
       "scene": "backlight",
@@ -304,7 +304,7 @@
       "punch": true
     },
     {
-      "id": 13,
+      "id": 21,
       "t": 669.5,
       "name": "Last chord rings into feedback, then dark",
       "scene": "blackout",
