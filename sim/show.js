@@ -101,13 +101,24 @@ function paint(f, fn, level = 1, strobe = 0) {
 // moves, turned to the sides. Set SIDEWAYS to 1 for a stage with height over the audience.
 const SIDEWAYS = 1.7;
 // The alcove is about 5 m wide, so the outer heads stand only about 0.7 m from its side walls, by the steps and the
-// doorway on the right. No beam may land on a side wall below 2.2 m (head height on the steps): leaning outwards,
-// its sideways run may be at most half its rise, about 27° from upright. Leaning inwards it's free.
+// doorway on the right. No beam may land on a side wall below WALL_CLEAR (head height on the steps): leaning towards
+// its own wall, a head's sideways run may be at most (distance to that wall) / (WALL_CLEAR - lens height) of its
+// rise. The sim tells the show where each head and wall is (setHeadWalls), so moving a head or resizing the room
+// moves the limit with it; until then every head gets MAX_OUT_LEAN, about 27° from upright. Leaning inwards it's free.
+const WALL_CLEAR = 2.2;
 const MAX_OUT_LEAN = 0.5;
+const outLean = new Map();
+export function setHeadWalls(walls) {
+  for (const f of B) {
+    const w = walls[f.id];
+    if (w) outLean.set(f, Math.max(0, w.wall) / Math.max(0.05, WALL_CLEAR - w.lens));
+  }
+}
 const D2R = Math.PI / 180;
 function aim(f, pan, tilt) {
+  const max = outLean.get(f) ?? MAX_OUT_LEAN;
   const out = Math.sin(tilt * D2R) * Math.sin(pan * D2R) * SIDE[B.indexOf(f)];   // > 0 when leaning towards its wall
-  if (out > 0 && out / Math.cos(tilt * D2R) > MAX_OUT_LEAN) tilt = Math.sign(tilt) * Math.atan(MAX_OUT_LEAN / Math.abs(Math.sin(pan * D2R))) / D2R;
+  if (out > 0 && out / Math.cos(tilt * D2R) > max) tilt = Math.sign(tilt) * Math.atan(max / Math.abs(Math.sin(pan * D2R))) / D2R;
   f.aim(pan, tilt);
 }
 // `exact` aims a head as given, for shapes that need each head placed (the crossing behind the drums)
@@ -128,10 +139,10 @@ const line = (fn, level = 1, strobe = 0) => H.forEach((f, k) => paint(f, u => fn
 // ceiling they're shapes across the back of the stage: nothing reaches over the audience.
 const POSITIONS = [
   k => ({ pan: SIDE[k] * 12, tilt: 8 }),    // straight up, tight fan
-  k => ({ pan: SIDE[k] * 55, tilt: 45 }),   // wide fan, the outer pair leaning out as far as MAX_OUT_LEAN allows
+  k => ({ pan: SIDE[k] * 55, tilt: 45 }),   // wide fan, the outer pair leaning out as far as its wall allows
   // crossing: the inner pair makes an X behind the drummer, about 1.7 m up, the outer pair leans in over it
   k => (k < 2 ? { pan: -SIDE[k] * 60, tilt: 40, exact: true } : { pan: -SIDE[k] * 90, tilt: 42, exact: true }),
-  // all four leaning the same way, parallel: to the left, away from the steps and doorway, within MAX_OUT_LEAN
+  // all four leaning the same way, parallel: to the left, away from the steps and doorway, within the wall limit
   () => ({ pan: -70, tilt: 27, exact: true, parallel: true }),
 ];
 // Seconds the heads get, dark and at full speed, to reach a new position: the LB150 pans 540° in 2.5 s, so a 150°
@@ -859,7 +870,7 @@ export function updateShow(t) {
 // A head never swings across the stage lit. The show follows where each head physically is (at the speed it was
 // last sent, like the sim draws it), and keeps it closed, moving at full speed, while it's more than 3° from
 // where it's meant to be: after a cut to another look, a punch, anything that jumps the aim. Glides keep up and
-// pass. Blast whips its beams on every beat on purpose, out to the sides within MAX_OUT_LEAN, so it's left alone.
+// pass. Blast whips its beams on every beat on purpose, out to the sides within the wall limit, so it's left alone.
 const SWING_DEG = 3;
 const travel = new Map(B.map(f => [f, { pan: 0, tilt: 0, speed: 0, t: null }]));
 function noLitSwings(t) {

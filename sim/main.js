@@ -8,7 +8,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 import { byId, channelMaps, LB150_WHEEL, PATCH, PROFILES, universes } from './dmx.js';
-import { beamHit, cue, hit, lookProgress, PALETTE, SCENE_LIST, show, tap, tubeHit, updateShow } from './show.js';
+import { beamHit, cue, hit, lookProgress, PALETTE, SCENE_LIST, setHeadWalls, show, tap, tubeHit, updateShow } from './show.js';
 import { BeamHead, CobTube, setBeamStops, WashPar } from './fixtures.js';
 import { artnet, bridgeUrl, pump, setMode } from './artnet.js';
 import { effect } from '@preact/signals';
@@ -102,7 +102,7 @@ camera.position.set(...VIEWS.FOH.pos);
 const controls = new OrbitControls(camera, canvas);
 controls.target.set(...VIEWS.FOH.look);
 controls.enableDamping = true;
-controls.maxDistance = 9;
+controls.maxDistance = 18;
 controls.maxPolarAngle = Math.PI * 0.53;
 
 const composer = new EffectComposer(renderer);
@@ -407,6 +407,12 @@ for (const [id, place] of Object.entries(RIG)) {
     heads.push(head);
   }
 }
+// the show keeps each head's outward beams off its own side wall: tell it how far that wall is and how high the lens is
+scene.updateMatrixWorld();
+setHeadWalls(Object.fromEntries(heads.map(h => {
+  const p = h.beams.getWorldPosition(new THREE.Vector3());
+  return [h.f.id, { wall: (p.z < ROOM.lip ? ROOM.alcoveW : ROOM.w) / 2 - Math.abs(p.x), lens: p.y }];
+})));
 
 // ── models & band ───────────────────────────────────────────────────────────
 
@@ -1393,15 +1399,6 @@ function adaptQuality(frameTime) {
   sampled = slow = 0;
 }
 
-// The camera stays inside the room (the walls only show their inside faces), and inside the alcove's width
-// when it's back there.
-function keepInside(p) {
-  const halfW = (p.z < ROOM.lip ? ROOM.alcoveW : ROOM.w) / 2 - 0.12;
-  p.x = Math.min(halfW, Math.max(-halfW, p.x));
-  p.y = Math.min(ROOM.h - 0.12, Math.max(0.2, p.y));
-  p.z = Math.min(ROOM.front - 0.12, Math.max(ROOM.back + 0.12, p.z));
-}
-
 const beatDots = [...document.querySelectorAll('.beats i')];
 let frames = 0, fpsT = 0;
 
@@ -1459,7 +1456,6 @@ renderer.setAnimationLoop(now => {
     if (flight.t === 1) flight = null;
   }
   controls.update();
-  keepInside(camera.position);
   composer.render();
 
   const beatNow = ((Math.floor(beat) % 4) + 4) % 4;
