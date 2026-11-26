@@ -17,7 +17,8 @@
       "fade": 0,
       "lead": "",
       "react": "off",
-      "punch": false
+      "punch": false,
+      "anagram": 1
     },
     {
       "id": 2,
@@ -36,7 +37,7 @@
     },
     {
       "id": 3,
-      "t": 23.6,
+      "t": 21,
       "name": "Verse I: melodic groove",
       "scene": "drive",
       "variant": 0,
@@ -51,7 +52,7 @@
     },
     {
       "id": 4,
-      "t": 60.5,
+      "t": 58,
       "name": "Verse II: shred fills & build",
       "scene": "riff",
       "variant": 0,
@@ -66,7 +67,7 @@
     },
     {
       "id": 5,
-      "t": 103.4,
+      "t": 107,
       "name": "First chorus & soaring lead",
       "scene": "surge",
       "variant": 0,
@@ -81,7 +82,7 @@
     },
     {
       "id": 6,
-      "t": 127.9,
+      "t": 130,
       "name": "Chug march, darker",
       "scene": "drive",
       "variant": 2,
@@ -111,7 +112,7 @@
     },
     {
       "id": 8,
-      "t": 214.5,
+      "t": 221,
       "name": "Opening riff returns, crushing",
       "scene": "backlight",
       "variant": 0,
@@ -137,7 +138,8 @@
       "fade": 0,
       "lead": "",
       "react": "off",
-      "punch": false
+      "punch": false,
+      "anagram": 2
     },
     {
       "id": 10,
@@ -152,7 +154,8 @@
       "fade": 1,
       "lead": "",
       "react": "off",
-      "punch": false
+      "punch": false,
+      "anagram": 3
     },
     {
       "id": 11,
@@ -167,7 +170,8 @@
       "fade": 0,
       "lead": "",
       "react": "guitar",
-      "punch": true
+      "punch": true,
+      "anagram": 2
     },
     {
       "id": 12,
@@ -182,11 +186,12 @@
       "fade": 0,
       "lead": "",
       "react": "crash",
-      "punch": true
+      "punch": true,
+      "anagram": 1
     },
     {
       "id": 13,
-      "t": 358.3,
+      "t": 363,
       "name": "The long solo ignites",
       "scene": "glint",
       "variant": 0,
@@ -201,7 +206,7 @@
     },
     {
       "id": 14,
-      "t": 395.7,
+      "t": 400,
       "name": "Solo climax: fast shred assault",
       "scene": "surge",
       "variant": 2,
@@ -227,7 +232,8 @@
       "fade": 2,
       "lead": "",
       "react": "off",
-      "punch": false
+      "punch": false,
+      "anagram": 2
     },
     {
       "id": 16,
