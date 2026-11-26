@@ -595,47 +595,107 @@ const showStart = performance.now();
 const showTime = () => (performance.now() - showStart) / 1000;
 
 const nextSong = () => { const l = setlist.songs.value, i = l.findIndex(x => x.id === setlist.songId.value); return i >= 0 ? l[i + 1] : null; };
-// Show mode's readout: the song, where we are in it, what comes next, and an approximate countdown to the next switch.
-const hudTimerEl = $('.hud-timer'), hudEtaEl = $('.hud-eta'), hudBarFill = $('.hud-bar i');
-let hudCueKey = '', hudCueT0 = 0, lastHudTick = -1;
+// Show mode's readout: the song, where we are in it, what comes next, and a countdown to the next switch.
+//
+// The countdown runs on a song clock, not on the last press, so a press too many can't throw it off. The clock
+// starts with the song's first cue and runs at the speed of the 15 Nov takes. A press near its cue's planned time
+// (within a third of the gap before it) re-syncs it there: the live tempo drifts, so every on-time press corrects
+// it. A press far from its time (a double press, a wrong section) leaves the clock alone, so it still knows where
+// the band is, and the readout says the lights are ahead. Back never moves it: the countdown carries on.
+const hudTimerEl = $('.hud-timer'), hudEtaEl = $('.hud-eta'), hudClockEl = $('.hud-clock'), hudSegsEl = $('.hud-segs');
+const hudHeadEl = $('.hud-head'), hudDriftEl = $('.hud-drift');
+let hudCueKey = '', hudCueT0 = 0, lastHudTick = -1, hudSegsKey = '';
+// song position `pos` at show time `at`; `synced` is the cue it was last set to
+const songClock = { id: '', running: false, at: 0, pos: 0, synced: -1 };
+let cueMove = '';   // why the cue is about to change: 'next', 'back', or '' (a jump, a song change, the recording)
 const fmtEta = sec => {
   const s = Math.max(0, Math.round(sec)), m = Math.floor(s / 60);
   return `${m}:${String(s % 60).padStart(2, '0')}`;
 };
+const isReadyCue = (c, i) => i === 0 && c.scene === 'blackout' && c.t === 0;   // dark, waiting for the band
+// the energy curve's length, or just past the last cue if the curve stops before it (it can be from an older take)
+const songLength = s => Math.max(s?.energy?.values?.length ? s.energy.values.length * s.energy.step : 0,
+  (setlist.cues.value.at(-1)?.t ?? 0) + 5);
+const following = () => setlist.follow.value && setlist.playing.value;   // a recording drives the cues
+function songPos(t) {
+  if (following()) return setlist.position();
+  return songClock.running ? songClock.pos + (t - songClock.at) : null;
+}
+function anchorClock(i, pos, t) { Object.assign(songClock, { running: true, at: t, pos, synced: i }); }
+// a cue just came on: start, re-sync or leave the song clock
+function onCueChange(t) {
+  const s = setlist.song.value, cues = setlist.cues.value, i = setlist.index.value, cur = cues[i];
+  const move = cueMove; cueMove = '';
+  if (songClock.id !== (s?.id || '')) Object.assign(songClock, { id: s?.id || '', running: false });
+  if (!cur || isReadyCue(cur, i)) { songClock.running = false; return; }
+  if (!songClock.running || move === '') return anchorClock(i, cur.t, t);
+  // Back, or Next onto a cue the clock already passed through (after a Back): the clock was right, keep it
+  if (move === 'back' || i <= songClock.synced) return;
+  const pos = songPos(t), prev = cues[i - 1];
+  const tolerance = Math.max(4, (cur.t - (prev?.t ?? 0)) / 3);
+  if (Math.abs(pos - cur.t) <= tolerance) anchorClock(i, cur.t, t);
+}
+// which cue the clock says the band is in
+const clockIndex = (cues, pos) => { let k = 0; while (k + 1 < cues.length && cues[k + 1].t <= pos) k++; return k; };
 function updateCueProgress(t) {
   const cues = setlist.cues.value, i = setlist.index.value, cur = cues[i], next = cues[i + 1];
   const expected = cur && next ? next.t - cur.t : 0;
   const onCue = cur && show.scene === cur.scene && show.variant === cur.variant;
-  if (!onCue || !next || expected < 2 || (cur.scene === 'blackout' && cur.t === 0)) {
+  if (!onCue || !next || expected < 2 || isReadyCue(cur, i)) {
     show.cueP = 0.5;   // neutral mid-arc in Manual mode or on ready/final cues
     return null;
   }
-  const elapsed = setlist.follow.value && setlist.playing.value
-    ? Math.max(0, setlist.position() - cur.t)
-    : Math.max(0, t - hudCueT0);
+  const pos = songPos(t);
+  const elapsed = Math.max(0, pos !== null ? pos - cur.t : t - hudCueT0);
   const p = Math.min(1, Math.max(0, elapsed / expected));
   show.cueP = p;
   return { expected, elapsed, p };
+}
+// the song as a strip of cues, each as long as it lasts
+function drawSegments(s, cues) {
+  const key = `${s?.id}:${cues.map(c => c.t).join(',')}`;
+  if (key === hudSegsKey) return;
+  hudSegsKey = key;
+  const len = songLength(s);
+  hudSegsEl.replaceChildren(...cues.map((c, k) => {
+    const el = document.createElement('i');
+    el.style.flexGrow = Math.max(0.1, (cues[k + 1]?.t ?? len) - c.t);
+    return el;
+  }));
 }
 function syncHudTimer(t, force = false) {
   if (!force && (document.body.dataset.mode !== 'show' || t - lastHudTick < 0.15)) return;
   lastHudTick = t;
   const info = updateCueProgress(t);
-  if (!info) {
-    hudTimerEl.hidden = true;
-    return;
+  const s = setlist.song.value, cues = setlist.cues.value, i = setlist.index.value, next = cues[i + 1];
+  const pos = songPos(t), len = songLength(s);
+  hudTimerEl.hidden = !cues.length;
+  if (!cues.length) { hudDriftEl.hidden = true; return; }
+  drawSegments(s, cues);
+  [...hudSegsEl.children].forEach((el, k) => {
+    el.classList.toggle('lit', k === i);
+    el.classList.toggle('past', k < i);
+  });
+  hudHeadEl.hidden = pos === null;
+  if (pos !== null) hudHeadEl.style.left = `${(Math.min(1, Math.max(0, pos / len)) * 100).toFixed(2)}%`;
+  hudClockEl.textContent = pos === null ? `– / ${fmtEta(len)}` : `${fmtEta(pos)} / ${fmtEta(len)}`;
+  // the countdown to the next cue, on the clock (on the last press until the clock runs)
+  const rem = !next || !info ? null : pos !== null ? next.t - pos : info.expected - info.elapsed;
+  hudTimerEl.dataset.state = rem === null ? 'ok' : rem <= 0 ? 'due' : rem <= 10 ? 'soon' : 'ok';
+  hudEtaEl.textContent = rem === null ? '' : rem > 0 ? `next ~${fmtEta(rem)}` : rem > -3 ? 'NOW' : `next +${fmtEta(-rem)}`;
+  // lights ahead of the clock (a press too many), or two or more behind (one behind is the late countdown above)
+  const drift = pos === null || following() || i < 0 ? 0 : i - clockIndex(cues, pos);
+  hudDriftEl.hidden = !(drift > 0 || drift <= -2);
+  if (!hudDriftEl.hidden) {
+    const n = Math.abs(drift), cuesWord = n === 1 ? 'cue' : 'cues';
+    hudDriftEl.textContent = drift > 0 ? `${n} ${cuesWord} ahead of the clock · Back` : `${n} ${cuesWord} behind the clock · Next`;
   }
-  const { expected, elapsed, p } = info;
-  const rem = expected - elapsed;
-  hudTimerEl.hidden = false;
-  hudTimerEl.dataset.state = rem <= 0 ? 'due' : rem <= 10 ? 'soon' : 'ok';
-  hudEtaEl.textContent = rem > 0 ? `~${fmtEta(rem)}` : rem > -3 ? 'NOW' : `+${fmtEta(-rem)}`;
-  hudBarFill.style.width = `${(p * 100).toFixed(1)}%`;
+  hudSegsEl.parentElement.classList.toggle('drift', !hudDriftEl.hidden);
 }
 function syncHud() {
   const s = setlist.song.value, cues = setlist.cues.value, i = setlist.index.value, cur = cues[i], next = cues[i + 1];
   const key = `${s?.id || ''}:${i}:${cur?.id || ''}`;
-  if (key !== hudCueKey) { hudCueKey = key; hudCueT0 = showTime(); }
+  if (key !== hudCueKey) { hudCueKey = key; hudCueT0 = showTime(); onCueChange(hudCueT0); }
   const ana = cur?.anagram ? ` · Anagram ${cur.anagram} ${ANAGRAM_LABEL[cur.anagram]}` : '';
   $('.hud-song').textContent = s ? (cur ? `${s.title} · cue ${cur.id}${ana}` : s.title) : 'No song';
   $('.song-name').textContent = s?.title || 'No song';
@@ -1175,9 +1235,21 @@ function stepSong(dir) {
 }
 // Through the set with one foot: Next runs through a song's scenes and, after its last one, into the next song
 // at its first scene. Back retraces exactly that, so a press too many can always be undone.
+// In Show, a second Next within NEXT_LOCK_S of the last one is taken for a double press and ignored: the closest
+// cues in the set are 7 s apart. Back is never held up, so a mistake can always be undone at once.
+const NEXT_LOCK_S = 2;
+let lastNextT = -1e9;
 function forward() {
+  if (mode === 'show') {
+    const t = showTime();
+    if (t - lastNextT < NEXT_LOCK_S) { toast('Next ignored: pressed twice'); return null; }
+    lastNextT = t;
+  }
   const cues = setlist.cues.value;
-  if (!cues.length || setlist.index.value + 1 < cues.length) return stepScene(1);
+  if (!cues.length || setlist.index.value + 1 < cues.length) {
+    cueMove = 'next';
+    try { return stepScene(1); } finally { cueMove = ''; }
+  }
   const list = setlist.songs.value, i = list.findIndex(s => s.id === setlist.songId.value);
   if (i < 0 || i + 1 >= list.length) return 'End of the set';
   setlist.selectSong(list[i + 1].id);
@@ -1186,7 +1258,10 @@ function forward() {
 }
 function backward() {
   const cues = setlist.cues.value;
-  if (!cues.length || setlist.index.value > 0) return stepScene(-1);
+  if (!cues.length || setlist.index.value > 0) {
+    cueMove = 'back';
+    try { return stepScene(-1); } finally { cueMove = ''; }
+  }
   const list = setlist.songs.value, i = list.findIndex(s => s.id === setlist.songId.value);
   if (i <= 0) return 'Start of the set';
   setlist.selectSong(list[i - 1].id);
@@ -1432,6 +1507,8 @@ renderer.setAnimationLoop(now => {
   adaptQuality(raw);
 
   const beat = stepShow(t);
+  // Show mode has no stage, only the readout: the lights don't need the picture, and the Mac keeps its breath
+  if (mode === 'show') { syncHudTimer(t); return; }
 
   for (const bar of bars) bar.update(t);
   for (const head of heads) head.update(t, dt, camera, ui.haze);
