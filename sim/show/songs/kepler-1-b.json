@@ -23,7 +23,7 @@
     {
       "id": 2,
       "t": 0.5,
-      "name": "The foundry ignites: opening riff",
+      "name": "intro",
       "scene": "slab",
       "variant": 0,
       "a": "Red",
@@ -38,7 +38,7 @@
     {
       "id": 3,
       "t": 21,
-      "name": "Verse I: melodic groove",
+      "name": "thème",
       "scene": "drive",
       "variant": 0,
       "a": "Red",
@@ -53,7 +53,7 @@
     {
       "id": 4,
       "t": 58,
-      "name": "Verse II: shred fills & build",
+      "name": "montée + thème",
       "scene": "riff",
       "variant": 0,
       "a": "Amber",
@@ -68,7 +68,7 @@
     {
       "id": 5,
       "t": 107,
-      "name": "First chorus & soaring lead",
+      "name": "space",
       "scene": "surge",
       "variant": 0,
       "a": "Amber",
@@ -83,7 +83,7 @@
     {
       "id": 6,
       "t": 130,
-      "name": "Chug march, darker",
+      "name": "space 3 accords",
       "scene": "drive",
       "variant": 2,
       "a": "Red",
@@ -98,7 +98,7 @@
     {
       "id": 7,
       "t": 184.7,
-      "name": "Chorus II, hotter",
+      "name": "thème revient + montée",
       "scene": "slab",
       "variant": 1,
       "a": "Amber",
@@ -113,7 +113,7 @@
     {
       "id": 8,
       "t": 221,
-      "name": "Opening riff returns, crushing",
+      "name": "thème plus violent",
       "scene": "backlight",
       "variant": 0,
       "a": "Red",
@@ -160,7 +160,7 @@
     {
       "id": 11,
       "t": 291.8,
-      "name": "Into the sunlight",
+      "name": "ça remonte",
       "scene": "wall",
       "variant": 0,
       "a": "Amber",
@@ -176,7 +176,7 @@
     {
       "id": 12,
       "t": 326.9,
-      "name": "War machine",
+      "name": "Space",
       "scene": "drive",
       "variant": 1,
       "a": "Red",
@@ -192,7 +192,7 @@
     {
       "id": 13,
       "t": 363,
-      "name": "The long solo ignites",
+      "name": "Space + solo",
       "scene": "glint",
       "variant": 0,
       "a": "Amber",
@@ -222,7 +222,7 @@
     {
       "id": 15,
       "t": 417.6,
-      "name": "Leaving the planet: clean loop",
+      "name": "space chill",
       "scene": "orbit",
       "variant": 0,
       "a": "Red",
@@ -238,7 +238,7 @@
     {
       "id": 16,
       "t": 453.1,
-      "name": "Drifting away: drums fade",
+      "name": "Space meurt",
       "scene": "embers",
       "variant": 0,
       "a": "Blue",
@@ -253,7 +253,7 @@
     {
       "id": 17,
       "t": 470.6,
-      "name": "Last chord rings out",
+      "name": "dernier",
       "scene": "blackout",
       "variant": 0,
       "a": "Red",

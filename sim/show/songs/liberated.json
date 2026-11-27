@@ -22,7 +22,7 @@
     {
       "id": 2,
       "t": 0.9,
-      "name": "Opening stabs",
+      "name": "pêche du début",
       "scene": "slab",
       "variant": 0,
       "a": "Amber",
@@ -37,7 +37,7 @@
     {
       "id": 3,
       "t": 16.1,
-      "name": "Main theme erupts",
+      "name": "longs du début",
       "scene": "drive",
       "variant": 0,
       "a": "Amber",
@@ -52,7 +52,7 @@
     {
       "id": 4,
       "t": 44,
-      "name": "Blues-metal groove & solo I",
+      "name": "groove bass",
       "scene": "fan",
       "variant": 0,
       "a": "Amber",
@@ -67,7 +67,7 @@
     {
       "id": 5,
       "t": 100,
-      "name": "Heavy chorus & lead climb",
+      "name": "4x dadaduba",
       "scene": "surge",
       "variant": 0,
       "a": "Amber",
@@ -82,7 +82,7 @@
     {
       "id": 6,
       "t": 128.7,
-      "name": "Syncopated riff break",
+      "name": "pêche du début",
       "scene": "riff",
       "variant": 0,
       "a": "Red",
@@ -97,7 +97,7 @@
     {
       "id": 7,
       "t": 143.1,
-      "name": "Main theme reprise & push",
+      "name": "pêche longue + montée",
       "scene": "drive",
       "variant": 2,
       "a": "Amber",
@@ -112,7 +112,7 @@
     {
       "id": 8,
       "t": 185.6,
-      "name": "Bridge: clean arpeggios",
+      "name": "moment dark tranquille",
       "scene": "searchlight",
       "variant": 0,
       "a": "Amber",
@@ -127,7 +127,7 @@
     {
       "id": 9,
       "t": 227,
-      "name": "Bridge: wailing distorted lead",
+      "name": "basse cool",
       "scene": "sweep",
       "variant": 0,
       "a": "Amber",
@@ -142,7 +142,7 @@
     {
       "id": 10,
       "t": 263,
-      "name": "Bridge: shred climax",
+      "name": "basse qui envoie",
       "scene": "glint",
       "variant": 0,
       "a": "White",
@@ -157,7 +157,7 @@
     {
       "id": 11,
       "t": 277.2,
-      "name": "Stop-start breakdown",
+      "name": "breakdown ensemble",
       "scene": "backlight",
       "variant": 0,
       "a": "Red",
@@ -173,7 +173,7 @@
     {
       "id": 12,
       "t": 290.9,
-      "name": "Double-kick gallop",
+      "name": "breakdown qui groove + funk",
       "scene": "surge",
       "variant": 1,
       "a": "Red",
@@ -188,7 +188,7 @@
     {
       "id": 13,
       "t": 316,
-      "name": "Off the cliff: clean funk",
+      "name": "funk",
       "scene": "sweep",
       "variant": 0,
       "a": "UV",
@@ -204,7 +204,7 @@
     {
       "id": 14,
       "t": 368,
-      "name": "Post-metal valley: clean chords",
+      "name": "solo basse",
       "scene": "orbit",
       "variant": 0,
       "a": "Ice",
@@ -220,7 +220,7 @@
     {
       "id": 15,
       "t": 395,
-      "name": "Post-metal build: drums & pulse",
+      "name": "deux notes",
       "scene": "shimmer",
       "variant": 0,
       "a": "Ice",
@@ -236,7 +236,7 @@
     {
       "id": 16,
       "t": 410,
-      "name": "Distortion swell: dam cracks",
+      "name": "montée",
       "scene": "slab",
       "variant": 1,
       "a": "Ice",
@@ -251,7 +251,7 @@
     {
       "id": 17,
       "t": 424.4,
-      "name": "The dam bursts: blast chug",
+      "name": "3 accords chie",
       "scene": "blast",
       "variant": 0,
       "a": "Amber",
@@ -266,7 +266,7 @@
     {
       "id": 18,
       "t": 438,
-      "name": "Main theme triumphant return",
+      "name": "6tet qui chie",
       "scene": "drive",
       "variant": 1,
       "a": "Amber",
@@ -281,7 +281,7 @@
     {
       "id": 19,
       "t": 467.5,
-      "name": "The big shred solo",
+      "name": "6tet + solo",
       "scene": "glint",
       "variant": 0,
       "a": "Amber",
@@ -296,7 +296,7 @@
     {
       "id": 20,
       "t": 512.1,
-      "name": "Anthem chorus into the stop",
+      "name": "remontée",
       "scene": "surge",
       "variant": 2,
       "a": "Amber",
@@ -311,7 +311,7 @@
     {
       "id": 21,
       "t": 539.6,
-      "name": "After the stop: full-band peak",
+      "name": "APEX",
       "scene": "wall",
       "variant": 0,
       "a": "White",

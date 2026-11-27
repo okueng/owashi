@@ -22,7 +22,7 @@
     {
       "id": 2,
       "t": 0.3,
-      "name": "Signal in the dark: swells",
+      "name": "rien à faire",
       "scene": "searchlight",
       "variant": 0,
       "a": "Ice",
@@ -37,7 +37,7 @@
     {
       "id": 3,
       "t": 37.6,
-      "name": "The two doom chords",
+      "name": "2 pêches",
       "scene": "slab",
       "variant": 0,
       "a": "Red",
@@ -68,7 +68,7 @@
     {
       "id": 5,
       "t": 121.3,
-      "name": "The groove locks in: main riff",
+      "name": "le groove arrive",
       "scene": "drive",
       "variant": 0,
       "a": "Blue",
@@ -84,7 +84,7 @@
     {
       "id": 6,
       "t": 161.6,
-      "name": "Lead theme soars over the groove",
+      "name": "Rammstein + bourrin",
       "scene": "sweep",
       "variant": 0,
       "a": "Teal",
@@ -99,7 +99,7 @@
     {
       "id": 7,
       "t": 215,
-      "name": "Thrash gear-shift & riff barrage",
+      "name": "le groove continue",
       "scene": "riff",
       "variant": 0,
       "a": "Blue",
@@ -113,8 +113,8 @@
     },
     {
       "id": 8,
-      "t": 242,
-      "name": "Wailing blues-metal lead climb",
+      "t": 228,
+      "name": "groove + solo",
       "scene": "fan",
       "variant": 0,
       "a": "Teal",
@@ -129,7 +129,7 @@
     {
       "id": 9,
       "t": 279.9,
-      "name": "After the stop: heavy chug",
+      "name": "RIFF LENT",
       "scene": "slab",
       "variant": 2,
       "a": "White",
@@ -145,7 +145,7 @@
     {
       "id": 10,
       "t": 307.3,
-      "name": "The shred solo erupts",
+      "name": "REFRAIN",
       "scene": "glint",
       "variant": 0,
       "a": "White",
@@ -160,7 +160,7 @@
     {
       "id": 11,
       "t": 352.1,
-      "name": "The floor gives way: one chord, then rimshots",
+      "name": "moment tranquille",
       "scene": "collapse",
       "variant": 0,
       "a": "Blue",
@@ -176,7 +176,7 @@
     {
       "id": 12,
       "t": 388.9,
-      "name": "Heavy chords return, slow & mourning",
+      "name": "espoir",
       "scene": "sweep",
       "variant": 0,
       "a": "Amber",
@@ -191,7 +191,7 @@
     {
       "id": 13,
       "t": 432,
-      "name": "Slow solo rises to a scream",
+      "name": "note grave",
       "scene": "searchlight",
       "variant": 0,
       "a": "Amber",
@@ -207,7 +207,7 @@
     {
       "id": 14,
       "t": 439,
-      "name": "The soaring theme returns, full band",
+      "name": "3 accords + solo",
       "scene": "drive",
       "variant": 1,
       "a": "Amber",
@@ -222,7 +222,7 @@
     {
       "id": 15,
       "t": 487.9,
-      "name": "Hush: clean chords hang",
+      "name": "à l'octave",
       "scene": "ambient",
       "variant": 0,
       "a": "Blue",
@@ -238,7 +238,7 @@
     {
       "id": 16,
       "t": 514.6,
-      "name": "Rebuild",
+      "name": "montée",
       "scene": "shimmer",
       "variant": 0,
       "a": "Teal",
@@ -269,7 +269,7 @@
     {
       "id": 18,
       "t": 588.5,
-      "name": "Sludge stomp",
+      "name": "c'est reparti pour le refrain",
       "scene": "drive",
       "variant": 2,
       "a": "Red",
@@ -284,7 +284,7 @@
     {
       "id": 19,
       "t": 614.8,
-      "name": "Double-kick barrage & last solo",
+      "name": "ça chie",
       "scene": "surge",
       "variant": 1,
       "a": "Red",
@@ -299,7 +299,7 @@
     {
       "id": 20,
       "t": 644.6,
-      "name": "Half-time stomp",
+      "name": "ça chie la fin",
       "scene": "backlight",
       "variant": 0,
       "a": "Red",
@@ -314,7 +314,7 @@
     {
       "id": 21,
       "t": 669.5,
-      "name": "Last chord rings into feedback, then dark",
+      "name": "derniers accords",
       "scene": "blackout",
       "variant": 0,
       "a": "Red",
