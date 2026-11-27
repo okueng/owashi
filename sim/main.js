@@ -717,6 +717,14 @@ function syncAnagramBadge() {
   let want = 0;
   for (let k = Math.min(i, cues.length - 1); k >= 0 && !want; k--) want = cues[k].anagram || 0;
   const scene = want || pedal.anagramLast;
+  if (cues[i]?.tuner || pedal.anagramTuner) {   // the wait before a song, with the Anagram's tuner open to retune
+    el.hidden = false;
+    const open = pedal.anagramTuner;
+    el.querySelector('span').textContent = open ? 'Tuner open · Next closes it' : 'Tuner: Anagram not connected';
+    el.dataset.state = open ? 'ok' : 'warn';
+    el.title = open ? 'The Anagram tuner is open; the next cue closes it' : 'Could not open the tuner: is the Anagram plugged in over USB-C?';
+    return;
+  }
   el.hidden = !scene;
   if (!scene) return;
   el.querySelector('span').textContent = `Anagram ${scene} · ${ANAGRAM_LABEL[scene] || ''}`;

@@ -7,7 +7,7 @@
 import { batch, computed, effect, signal } from '@preact/signals';
 import { beamHit, cue, DRUM_LOOKS, hit, PALETTE, SCENE_LIST, show, tubeHit, VARIANTS } from './show.js';
 import { addSong, loadShow, saveSong, showStore } from './showstore.js';
-import { sendAnagramScene } from './pedal.js';
+import { sendAnagramScene, setAnagramTuner } from './pedal.js';
 
 export const LOOKS = SCENE_LIST.map(([id, label]) => ({ id, label }));
 export const LOOK_LABEL = Object.fromEntries(LOOKS.map(l => [l.id, l.label]));
@@ -42,6 +42,7 @@ export const clean = c => ({
   react: REACTS.includes(c.react) ? c.react : 'crash',   // which live accents fire during this cue (live.js)
   punch: !!c.punch,   // lands with a white slam on everything: for the big entries, pressed right on the hit
   ...([1, 2, 3].includes(+c.anagram) ? { anagram: +c.anagram } : {}),   // optional Darkglass Anagram scene (1–3)
+  ...(c.tuner ? { tuner: true } : {}),   // the Anagram's tuner is open for this cue: the wait before a song, to retune
 });
 // Every cue keeps a number of its own within its song, so it can be named ("New Land 17") whatever gets added,
 // moved or removed around it. A cue without one, or with one that's taken, gets the next free number.
@@ -119,6 +120,7 @@ export function selectSong(id) {
   const s = songs.value.find(x => x.id === id);
   if (!s) return;
   pause();
+  setAnagramTuner(false);   // a tuner opened for one song's wait never stays open into another
   widget = null; pos = 0; followed = -1;
   batch(() => {
     songId.value = id;
@@ -284,7 +286,10 @@ function apply(i, p = null, cut = false, forward = true) {
   show.colorA = c.a; show.colorB = c.b; show.bpm = c.bpm;
   cue(c.scene, now(), cut ? 0 : (c.fade * 240) / c.bpm, c.variant);
   if (c.punch && !cut && forward) hit(now(), 1);   // not when jumping about or stepping back
+  // tuner shut before the scene changes, opened after it, so a song starts on its scene with the tuner closed
+  if (!c.tuner) setAnagramTuner(false);
   if (c.anagram) sendAnagramScene(c.anagram);
+  if (c.tuner) setAnagramTuner(true);
   songT0 = now() - (p ?? c.t);
   align(c, p ?? c.t);
   onApplied();

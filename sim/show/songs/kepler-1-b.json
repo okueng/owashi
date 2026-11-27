@@ -18,7 +18,8 @@
       "lead": "",
       "react": "off",
       "punch": false,
-      "anagram": 1
+      "anagram": 1,
+      "tuner": true
     },
     {
       "id": 2,

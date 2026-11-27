@@ -43,6 +43,7 @@ export const pedal = {
   destinations: [], // MIDI outputs the bridge (or browser) sees, for sending scene changes to the Anagram
   anagram: { target: 'auto', channel: 1, cc: 107 },   // Darkglass Anagram: CC 107, values 1–3
   anagramLast: 0,   // last scene number sent (1–3)
+  anagramTuner: false,   // whether the sim opened the Anagram's tuner (CC 86 only toggles, so the sim keeps count)
   onAction: () => {},
   onChange: () => {},
   describe,
@@ -81,27 +82,36 @@ export function anagramTarget() {
 }
 
 let bridgeWs = null, midiAccess = null;
-export function sendAnagramScene(scene) {
-  const n = Math.round(+scene || 0);
-  if (n < 1 || n > 127) return false;
+// one Control Change to the Anagram, through the bridge or the browser's own MIDI
+function sendAnagram(cc, value) {
   const to = anagramTarget();
   if (!to) return false;
-  const { channel, cc } = pedal.anagram;
-  const data = [0xb0 | ((channel - 1) & 0x0f), cc & 0x7f, n & 0x7f];
+  const data = [0xb0 | ((pedal.anagram.channel - 1) & 0x0f), cc & 0x7f, value & 0x7f];
   if (bridgeWs?.readyState === WebSocket.OPEN) {
     bridgeWs.send(JSON.stringify({ type: 'midi-out', to, data }));
-    pedal.anagramLast = n;
-    pedal.onChange();
     return true;
   }
   const out = midiAccess && [...midiAccess.outputs.values()].find(o => o.name === to);
-  if (out) {
-    out.send(data);
-    pedal.anagramLast = n;
-    pedal.onChange();
-    return true;
-  }
-  return false;
+  if (!out) return false;
+  out.send(data);
+  return true;
+}
+export function sendAnagramScene(scene) {
+  const n = Math.round(+scene || 0);
+  if (n < 1 || n > 127 || !sendAnagram(pedal.anagram.cc, n)) return false;
+  pedal.anagramLast = n;
+  pedal.onChange();
+  return true;
+}
+// Tuner Enter/Exit is CC 86, and any value toggles it (Anagram manual, KosmOS 1.17), so the sim remembers whether
+// it opened the tuner and only sends when that has to change. Closed by hand on the Anagram, the count is off.
+export const ANAGRAM_TUNER_CC = 86;
+export function setAnagramTuner(open) {
+  if (pedal.anagramTuner === !!open) return true;
+  if (!sendAnagram(ANAGRAM_TUNER_CC, 127)) return false;
+  pedal.anagramTuner = !!open;
+  pedal.onChange();
+  return true;
 }
 
 // A switch or pad is its message type, channel and number. Pressing is a note on, a control change above 0
