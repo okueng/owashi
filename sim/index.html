@@ -98,10 +98,16 @@
   /* Show mode: where we are in the song, big enough to read from the stage */
   body[data-mode="show"]{background:#000}
   body[data-mode="show"] canvas.stage{display:none}
-  body[data-mode="show"] .hud{top:50%;transform:translate(-50%,-55%)}
-  body[data-mode="show"] .hud-song{font-size:16px}
-  body[data-mode="show"] .hud-cue{font-size:clamp(34px,6vw,64px);margin:6px 0}
-  body[data-mode="show"] .hud-next{font-size:clamp(16px,2.4vw,24px)}
+  /* read from standing height off a laptop at the player's feet: the cue as big as fits (fitCue), next a clear second */
+  body[data-mode="show"] .hud{top:50%;transform:translate(-50%,-55%);width:calc(100vw - 48px);max-width:none}
+  body[data-mode="show"] .hud-song{font-size:clamp(14px,1.6vw,22px)}
+  body[data-mode="show"] .hud-prev{color:var(--fg-3);font-size:clamp(18px,2.6vw,36px);margin-top:12px;min-height:1.2em}
+  body[data-mode="show"] .hud-cue{font-size:min(11vw,20vh);font-weight:600;line-height:1;margin:6px 0 14px;text-wrap:balance;overflow-wrap:anywhere}
+  body[data-mode="show"] .hud-next{font-size:clamp(24px,4.2vw,60px);line-height:1.1;color:var(--fg);text-wrap:balance}
+  body[data-mode="show"] .hud-timer{width:min(1100px,calc(100vw - 48px))}
+  body[data-mode="show"] .hud-clock{font-size:clamp(18px,1.8vw,26px)}
+  body[data-mode="show"] .hud-eta{font-size:clamp(26px,3vw,44px)}
+  body[data-mode="show"] .hud-drift{font-size:clamp(16px,1.6vw,22px)}
   .hud{position:fixed;z-index:4;top:16px;left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100vw - 32px);text-align:center;pointer-events:none;text-shadow:0 0 8px #000,0 0 3px #000}
   .hud p{margin:0}
   .hud-song{color:var(--fg-2);font-size:12px;letter-spacing:.14em;text-transform:uppercase}
@@ -133,6 +139,13 @@
   .rig-status [data-state="ok"] i{background:var(--ok);box-shadow:0 0 6px var(--ok)}
   .rig-status [data-state="warn"] i{background:var(--amber);box-shadow:0 0 6px var(--amber)}
   .rig-status [data-state="err"] i{background:var(--live);box-shadow:0 0 6px var(--live)}
+  /* Show mode: the Anagram scene the song is on, top right; amber when it couldn't be sent */
+  .hud-anagram{position:fixed;z-index:5;top:14px;right:20px;margin:0;display:flex;align-items:center;gap:10px;font-size:clamp(16px,1.8vw,26px);font-weight:500;letter-spacing:.04em;color:var(--fg);pointer-events:none}
+  body:not([data-mode="show"]) .hud-anagram{display:none}
+  .hud-anagram i{width:12px;height:12px;border-radius:50%;background:var(--fg-3)}
+  .hud-anagram[data-state="ok"] i{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+  .hud-anagram[data-state="warn"]{color:var(--amber)}
+  .hud-anagram[data-state="warn"] i{background:var(--amber);box-shadow:0 0 8px var(--amber)}
 
   input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:20px;margin:0;background:transparent;cursor:pointer;--track:var(--fg)}
   input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:linear-gradient(to right,var(--track) var(--v,0%),var(--line-2) var(--v,0%))}
@@ -349,8 +362,10 @@
   <button type="button" class="st-anagram" data-state="off"><i></i>Anagram</button>
   <button type="button" class="st-audio" data-state="off"><i></i>XR18</button>
 </div>
+<p class="hud-anagram" data-state="off" hidden><i></i><span></span></p>
 <div class="hud" aria-live="polite">
   <p class="hud-song"></p>
+  <p class="hud-prev"></p>
   <p class="hud-cue"></p>
   <p class="hud-next"></p>
   <div class="hud-timer" hidden>

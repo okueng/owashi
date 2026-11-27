@@ -696,17 +696,43 @@ function syncHud() {
   const s = setlist.song.value, cues = setlist.cues.value, i = setlist.index.value, cur = cues[i], next = cues[i + 1];
   const key = `${s?.id || ''}:${i}:${cur?.id || ''}`;
   if (key !== hudCueKey) { hudCueKey = key; hudCueT0 = showTime(); onCueChange(hudCueT0); }
-  const ana = cur?.anagram ? ` · Anagram ${cur.anagram} ${ANAGRAM_LABEL[cur.anagram]}` : '';
-  $('.hud-song').textContent = s ? (cur ? `${s.title} · cue ${cur.id}${ana}` : s.title) : 'No song';
+  $('.hud-song').textContent = s ? (cur ? `${s.title} · cue ${cur.id}` : s.title) : 'No song';
   $('.song-name').textContent = s?.title || 'No song';
-  $('.hud-cue').textContent = show.scene === 'blackout' ? 'Blackout' : cur ? `${cur.name} · ${labelOf(show.scene)}` : labelOf(show.scene);
-  const nextAna = next?.anagram ? ` → Anagram ${next.anagram} ${ANAGRAM_LABEL[next.anagram]}` : '';
+  // the cue names only, not the looks: previous (dim), current (big), next
+  const prev = cues[i - 1], blackedOut = show.scene === 'blackout' && cur?.scene !== 'blackout';
+  $('.hud-prev').textContent = prev ? `Before: ${prev.name}` : '';
+  $('.hud-cue').textContent = blackedOut ? 'Blackout' : cur ? cur.name : cues.length ? 'Ready' : labelOf(show.scene);
   $('.hud-next').textContent = !cues.length ? 'No cues yet: Next steps through the looks'
-    : next ? `Next: ${next.name} · ${labelOf(next.scene)}${nextAna}`
+    : next ? `Next: ${next.name}`
     : nextSong() ? `Next song: ${nextSong().title}` : 'End of the set';
   $('.hud-choke').hidden = !show.autoChoke;
+  syncAnagramBadge();
+  fitCue();
   syncHudTimer(showTime(), true);
 }
+// The Anagram scene the song should be on by now (the last cue up to here that sets one), and whether it went out:
+// green once that scene was sent, amber when it wasn't (Anagram unplugged or MIDI out off).
+function syncAnagramBadge() {
+  const el = $('.hud-anagram'), cues = setlist.cues.value, i = setlist.index.value;
+  let want = 0;
+  for (let k = Math.min(i, cues.length - 1); k >= 0 && !want; k--) want = cues[k].anagram || 0;
+  const scene = want || pedal.anagramLast;
+  el.hidden = !scene;
+  if (!scene) return;
+  el.querySelector('span').textContent = `Anagram ${scene} · ${ANAGRAM_LABEL[scene] || ''}`;
+  el.dataset.state = pedal.anagramLast === scene && anagramTarget() ? 'ok' : 'warn';
+  el.title = el.dataset.state === 'ok' ? 'Sent to the Anagram' : 'Not sent: is the Anagram plugged in over USB-C?';
+}
+// the cue name as big as the screen allows: one line for short names, up to about a third of the height for long ones
+function fitCue() {
+  const el = $('.hud-cue');
+  if (document.body.dataset.mode !== 'show') return el.style.removeProperty('font-size');
+  let size = Math.min(innerWidth * 0.11, innerHeight * 0.2);
+  el.style.fontSize = `${size}px`;
+  while (el.offsetHeight > innerHeight * 0.34 && size > 40) el.style.fontSize = `${size *= 0.92}px`;
+}
+addEventListener('resize', fitCue);
+document.fonts?.ready.then(fitCue);   // the web font is wider than the fallback it was measured in
 
 const sceneButtons = SCENE_LIST.map(([id, label, key, , hint]) => {
   const b = button(label, null, () => setScene(id));
@@ -1063,6 +1089,7 @@ function syncRigStatus() {
     : anaOut ? `Anagram: ${anaOut} · ch ${pedal.anagram.channel} · CC ${pedal.anagram.cc}${pedal.anagramLast ? ` (scene ${pedal.anagramLast})` : ''}`
     : 'Anagram not found — plug in over USB-C';
   setDot('.st-anagram', anaState, anaTitle);
+  syncAnagramBadge();
 
   const audioState = !inputs.device ? 'off' : show.autoChoke ? 'warn' : 'ok';
   const audioTitle = !inputs.device ? (inputs.note || 'No audio interface connected')
@@ -1223,7 +1250,7 @@ function stepScene(dir) {
   const to = cues[setlist.index.value + dir];
   if (!to) return dir > 0 ? 'End of the song' : 'First cue';
   if (dir > 0) setlist.go(); else setlist.back();
-  return `${to.name} · ${labelOf(to.scene)}`;
+  return mode === 'show' ? to.name : `${to.name} · ${labelOf(to.scene)}`;
 }
 function stepSong(dir) {
   const list = setlist.songs.value;
