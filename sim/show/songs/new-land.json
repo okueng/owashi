@@ -6,7 +6,7 @@
     {
       "id": 1,
       "t": 0,
-      "name": "Before the first chord",
+      "name": "Avant",
       "scene": "blackout",
       "variant": 0,
       "a": "Red",
@@ -22,7 +22,7 @@
     {
       "id": 2,
       "t": 0.3,
-      "name": "Clean swells, first light",
+      "name": "Intro tranquille",
       "scene": "ambient",
       "variant": 0,
       "a": "Teal",
@@ -37,7 +37,7 @@
     {
       "id": 3,
       "t": 38.2,
-      "name": "Toms and blues, gathering",
+      "name": "Intro rythmée",
       "scene": "sweep",
       "variant": 0,
       "a": "Teal",
@@ -52,7 +52,7 @@
     {
       "id": 4,
       "t": 87.7,
-      "name": "The land erupts",
+      "name": "pêches",
       "scene": "slab",
       "variant": 0,
       "a": "Teal",
@@ -67,7 +67,7 @@
     {
       "id": 5,
       "t": 98.2,
-      "name": "One guitar alone",
+      "name": "guitare seule",
       "scene": "silhouette",
       "variant": 0,
       "a": "Teal",
@@ -83,7 +83,7 @@
     {
       "id": 6,
       "t": 109.4,
-      "name": "Full band slams in",
+      "name": "pêches ensemble",
       "scene": "drive",
       "variant": 0,
       "a": "Teal",
@@ -98,7 +98,7 @@
     {
       "id": 7,
       "t": 133,
-      "name": "Wailing lead theme",
+      "name": "theme ensemble",
       "scene": "surge",
       "variant": 0,
       "a": "Teal",
@@ -113,7 +113,7 @@
     {
       "id": 8,
       "t": 191.6,
-      "name": "Clean oasis",
+      "name": "moment calme",
       "scene": "ambient",
       "variant": 0,
       "a": "Green",
@@ -129,7 +129,7 @@
     {
       "id": 9,
       "t": 228.7,
-      "name": "The big chord: heavy again",
+      "name": "moment mélancolique",
       "scene": "slab",
       "variant": 0,
       "a": "Ice",
@@ -144,7 +144,7 @@
     {
       "id": 10,
       "t": 255,
-      "name": "Solo I shreds",
+      "name": "mélancolique solo",
       "scene": "glint",
       "variant": 0,
       "a": "Teal",
@@ -159,7 +159,7 @@
     {
       "id": 11,
       "t": 284.4,
-      "name": "Post-rock valley: arpeggios → warm lead",
+      "name": "fin du moment mélancolique, arpégio",
       "scene": "orbit",
       "variant": 0,
       "a": "Ice",
@@ -174,7 +174,7 @@
     {
       "id": 12,
       "t": 359.9,
-      "name": "Full band: the long solo ignites",
+      "name": "Retour au thème",
       "scene": "drive",
       "variant": 0,
       "a": "Teal",
@@ -190,7 +190,7 @@
     {
       "id": 13,
       "t": 405,
-      "name": "Shred assault → tapping climax",
+      "name": "ca déménage",
       "scene": "shimmer",
       "variant": 0,
       "a": "Ice",
@@ -205,7 +205,7 @@
     {
       "id": 14,
       "t": 472.7,
-      "name": "Lead theme II & double-kick barrage",
+      "name": "theme + double kick",
       "scene": "surge",
       "variant": 0,
       "a": "White",
@@ -220,7 +220,7 @@
     {
       "id": 15,
       "t": 544.2,
-      "name": "Feedback: the rhythm dies, the void",
+      "name": "VOID",
       "scene": "searchlight",
       "variant": 0,
       "a": "White",
@@ -235,7 +235,7 @@
     {
       "id": 16,
       "t": 597,
-      "name": "Doom groove & machine-gun stabs",
+      "name": "VOID + GUITAR",
       "scene": "backlight",
       "variant": 0,
       "a": "Teal",
@@ -250,7 +250,7 @@
     {
       "id": 17,
       "t": 620,
-      "name": "The engine starts: double-kick chug",
+      "name": "CA COMMENCE JUSQU AUX PÊCHES",
       "scene": "drive",
       "variant": 2,
       "a": "Teal",
@@ -265,7 +265,7 @@
     {
       "id": 18,
       "t": 672.8,
-      "name": "Tremolo melody & shred marathon",
+      "name": "GRAND SOLO -> arpégio",
       "scene": "surge",
       "variant": 2,
       "a": "Ice",
@@ -280,7 +280,7 @@
     {
       "id": 19,
       "t": 772,
-      "name": "Tapping return → tremolo peak",
+      "name": "moment intense -> montée",
       "scene": "glint",
       "variant": 0,
       "a": "White",
@@ -295,7 +295,7 @@
     {
       "id": 20,
       "t": 822.5,
-      "name": "Swagger riff",
+      "name": "CIMETIERE",
       "scene": "fan",
       "variant": 0,
       "a": "Amber",
@@ -310,7 +310,7 @@
     {
       "id": 21,
       "t": 867.2,
-      "name": "Back in: heavy riff & solo",
+      "name": "THEME",
       "scene": "drive",
       "variant": 1,
       "a": "White",
@@ -325,7 +325,7 @@
     {
       "id": 22,
       "t": 948.2,
-      "name": "Call and response & unison screams",
+      "name": "Fin épique",
       "scene": "riff",
       "variant": 0,
       "a": "UV",
@@ -355,7 +355,7 @@
     {
       "id": 24,
       "t": 1031.6,
-      "name": "Coda: massive chord & blast beats",
+      "name": "ca arrache",
       "scene": "wall",
       "variant": 0,
       "a": "White",
@@ -370,7 +370,7 @@
     {
       "id": 25,
       "t": 1050.4,
-      "name": "Final crash: feedback → barrage",
+      "name": "ca arrache entrain de mourir",
       "scene": "collapse",
       "variant": 0,
       "a": "Teal",
@@ -385,7 +385,7 @@
     {
       "id": 26,
       "t": 1071.6,
-      "name": "Last chord: one slam, then dark",
+      "name": "flash de fin",
       "scene": "blackout",
       "variant": 0,
       "a": "Red",
