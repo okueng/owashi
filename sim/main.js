@@ -29,22 +29,17 @@ const DECK = { w: 5, d: 3.5, h: 0, front: 1.0 };      // the playing area, on th
 const S = DECK.h;
 const KIT_Z = -1.0;                                    // drums on the rug, no riser
 
-// On 4 m the kit and the 2 m banner fill the middle, which leaves about 95 cm each side at the back. So each
-// back corner carries two heads side by side with a tube between them, a little in front.
+// As set up at the venue (photo, 2026-11-28; places estimated from it, heights from what each head stands on).
+// Two heads up high at the back corners on the amps, two on the floor either side of the kit; no PARs.
 const RIG = {
-  // two tubes framing the band at the stage edges, two at the back between the heads
-  V1: { pos: [-1.9, S, 0.3] }, V2: { pos: [-1.54, S, -1.95] }, V3: { pos: [1.54, S, -1.95] }, V4: { pos: [1.9, S, 0.3] },
+  // two tubes framing the band at the stage edges, two at the back: left behind the Orange combo, right by the wall
+  V1: { pos: [-1.9, S, 0.3] }, V2: { pos: [-1.15, S, -2.3] }, V3: { pos: [1.85, S, -2.1] }, V4: { pos: [1.9, S, 0.3] },
   // (the two horizontal floor bars at the stage front are out for now; they sat at the front edge, raise 0.05)
-  // behind everyone, so nobody faces them, and on low cases to keep the beams clear of the amps and above eye level
-  B1: { pos: [-1.78, S, -2.25], riser: 0.5 }, B2: { pos: [1.78, S, -2.25], riser: 0.5 },
-  // the second pair: on the floor just outside the banner (no stands, nothing flown). Beams read brightest coming
-  // towards the audience through the haze, so all four stay at the back. With the heads kept at least 45° above
-  // the horizontal, a beam from the floor still clears an amp half a metre in front of it and passes about 3 m
-  // above the front players, so a case under them only shows a little more of the beam's foot.
-  B3: { pos: [-1.3, S, -2.25], riser: 0 }, B4: { pos: [1.3, S, -2.25], riser: 0 },
-  // two wash PARs on the floor behind the kit, either side of the drummer and under the banner, leaning 60° from
-  // straight up towards the room: through the kit, onto the front players' backs, then over the audience's heads
-  P1: { pos: [-0.6, S, -2.05], tilt: 60 }, P2: { pos: [0.6, S, -2.05], tilt: 60 },
+  // the high pair: B1 (DMX 13) on the Orange combo on its case, back left; B2 (DMX 25) on the Orange head and cab
+  // up on the platform, back right
+  B1: { pos: [-1.3, S, -2.2], riser: 1.15 }, B2: { pos: [2.1, S, -1.6], riser: 1.35 },
+  // the floor pair, either side of the kit: B3 (DMX 37) left, B4 (DMX 1) right, beside the keyboard stand
+  B3: { pos: [-1.5, S, -0.7], riser: 0 }, B4: { pos: [1.5, S, -0.7], riser: 0 },
 };
 
 // The trio, left to right as the audience sees it: Cyril, Romain (back), Olivier. Where Cyril stands now that he

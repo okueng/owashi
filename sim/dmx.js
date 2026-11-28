@@ -90,21 +90,20 @@ PROFILES.hexpar = {
 };
 
 export const PATCH = [
-  // universe 1 — the Art-Net box, whose two DMX ports carry the same universe: B1 then B3 on DMX1, B2 then B4 on DMX2
-  // left and right as the audience sees them; tag is the short name on the 3D labels
-  { id: 'B1', tag: 'Beam L', label: 'Moving head, back left, outer', profile: 'lb150', universe: 1, address: 1 },
-  { id: 'B2', tag: 'Beam R', label: 'Moving head, back right, outer', profile: 'lb150', universe: 1, address: 13 },
-  // the second pair, either side of the banner (addresses 25 and 37 still to be set on the real heads)
-  { id: 'B3', tag: 'Inner L', label: 'Moving head, back left, inner', profile: 'lb150', universe: 1, address: 25 },
-  { id: 'B4', tag: 'Inner R', label: 'Moving head, back right, inner', profile: 'lb150', universe: 1, address: 37 },
-  // the two wash PARs on the floor behind the kit, chained after the heads (addresses still to be set on them)
-  { id: 'P1', tag: 'Wash L', label: 'Wash PAR, behind the kit, left', profile: 'hexpar', universe: 1, address: 49 },
-  { id: 'P2', tag: 'Wash R', label: 'Wash PAR, behind the kit, right', profile: 'hexpar', universe: 1, address: 59 },
-  // universes 2–3 — the tubes on WLED, outputs 1–4 of the Dig-Quad: 256 channels each, two per universe
-  { id: 'V1', tag: 'Side L', label: 'Tube, side left', profile: 'tube', universe: 2, address: 1 },
-  { id: 'V2', tag: 'Back L', label: 'Tube, back left', profile: 'tube', universe: 2, address: 257 },
-  { id: 'V3', tag: 'Back R', label: 'Tube, back right', profile: 'tube', universe: 3, address: 1 },
-  { id: 'V4', tag: 'Side R', label: 'Tube, side right', profile: 'tube', universe: 3, address: 257 },
+  // universe 1 — the Art-Net box (both DMX ports carry the same universe). Left and right as the audience sees
+  // them; tag is the short name on the 3D labels. The ids keep their roles in the looks: B1/B2 the high pair,
+  // B3/B4 the floor pair (INNER); the addresses are what's set on each head at the venue.
+  { id: 'B1', tag: 'High L', label: 'Moving head, high, back left (on the Orange combo)', profile: 'lb150', universe: 1, address: 13 },
+  { id: 'B2', tag: 'High R', label: 'Moving head, high, back right (on the Orange stack)', profile: 'lb150', universe: 1, address: 25 },
+  { id: 'B3', tag: 'Floor L', label: 'Moving head, floor, left of the kit', profile: 'lb150', universe: 1, address: 37 },
+  { id: 'B4', tag: 'Floor R', label: 'Moving head, floor, right of the kit', profile: 'lb150', universe: 1, address: 1 },
+  // (the two wash PARs behind the kit, hexpar at 49 and 59, are out: no PARs at the venue)
+  // universes 2–3 — the tubes on WLED, outputs 1–4: 256 channels each, two per universe. As placed at the venue:
+  // tube 1 front right, 2 back right, 3 front left, 4 back left (the ids keep their places in the looks)
+  { id: 'V1', tag: 'Side L', label: 'Tube 3, front left', profile: 'tube', universe: 3, address: 1 },
+  { id: 'V2', tag: 'Back L', label: 'Tube 4, back left', profile: 'tube', universe: 3, address: 257 },
+  { id: 'V3', tag: 'Back R', label: 'Tube 2, back right', profile: 'tube', universe: 2, address: 257 },
+  { id: 'V4', tag: 'Side R', label: 'Tube 1, front right', profile: 'tube', universe: 2, address: 1 },
   // The two horizontal floor bars at the stage front (H1, H2) were taken out for the December 2026 show: they
   // won't be built in time. To bring them back: universe 4, addresses 1 and 257, and their places in RIG (main.js).
 ];

@@ -4,19 +4,19 @@
       "sim": 1,
       "artnet": 1,
       "to": "192.168.1.100",
-      "note": "ICERAY box, DMX1 and DMX2: LB150 1 (1–12), LB150 2 (13–24), LB150 3 (25–36), LB150 4 (37–48), PAR 1 (49–58), PAR 2 (59–68)"
+      "note": "ICERAY box, DMX1 and DMX2: LB150 at 1 (floor right), 13 (high left), 25 (high right), 37 (floor left); no PARs"
     },
     {
       "sim": 2,
       "artnet": 2,
       "to": "192.168.1.20",
-      "note": "WLED, start universe 2, Multi RGBW, address 1: tube 1 (ch 1–256), tube 2 (ch 257–512)"
+      "note": "WLED, start universe 2, Multi RGBW, address 1: tube 1 front right (ch 1–256), tube 2 back right (ch 257–512)"
     },
     {
       "sim": 3,
       "artnet": 3,
       "to": "192.168.1.20",
-      "note": "WLED: tube 3 (ch 1–256), tube 4 (ch 257–512)"
+      "note": "WLED: tube 3 front left (ch 1–256), tube 4 back left (ch 257–512)"
     }
   ]
 }

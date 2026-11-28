@@ -569,7 +569,7 @@ export const SCENE_LIST = [
   ['surge', 'Surge', 'c', 'Heavy', 'Fast thrash: crests of light rising up the tubes, beams fanned wide, no flashing'],
   ['glint', 'Glint', 'f', 'Heavy', 'Shred solos: tubes glitter in the song colour, beams crossed high'],
   ['slab', 'Slab', 'q', 'Heavy', 'Big slow chords: solid colour swelling every 2 bars, no flicker'],
-  ['backlight', 'Backlight', 'k', 'Heavy', 'The band in black against the PARs behind the kit: tubes dark, beams in a still fan'],
+  ['backlight', 'Backlight', 'k', 'Heavy', 'The band in black against the glow at the foot of the back tubes: beams in a still fan'],
   ['fan', 'Fan', 'l', 'Heavy', 'The four beams open into a wide fan and close again every 4 bars; tubes almost off'],
   ['riff', 'Riff', '4', 'Heavy', 'Back and side tubes trade beats, white on every downbeat'],
   ['blast', 'Blast', '5', 'Heavy', 'Blast beats: white sparks on sixteenths, beams whipping every beat'],
